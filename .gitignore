@@ -217,3 +217,4 @@ build_prod/*.map
 build_prod/*.exe
 build_prod/*.pdb
 build_prod/*.dll
+.gitignore  
