@@ -989,3 +989,25 @@ if(NOT TARGET test_model_loader_streamer_smoke AND EXISTS "${CMAKE_CURRENT_SOURC
     add_test(NAME test_model_loader_streamer_smoke COMMAND test_model_loader_streamer_smoke)
     message(STATUS "  ✓ Added test_model_loader_streamer_smoke")
 endif()
+
+# ============================================================================
+# SOVEREIGN BASELINE REGRESSION TEST
+# ============================================================================
+# Validates post-surgical stability: ODR guard, CPU fallback, subsystem health,
+# model contract, agent wiring, performance baseline.
+# ============================================================================
+if(NOT TARGET sovereign_baseline_regression AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/regression/sovereign_baseline_regression.cpp")
+    add_executable(sovereign_baseline_regression
+        regression/sovereign_baseline_regression.cpp
+    )
+    target_include_directories(sovereign_baseline_regression PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(sovereign_baseline_regression PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+    )
+    add_test(NAME sovereign_baseline_regression COMMAND sovereign_baseline_regression)
+    message(STATUS "  ✓ Added sovereign_baseline_regression")
+endif()

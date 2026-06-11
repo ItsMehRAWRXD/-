@@ -1,0 +1,12 @@
+tree c312133e249cbf96d8ea9d46ab446251652d45f1
+parent 6b0fcb2c1e9e85c3527aba2fde5be2af5fb03950
+author Charles Xu <charles.xu@arm.com> 1753105792 +0200
+committer Georgi Gerganov <ggerganov@gmail.com> 1753379860 +0300
+
+kleidiai: add support for get_rows (llama/14676)
+
+* kleidiai: add support for get_rows
+
+* apply fixes based on code review
+
+* apply more fixes based on code review

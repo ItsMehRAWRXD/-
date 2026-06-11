@@ -1,0 +1,7 @@
+kleidiai: add support for get_rows (llama/14676)
+
+* kleidiai: add support for get_rows
+
+* apply fixes based on code review
+
+* apply more fixes based on code review
