@@ -2,7 +2,7 @@
 // Activity Bar, Secondary Sidebar, Panel (Terminal/Output/Problems/Debug Console), Enhanced Status Bar
 
 #include "../ui/tool_action_status.h"
-#include "IDEConfig.h"
+#include "../config/IDEConfig.h"
 #include "Win32IDE.h"
 #include <algorithm>
 #include <cmath>

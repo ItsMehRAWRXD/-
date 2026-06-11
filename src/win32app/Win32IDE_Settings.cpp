@@ -3,7 +3,7 @@
 // Architecture: C++23 + AVX-512, Zero-Dependency Sovereign Core
 // Build timestamp: 2026-03-31
 
-#include "IDEConfig.h"
+#include "../config/IDEConfig.h"
 #include "Win32IDE.h"
 #include "Win32IDE_Types.h"
 #include <algorithm>

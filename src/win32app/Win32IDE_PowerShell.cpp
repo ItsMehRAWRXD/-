@@ -2,7 +2,7 @@
 // Complete PowerShell integration for Win32IDE — production-ready with agentic/audit timeout tie-in.
 
 #include "../../include/agentic_autonomous_config.h"
-#include "IDEConfig.h"
+#include "../config/IDEConfig.h"
 #include "Win32IDE.h"
 #include <algorithm>
 #include <fstream>

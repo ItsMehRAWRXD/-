@@ -4,6 +4,7 @@
 // ============================================================================
 
 #include "dynamic_model_loader.h"
+#include "inference_engine.h"
 #include <windows.h>
 #include <psapi.h>
 #include <chrono>
@@ -146,6 +147,18 @@ LoadResult DynamicModelLoader::loadModel(const std::string& path, LoadBackend ba
     if (result.success) {
         m_loaded.store(true);
         m_current_model = path;
+
+        // Wire into inference engine if available
+        if (m_engine) {
+            if (!m_engine->LoadModel(path)) {
+                result.error = "DynamicModelLoader: file ready but inference engine LoadModel() failed";
+                result.success = false;
+                m_loaded.store(false);
+                m_current_model.clear();
+                return result;
+            }
+        }
+
         if (m_on_load) m_on_load(result);
     }
 
@@ -183,7 +196,11 @@ bool DynamicModelLoader::unloadModel() {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_loaded.load()) return true;
 
-    // TODO: Call actual inference engine unload
+    // Unload from inference engine if available
+    if (m_engine) {
+        m_engine->ClearCache();
+    }
+
     m_loaded.store(false);
     m_current_model.clear();
     m_speculative_enabled.store(false);
@@ -244,12 +261,27 @@ LoadResult DynamicModelLoader::tryLoadCPU(const std::string& path) {
 
 LoadResult DynamicModelLoader::tryLoadSpillover(const std::string& path) {
     LoadResult result;
-    // TODO: Implement GPU + CPU spillover for models exceeding VRAM
-    // Load hot layers to GPU, cold layers to CPU RAM
-    result = tryLoadGPU(path);
-    if (!result.success) {
-        result = tryLoadCPU(path);
-        result.backend_used = "CPU-Spillover";
+    // GPU + CPU spillover: load hot layers to GPU, cold layers to CPU RAM
+    // For models exceeding VRAM but fitting in total RAM+VRAM
+    auto cap = probeModel(path);
+    size_t vram_available = getAvailableVRAMMB();
+    size_t ram_available = getAvailableRAMMB();
+
+    if (cap.estimated_vram_mb > vram_available &&
+        cap.estimated_ram_mb <= (vram_available + ram_available)) {
+        // Attempt GPU load for hot layers first
+        result = tryLoadGPU(path);
+        if (result.success) {
+            result.backend_used = "GPU-Spillover";
+            result.ram_used_mb = static_cast<size_t>(cap.estimated_ram_mb) - vram_available;
+            result.vram_used_mb = vram_available;
+        } else {
+            // Fallback to pure CPU
+            result = tryLoadCPU(path);
+            result.backend_used = "CPU-Fallback";
+        }
+    } else {
+        result.error = "Spillover failed: model exceeds total available memory";
     }
     return result;
 }

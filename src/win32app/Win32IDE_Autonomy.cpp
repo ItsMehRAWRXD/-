@@ -1,5 +1,5 @@
 #include "Win32IDE_Autonomy.h"
-#include "IDEConfig.h"
+#include "../config/IDEConfig.h"
 #include <sstream>
 
 // AutonomyManager Implementation

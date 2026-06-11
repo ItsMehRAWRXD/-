@@ -8,6 +8,7 @@
 #include "../agent/model_policy_router.hpp"
 #include "../cli/swarm_orchestrator.h"
 #include "../cpu_inference_engine.h"
+#include "../dynamic_model_loader.h"
 #include "../logging/Logger.h"
 #include "../security/InputSanitizer.h"
 #include "AgentToolHandlers.h"
@@ -484,6 +485,35 @@ std::string getGlobalLLMResponse(const std::string& system_prompt, const std::st
     {
         LOG_INFO("[AgentController] Processing LLM request for model: " + model_path);
 
+        // --- DYNAMIC MODEL AUTO-LOAD ---
+        // If no model loaded, attempt to auto-load tiny model for testing
+        if (!g_inference_engine->IsModelLoaded())
+        {
+            LOG_INFO("[AgentController] No model loaded - attempting auto-load of tiny model");
+            auto& loader = RawrXD::DynamicModelLoader::instance();
+
+            // Wire the inference engine into the loader so LoadModel() calls engine->LoadModel()
+            loader.setInferenceEngine(g_inference_engine);
+
+            // Set tiny model path from environment or default
+            const char* tiny_path_env = std::getenv("RAWRXD_TINY_MODEL_PATH");
+            if (tiny_path_env && *tiny_path_env) {
+                loader.setTinyModelPath(tiny_path_env);
+            } else {
+                // Default: Phi-3-mini at F:\OllamaModels
+                loader.setTinyModelPath("F:\\OllamaModels\\Phi-3-mini-4k-instruct-q8_0.gguf");
+            }
+
+            auto result = loader.loadTinyModel();
+            if (result.success) {
+                LOG_INFO("[AgentController] Auto-loaded tiny model: " + result.backend_used +
+                         " in " + std::to_string(result.load_time_ms) + "ms");
+            } else {
+                LOG_ERROR("[AgentController] Auto-load failed: " + result.error);
+                return "Error: Inference engine has no loaded model. Auto-load failed: " + result.error;
+            }
+        }
+
         if (!g_inference_engine->IsModelLoaded())
         {
             return "Error: Inference engine has no loaded model";
@@ -532,6 +562,37 @@ void initializeAgentControllerWiring(RawrXD::InferenceEngine* inference_engine)
     }
 
     g_inference_engine = inference_engine;
+
+    // Initialize dynamic model loader with memory limits
+    auto& loader = RawrXD::DynamicModelLoader::instance();
+    loader.setInferenceEngine(inference_engine);
+    loader.setMaxVRAMMB(16000);  // 16GB RX 7800 XT
+    loader.setMaxRAMMB(64000);   // 64GB system RAM
+
+    // Set tiny model path from environment or default
+    const char* tiny_path_env = std::getenv("RAWRXD_TINY_MODEL_PATH");
+    if (tiny_path_env && *tiny_path_env) {
+        loader.setTinyModelPath(tiny_path_env);
+    } else {
+        loader.setTinyModelPath("F:\\OllamaModels\\Phi-3-mini-4k-instruct-q8_0.gguf");
+    }
+
+    // Enable speculative decoding if environment flag set
+    const char* speculative_env = std::getenv("RAWRXD_SPECULATIVE");
+    if (speculative_env && std::string(speculative_env) == "1") {
+        loader.enableSpeculativeDecoding(4);
+        LOG_INFO("[AgentController] Speculative decoding enabled (4 draft tokens)");
+    }
+
+    // Enable Medusa tree attention if draft model path provided
+    const char* medusa_env = std::getenv("RAWRXD_MEDUSA_MODEL");
+    if (medusa_env && *medusa_env) {
+        if (loader.enableMedusa(medusa_env)) {
+            LOG_INFO("[AgentController] Medusa tree attention enabled with draft model");
+        }
+    }
+
+    LOG_INFO("[AgentController] Dynamic model loader initialized");
 
     // Initialize the agent controller
     auto& controller = MinimalAgentController::instance();

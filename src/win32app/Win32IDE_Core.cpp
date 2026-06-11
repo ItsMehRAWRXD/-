@@ -27,7 +27,7 @@
 #include "../native_agent.hpp"
 #include "../streaming_gguf_loader.h"
 #include "ExtensionEngine_bridge.h"
-#include "IDEConfig.h"
+#include "../config/IDEConfig.h"
 #include "IDELogger.h"
 #include "ModelConnection.h"
 #include "RawrXD_AgentCoordinator.h"

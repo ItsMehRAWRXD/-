@@ -29,6 +29,23 @@
 #include "../agent/agentic_failure_detector.hpp"
 
 // =============================================================================
+// AI Edit / Rollback types
+// =============================================================================
+
+struct AIFileRollbackRecord {
+    std::string filePath;
+    std::string originalContent;
+    std::string modifiedContent;
+    uint64_t timestamp = 0;
+};
+
+struct AIEditTransaction {
+    std::string description;
+    std::vector<AIFileRollbackRecord> records;
+    bool committed = false;
+};
+
+// =============================================================================
 // Basic IDE / editor structures
 // =============================================================================
 

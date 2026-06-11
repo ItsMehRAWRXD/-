@@ -16,6 +16,9 @@
 
 namespace RawrXD {
 
+// Forward declaration
+class InferenceEngine;
+
 // Model capability descriptor
 struct ModelCapability {
     std::string name;
@@ -82,6 +85,10 @@ public:
     void setOnLoadComplete(LoadCallback cb) { m_on_load = std::move(cb); }
     void setOnUnloadComplete(std::function<void()> cb) { m_on_unload = std::move(cb); }
 
+    // --- Inference Engine Bridge ---
+    void setInferenceEngine(InferenceEngine* engine) { m_engine = engine; }
+    InferenceEngine* getInferenceEngine() const { return m_engine; }
+
     // --- Medusa / Speculative Decoding ---
     bool enableMedusa(const std::string& draft_model_path);
     bool enableSpeculativeDecoding(int draft_tokens = 4);
@@ -98,6 +105,8 @@ private:
     std::atomic<bool> m_loaded{false};
     std::atomic<bool> m_speculative_enabled{false};
     std::mutex m_mutex;
+
+    InferenceEngine* m_engine = nullptr;
 
     size_t m_max_vram_mb = 16000;  // 16GB default
     size_t m_max_ram_mb = 64000;   // 64GB default
