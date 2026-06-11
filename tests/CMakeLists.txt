@@ -839,6 +839,26 @@ if(NOT TARGET bench_sovereign_kernels AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/as
     message(STATUS "  ✓ Added bench_sovereign_kernels")
 endif()
 
+# ============================================================================
+# Sovereign Baseline Regression Test (post-ODR-fix stability guard)
+# ============================================================================
+if(NOT TARGET sovereign_baseline_regression AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/regression/sovereign_baseline_regression.cpp")
+    add_executable(sovereign_baseline_regression
+        regression/sovereign_baseline_regression.cpp
+    )
+    target_include_directories(sovereign_baseline_regression PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    set_target_properties(sovereign_baseline_regression PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+    )
+    add_test(NAME sovereign_baseline_regression COMMAND sovereign_baseline_regression)
+    message(STATUS "  ✓ Added sovereign_baseline_regression (ODR/CPU-fallback/subsystem guard)")
+endif()
+
 # ============================================================
 # Test Summary
 # ============================================================
