@@ -24,7 +24,7 @@
 #include "../modules/native_memory.hpp"
 #include "../security/InputSanitizer.h"
 #include "../vsix_native_converter.hpp"
-#include "IDEConfig.h"
+#include "../config/IDEConfig.h"
 #include "IDELogger.h"
 #include "TitanIPC.h"
 #include "Win32IDE.h"
@@ -1888,6 +1888,21 @@ void AgenticBridge::SetModel(const std::string& modelName)
         setenv("RAWRXD_NATIVE_MODEL_PATH", modelName.c_str(), 1);
 #endif
         LOG_INFO("Set RAWRXD_NATIVE_MODEL_PATH to: " + modelName);
+
+        // Load model into shared CPU inference engine so agentic bridge can use it
+        auto cpuEng = SharedCpuEngine();
+        if (cpuEng && !cpuEng->IsModelLoaded())
+        {
+            LOG_INFO("[AgenticBridge] Loading model into CPUInferenceEngine: " + modelName);
+            if (!cpuEng->LoadModel(modelName))
+            {
+                LOG_WARNING("[AgenticBridge] CPUInferenceEngine::LoadModel failed for: " + modelName);
+            }
+            else
+            {
+                LOG_INFO("[AgenticBridge] CPUInferenceEngine loaded model successfully");
+            }
+        }
 
 #ifdef _WIN32
         std::string titanErr;
