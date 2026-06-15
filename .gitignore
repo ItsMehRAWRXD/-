@@ -1,0 +1,28 @@
+# Object files
+*.obj
+*.o
+
+# Executables
+*.exe
+*.dll
+
+# Build artifacts
+*.pdb
+*.ilk
+*.map
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.sln
+*.vcxproj*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+*.tmp
+*.temp
+*.log
