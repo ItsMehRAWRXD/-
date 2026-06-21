@@ -1,27 +1,48 @@
 #include "UnifiedAutocompleteEngine.h"
 #include "../semantic_index/SemanticCodeIndex.h"
+#include "../semantic_index/CodeEmbedder.h"
 #include "../ast_parser/ASTContextProvider.h"
 
 #include <chrono>
 #include <algorithm>
 #include <unordered_set>
+#include <future>
+#include <cmath>
 
 namespace rawrxd {
 
-// PIMPL implementation
+// Fusion weights for hybrid retrieval
+constexpr float TRIE_WEIGHT = 0.75f;      // Alpha: favor exact matches
+constexpr float SEMANTIC_WEIGHT = 0.25f;  // 1 - Alpha: semantic boost
+constexpr float SEMANTIC_THRESHOLD = 0.7f;  // Minimum cosine similarity
+constexpr size_t MAX_TRIE_RESULTS = 10;   // Skip semantic if trie has enough
+constexpr float LATENCY_BUDGET_MS = 3.5f;   // P95 hard limit
+
+// PIMPL implementation with hybrid retrieval support
 struct UnifiedAutocompleteEngine::Impl {
     UnifiedAutocompleteConfig config;
     
     // Tier backends
     std::unique_ptr<SemanticCodeIndex> semantic_index;
+    std::unique_ptr<CodeEmbedder> code_embedder;
     std::unique_ptr<ASTContextProvider> ast_provider;
     
     // Statistics
     Stats stats;
     float last_latency_ms = 0.0f;
+    float last_trie_latency_ms = 0.0f;
+    float last_semantic_latency_ms = 0.0f;
     
     // Trie index (simplified - would connect to existing SymbolIndex)
     std::unordered_map<std::string, std::vector<std::string>> trie_index;
+    
+    // Embedding cache for frequently accessed contexts (L1 cache)
+    struct CacheEntry {
+        std::vector<float> embedding;
+        std::chrono::steady_clock::time_point timestamp;
+    };
+    std::unordered_map<std::string, CacheEntry> embedding_cache;
+    static constexpr size_t MAX_CACHE_SIZE = 1000;
     
     explicit Impl(const UnifiedAutocompleteConfig& cfg) : config(cfg) {}
     
@@ -30,12 +51,60 @@ struct UnifiedAutocompleteEngine::Impl {
             SemanticIndexConfig sem_cfg;
             semantic_index = std::make_unique<SemanticCodeIndex>(sem_cfg);
             semantic_index->initialize();
+            
+            // Initialize CodeEmbedder for semantic search
+            EmbedderConfig embed_cfg;
+            embed_cfg.model_path = config.model_path;
+            embed_cfg.embedding_dimension = 384;
+            embed_cfg.intra_op_threads = 2;  // Limit threads for latency
+            embed_cfg.inter_op_threads = 1;
+            code_embedder = std::make_unique<CodeEmbedder>(embed_cfg);
         }
         
         if (config.enable_ast) {
             ASTParserConfig ast_cfg;
             ast_provider = std::make_unique<ASTContextProvider>(ast_cfg);
         }
+    }
+    
+    // Check if query is complex enough to warrant semantic search
+    bool is_complex_request(const CursorContext& cursor) {
+        // Complex if: longer than 3 chars, contains spaces, or is natural language-like
+        if (cursor.current_word.length() > 3) return true;
+        if (cursor.current_word.find(' ') != std::string::npos) return true;
+        
+        // Complex if after dot/arrow (member access patterns)
+        if (cursor.is_after_dot || cursor.is_after_arrow) return true;
+        
+        // Complex if in type context
+        if (cursor.is_type_context) return true;
+        
+        return false;
+    }
+    
+    // Get or compute embedding with caching
+    std::vector<float> get_embedding(const std::string& context) {
+        auto it = embedding_cache.find(context);
+        if (it != embedding_cache.end()) {
+            return it->second.embedding;
+        }
+        
+        // Compute new embedding
+        std::vector<float> embedding;
+        if (code_embedder) {
+            embedding = code_embedder->Embed(context);
+        }
+        
+        // Cache if valid
+        if (!embedding.empty()) {
+            if (embedding_cache.size() >= MAX_CACHE_SIZE) {
+                // Simple LRU: clear half the cache
+                embedding_cache.clear();
+            }
+            embedding_cache[context] = {embedding, std::chrono::steady_clock::now()};
+        }
+        
+        return embedding;
     }
     
     // Simple trie lookup (stub - would use actual SymbolIndex)
@@ -49,6 +118,7 @@ struct UnifiedAutocompleteEngine::Impl {
                     comp.text = val;
                     comp.label = val;
                     comp.detail = "Trie match";
+                    // Normalize trie score to 0-1 range
                     comp.score = 1.0f - (static_cast<float>(key.length() - prefix.length()) / 100.0f);
                     comp.source = QueryType::FAST_PREFIX;
                     results.push_back(comp);
@@ -127,15 +197,62 @@ std::vector<UnifiedCompletion> UnifiedAutocompleteEngine::get_completions(const 
     auto start = std::chrono::steady_clock::now();
     QueryType query_type = classify_query(cursor);
     
-    // Query appropriate backends based on classification
+    // Phase 17C.4: Hybrid Retrieval with Latency Guard
+    // Always start with fast trie search
     auto trie_results = get_trie_completions(cursor);
-    auto semantic_results = get_semantic_completions(cursor);
-    auto ast_results = get_ast_completions(cursor);
     
-    // Merge and deduplicate
-    results = merge_results(std::move(trie_results), 
-                           std::move(semantic_results), 
-                           std::move(ast_results));
+    // Check if we have enough high-confidence trie results
+    size_t high_confidence_trie = std::count_if(
+        trie_results.begin(), trie_results.end(),
+        [](const UnifiedCompletion& c) { return c.score > 0.9f; }
+    );
+    
+    // Early termination: if trie has enough exact matches, skip semantic
+    if (high_confidence_trie >= MAX_TRIE_RESULTS) {
+        results = trie_results;
+        if (results.size() > static_cast<size_t>(m_config.max_completions)) {
+            results.resize(m_config.max_completions);
+        }
+    } else {
+        // Parallel query: Trie + Semantic (with timeout)
+        auto trie_future = std::async(std::launch::async, [trie_results]() {
+            return trie_results;
+        });
+        
+        // Capture cursor by value to avoid reference issues
+        CursorContext cursor_copy = cursor;
+        auto semantic_future = std::async(std::launch::async, [this, cursor_copy]() {
+            return get_semantic_completions(cursor_copy);
+        });
+        
+        // Wait for trie (should be instant)
+        auto trie_res = trie_future.get();
+        
+        // Wait for semantic with timeout (remaining budget)
+        auto elapsed = std::chrono::steady_clock::now() - start;
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() / 1000.0f;
+        float remaining_budget = LATENCY_BUDGET_MS - elapsed_ms;
+        
+        std::vector<UnifiedCompletion> semantic_res;
+        if (remaining_budget > 0.5f) {  // Only if we have >0.5ms left
+            auto status = semantic_future.wait_for(
+                std::chrono::microseconds(static_cast<long>(remaining_budget * 1000))
+            );
+            if (status == std::future_status::ready) {
+                semantic_res = semantic_future.get();
+            }
+            // If timeout, semantic_res stays empty (graceful degradation)
+        }
+        
+        // Weighted fusion of results
+        results = fuse_results(trie_res, semantic_res);
+    }
+    
+    // Add AST completions if context-aware query
+    if (query_type == QueryType::CONTEXT_AWARE) {
+        auto ast_results = get_ast_completions(cursor);
+        results = merge_with_ast(results, ast_results);
+    }
     
     // Update statistics
     auto elapsed = std::chrono::steady_clock::now() - start;
@@ -260,6 +377,90 @@ std::vector<UnifiedCompletion> UnifiedAutocompleteEngine::merge_results(
               [](const UnifiedCompletion& a, const UnifiedCompletion& b) {
                   return a.score > b.score;
               });
+    
+    // Limit results
+    if (merged.size() > static_cast<size_t>(m_config.max_completions)) {
+        merged.resize(m_config.max_completions);
+    }
+    
+    return merged;
+}
+
+// Phase 17C.4: Weighted Fusion of Trie and Semantic Results
+// Formula: Score_final = α * Score_trie + (1-α) * Score_semantic
+std::vector<UnifiedCompletion> UnifiedAutocompleteEngine::fuse_results(
+    const std::vector<UnifiedCompletion>& trie_results,
+    const std::vector<UnifiedCompletion>& semantic_results) {
+    
+    std::vector<UnifiedCompletion> fused;
+    std::unordered_map<std::string, UnifiedCompletion> result_map;
+    
+    // Add trie results with weight
+    for (const auto& trie : trie_results) {
+        UnifiedCompletion comp = trie;
+        comp.score *= TRIE_WEIGHT;  // Apply trie weight
+        result_map[comp.text] = comp;
+    }
+    
+    // Merge semantic results with weight
+    for (const auto& sem : semantic_results) {
+        auto it = result_map.find(sem.text);
+        if (it != result_map.end()) {
+            // Result exists in both: weighted fusion
+            it->second.score = (it->second.score * TRIE_WEIGHT) + 
+                              (sem.score * SEMANTIC_WEIGHT);
+            it->second.source = QueryType::SEMANTIC;  // Mark as hybrid
+        } else {
+            // New semantic result
+            UnifiedCompletion comp = sem;
+            comp.score *= SEMANTIC_WEIGHT;
+            result_map[comp.text] = comp;
+        }
+    }
+    
+    // Convert map back to vector
+    for (auto& [text, comp] : result_map) {
+        (void)text;  // Unused, key is already in comp.text
+        fused.push_back(comp);
+    }
+    
+    // Sort by fused score descending
+    std::sort(fused.begin(), fused.end(),
+              [](const UnifiedCompletion& a, const UnifiedCompletion& b) {
+                  return a.score > b.score;
+              });
+    
+    // Limit results
+    if (fused.size() > static_cast<size_t>(m_config.max_completions)) {
+        fused.resize(m_config.max_completions);
+    }
+    
+    return fused;
+}
+
+// Phase 17C.4: Merge AST results with existing results (AST gets priority)
+std::vector<UnifiedCompletion> UnifiedAutocompleteEngine::merge_with_ast(
+    const std::vector<UnifiedCompletion>& existing,
+    const std::vector<UnifiedCompletion>& ast_results) {
+    
+    std::vector<UnifiedCompletion> merged;
+    std::unordered_set<std::string> seen;
+    
+    // First add AST results (highest priority)
+    for (const auto& ast : ast_results) {
+        if (seen.find(ast.text) == seen.end()) {
+            merged.push_back(ast);
+            seen.insert(ast.text);
+        }
+    }
+    
+    // Then add existing results (if not duplicate)
+    for (const auto& ex : existing) {
+        if (seen.find(ex.text) == seen.end()) {
+            merged.push_back(ex);
+            seen.insert(ex.text);
+        }
+    }
     
     // Limit results
     if (merged.size() > static_cast<size_t>(m_config.max_completions)) {

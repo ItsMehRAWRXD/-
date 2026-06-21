@@ -69,6 +69,9 @@ struct UnifiedAutocompleteConfig {
     bool enable_semantic = true;
     bool enable_ast = true;
     bool enable_trie = true;
+    
+    // Phase 17C.4: Model path for CodeEmbedder
+    std::string model_path;  // Path to ONNX model (e.g., "models/all-MiniLM-L6-v2.onnx")
 };
 
 /**
@@ -147,7 +150,15 @@ private:
     std::vector<UnifiedCompletion> get_semantic_completions(const CursorContext& cursor);
     std::vector<UnifiedCompletion> get_ast_completions(const CursorContext& cursor);
     
-    // Merge and deduplicate results
+    // Phase 17C.4: Hybrid retrieval methods
+    std::vector<UnifiedCompletion> fuse_results(
+        const std::vector<UnifiedCompletion>& trie_results,
+        const std::vector<UnifiedCompletion>& semantic_results);
+    std::vector<UnifiedCompletion> merge_with_ast(
+        const std::vector<UnifiedCompletion>& existing,
+        const std::vector<UnifiedCompletion>& ast_results);
+    
+    // Legacy merge (deprecated in favor of fuse_results)
     std::vector<UnifiedCompletion> merge_results(
         std::vector<UnifiedCompletion>&& trie_results,
         std::vector<UnifiedCompletion>&& semantic_results,
