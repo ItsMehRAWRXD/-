@@ -99,6 +99,15 @@ public:
     bool is_running() const { return m_running.load(); }
     
     /**
+     * @brief Set handler for real-time feedback processing
+     * @param handler Callback invoked for each entry (before WAL flush)
+     * 
+     * Phase 18B: Wire to AdaptiveFusionEngine for online learning
+     */
+    using FeedbackHandler = std::function<void(const FeedbackEntry&)>;
+    void SetHandler(FeedbackHandler handler);
+    
+    /**
      * @brief Shutdown collector and flush remaining entries
      */
     void shutdown();
@@ -125,6 +134,10 @@ private:
     // Background thread
     std::thread m_worker;
     std::atomic<bool> m_running{true};
+    
+    // Phase 18B: Real-time handler for fusion engine
+    FeedbackHandler m_handler;
+    mutable std::mutex m_handler_mutex;
     
     // WAL configuration
     static constexpr size_t BATCH_SIZE = 100;      // Flush every N entries
