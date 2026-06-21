@@ -1666,6 +1666,7 @@ option(RAWR_ENABLE_SEMANTIC_INDEX "Enable FAISS/HNSW semantic code indexing" ON)
 if(RAWR_ENABLE_SEMANTIC_INDEX)
     message(STATUS "[Phase 17C] Semantic Index integration enabled")
     add_subdirectory(src/semantic_index)
+    add_subdirectory(src/completion)  # Phase 17C.2: CompletionRouter
     set(RAWR_HAS_SEMANTIC_INDEX ON)
 else()
     message(STATUS "[Phase 17C] Semantic Index integration disabled")
