@@ -4,11 +4,13 @@
 set(LORA_SOURCES
     AdapterRegistry.cpp
     AdapterTrainer.cpp
+    LoRAAdapterManager.cpp
 )
 
 set(LORA_HEADERS
     AdapterRegistry.h
     AdapterTrainer.h
+    LoRAAdapterManager.h
 )
 
 add_library(rawrxd_lora STATIC ${LORA_SOURCES} ${LORA_HEADERS})

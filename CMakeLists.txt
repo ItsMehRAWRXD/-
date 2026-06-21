@@ -1695,6 +1695,18 @@ else()
     set(RAWR_HAS_ADAPTIVE_FUSION OFF)
 endif()
 
+# Phase 18C: LoRA Adapter System
+option(RAWR_ENABLE_LORA "Enable Low-Rank Adaptation for personalized embeddings" ON)
+
+if(RAWR_ENABLE_LORA)
+    message(STATUS "[Phase 18C] LoRA Adapter System (Personalized Embeddings) enabled")
+    add_subdirectory(src/lora)
+    set(RAWR_HAS_LORA ON)
+else()
+    message(STATUS "[Phase 18C] LoRA Adapter System disabled")
+    set(RAWR_HAS_LORA OFF)
+endif()
+
 # =============================================================================
 # Reverse Engineering Suite (sub-module)
 # =============================================================================
