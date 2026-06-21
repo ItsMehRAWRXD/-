@@ -272,7 +272,7 @@ SIZE CallStackPanel::GetPreferredSize() const {
     size_t frameCount = pImpl_->frames_.size();
     size_t minFrames = 5;
     size_t displayFrames = (frameCount > minFrames) ? frameCount : minFrames;
-    return { 400, static_cast<LONG>(displayFrames * pImpl_>config_.rowHeight) };
+    return { 400, static_cast<LONG>(displayFrames * pImpl_->config_.rowHeight) };
 }
 
 void CallStackPanel::SetSize(int width, int height) {
