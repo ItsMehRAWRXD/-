@@ -202,13 +202,6 @@ class SymbolResolver {
 public:
     virtual ~SymbolResolver() = default;
     
-    virtual bool Initialize(const std::wstring& symbolPath) = 0;
-    virtual void Shutdown() = 0;
-    
-    virtual std::optional<uint64_t> ResolveSymbol(const std::wstring& symbolName) = 0;
-    virtual std::optional<SymbolInfo> ResolveAddress(uint64_t address) = 0;
-    virtual bool LoadModuleSymbols(const std::wstring& modulePath, uint64_t baseAddress) = 0;
-    
     struct SymbolInfo {
         std::wstring name;
         std::wstring module;
@@ -217,6 +210,13 @@ public:
         std::wstring filePath;
         uint32_t lineNumber = 0;
     };
+    
+    virtual bool Initialize(const std::wstring& symbolPath) = 0;
+    virtual void Shutdown() = 0;
+    
+    virtual std::optional<uint64_t> ResolveSymbol(const std::wstring& symbolName) = 0;
+    virtual std::optional<SymbolInfo> ResolveAddress(uint64_t address) = 0;
+    virtual bool LoadModuleSymbols(const std::wstring& modulePath, uint64_t baseAddress) = 0;
 };
 
 // ============================================================================
