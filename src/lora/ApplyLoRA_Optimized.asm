@@ -49,8 +49,7 @@ ENDM
 ; Clobbers: YMM0-YMM14, RAX-RDX
 ; ============================================================================
 COMPUTE_LORA_TILE MACRO
-    LOCAL row_loop, col_loop, unroll_0, unroll_1, unroll_2, unroll_3
-    LOCAL next_row, tile_done
+    LOCAL row_loop, col_loop, process_remainder, compute_output, tile_done
     
     ; Outer loop: over output rows (hidden_dim)
 row_loop:
@@ -85,10 +84,11 @@ col_loop:
     vbroadcastss ymm7, dword ptr [r10 + rdx*4 + 3*4]
     
     ; Load A[row, r+0..r+3] - 4 consecutive elements
-    vmovups ymm8,  [r8 + rdx*4 + 0*32]   ; A[row][r:r+7]
-    vmovups ymm9,  [r8 + rdx*4 + 1*32]   ; A[row][r+8:r+15]
-    vmovups ymm10, [r8 + rdx*4 + 2*32]   ; etc
-    vmovups ymm11, [r8 + rdx*4 + 3*32]
+    ; Use 32-bit index for scaled addressing
+    vmovups ymm8,  [r8 + rdx*4]           ; A[row][r:r+7]
+    vmovups ymm9,  [r8 + rdx*4 + 32]      ; A[row][r+8:r+15]
+    vmovups ymm10, [r8 + rdx*4 + 64]      ; etc
+    vmovups ymm11, [r8 + rdx*4 + 96]
     
     ; FMA: acc += A[row][r] * input[r] (4 independent chains)
     vfmadd231ps ymm0, ymm8,  ymm4   ; acc0 += A[row][r+0..7] * input[r+0]
@@ -142,8 +142,10 @@ compute_output:
     vmovups [r11], ymm0           ; Store back
     
     ; Advance pointers
-    add     r8,  r14d * 4         ; Next row of A
-    add     r9,  r14d * 4         ; Next row of B
+    mov     eax, r14d
+    shl     rax, 2                ; rank * 4
+    add     r8, rax               ; Next row of A
+    add     r9, rax               ; Next row of B
     add     r11, 32               ; Next 8 output elements
     dec     r12d
     jmp     row_loop
@@ -226,9 +228,13 @@ tile_loop:
     mov     eax, r12d
     dec     eax
     jz      skip_prefetch
-    lea     rax, [r8 + TILE_SIZE_A * r14 * 4]
+    mov     rax, r14
+    imul    rax, TILE_SIZE_A * 4
+    add     rax, r8
     PREFETCH_MATRIX_BLOCK rax
-    lea     rax, [r9 + TILE_SIZE_B * r14 * 4]
+    mov     rax, r14
+    imul    rax, TILE_SIZE_B * 4
+    add     rax, r9
     PREFETCH_MATRIX_BLOCK rax
     
 skip_prefetch:

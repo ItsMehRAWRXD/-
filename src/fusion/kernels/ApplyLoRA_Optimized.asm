@@ -196,8 +196,9 @@ ApplyLoRA_Optimized PROC FRAME
     vhaddps xmm1, xmm1, xmm1                      ; Horizontal add
     vhaddps xmm1, xmm1, xmm1                      ; Final horizontal add
     
-    ; Store result in temp buffer
-    movss   REAL4 PTR lora_temp_buffer[r8*4], xmm1
+    ; Store result in temp buffer (use R15 as temp buffer pointer)
+    lea     rax, lora_temp_buffer
+    movss   REAL4 PTR [rax + r8*4], xmm1
     
     ; Move to next row of A
     mov     eax, r13d
@@ -243,7 +244,8 @@ ApplyLoRA_Optimized PROC FRAME
     jge     @@rank_done
     
     ; Load x'[rank] once, broadcast to all accumulators
-    vbroadcastss zmm9, REAL4 PTR lora_temp_buffer[r9*4]
+    lea     rcx, lora_temp_buffer
+    vbroadcastss zmm9, REAL4 PTR [rcx + r9*4]
     
     ; B is (d x r), so B[row][rank] = B + (row * r + rank) * 4
     ; For unrolled output, we compute 8 rows at once
@@ -354,7 +356,8 @@ ApplyLoRA_Optimized PROC FRAME
     add     eax, r9d
     
     vbroadcastss zmm2, REAL4 PTR [r15 + rax*4]
-    vbroadcastss zmm3, REAL4 PTR lora_temp_buffer[r9*4]
+    lea     rcx, lora_temp_buffer
+    vbroadcastss zmm3, REAL4 PTR [rcx + r9*4]
     vfmadd231ps zmm1, zmm2, zmm3
     
     inc     r9d
@@ -458,7 +461,8 @@ ApplyLoRA_Baseline PROC FRAME
     vhaddps xmm1, xmm1, xmm1
     vhaddps xmm1, xmm1, xmm1
     
-    movss   REAL4 PTR lora_temp_buffer[r8*4], xmm1
+    lea     rax, lora_temp_buffer
+    movss   REAL4 PTR [rax + r8*4], xmm1
     
     mov     eax, r13d
     shl     eax, 2
@@ -485,7 +489,8 @@ ApplyLoRA_Baseline PROC FRAME
     add     eax, r9d
     
     vbroadcastss zmm2, REAL4 PTR [r15 + rax*4]
-    vbroadcastss zmm3, REAL4 PTR lora_temp_buffer[r9*4]
+    lea     rcx, lora_temp_buffer
+    vbroadcastss zmm3, REAL4 PTR [rcx + r9*4]
     vfmadd231ps zmm1, zmm2, zmm3
     
     inc     r9d

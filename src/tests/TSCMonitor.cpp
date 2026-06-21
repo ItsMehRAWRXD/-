@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
+#include <mutex>
+#include <iomanip>
 
 namespace RawrXD::E2E {
 
@@ -35,7 +37,7 @@ TSCMonitor::Scope::~Scope() {
     }
 }
 
-LatencyReport TSCMonitor::GetReport() {
+TSCMonitor::LatencyReport TSCMonitor::GetReport() {
     LatencyReport report;
     
     // Flush remaining samples

@@ -1,7 +1,7 @@
 @echo off
 REM Phase 20: Standalone Benchmark Build Script
 REM Bypasses CMake integration debt, builds minimal benchmark harness
-REM Requires: Visual Studio 2022 (or ml64.exe/cl.exe in PATH)
+REM Requires: ml64.exe (MASM) and g++ (MinGW)
 
 setlocal EnableDelayedExpansion
 
@@ -11,7 +11,9 @@ echo ============================================
 echo.
 
 REM Configuration
-set "MASM_PATH=C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717\bin\Hostx64\x64\ml64.exe"
+set "VS_TOOLS=C:\VS2022Enterprise\VC\Tools\MSVC\14.50.35717"
+set "MASM_PATH=%VS_TOOLS%\bin\Hostx64\x64\ml64.exe"
+set "CXX_PATH=C:\ProgramData\mingw64\mingw64\bin\g++.exe"
 set "SRC_DIR=%~dp0..\src"
 set "TEST_DIR=%~dp0"
 set "BUILD_DIR=%~dp0..\build-benchmark"
@@ -19,11 +21,19 @@ set "BUILD_DIR=%~dp0..\build-benchmark"
 REM Check for ml64.exe
 if not exist "%MASM_PATH%" (
     echo ERROR: ml64.exe not found at %MASM_PATH%
-    echo Please update MASM_PATH in this script or ensure VS2022 is installed
+    echo Please update VS_TOOLS in this script or ensure VS2022 is installed
+    exit /b 1
+)
+
+REM Check for g++
+if not exist "%CXX_PATH%" (
+    echo ERROR: g++.exe not found at %CXX_PATH%
+    echo Please install MinGW or update CXX_PATH
     exit /b 1
 )
 
 echo MASM: %MASM_PATH%
+echo CXX:  %CXX_PATH%
 echo.
 
 REM Create build directory
@@ -59,9 +69,9 @@ echo.
 
 REM Step 3: Compile TSCMonitor (from Phase 19)
 echo [3/4] Compiling TSCMonitor.cpp...
-cl.exe /c /O2 /arch:AVX512 /Fo"%BUILD_DIR%\TSCMonitor.obj" ^
-    /I"%SRC_DIR%" ^
-    /D_CRT_SECURE_NO_WARNINGS ^
+"%CXX_PATH%" -c -O3 -mavx512f -mavx512vl -o "%BUILD_DIR%\TSCMonitor.o" ^
+    -I"%SRC_DIR%" ^
+    -D_CRT_SECURE_NO_WARNINGS ^
     "%SRC_DIR%\tests\TSCMonitor.cpp" 2>&1
 
 if errorlevel 1 (
@@ -69,18 +79,18 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo     OK: %BUILD_DIR%\TSCMonitor.obj
+echo     OK: %BUILD_DIR%\TSCMonitor.o
 echo.
 
 REM Step 4: Compile and link benchmark
 echo [4/4] Building benchmark_kernel.exe...
-cl.exe /O2 /arch:AVX512 /Fe"%BUILD_DIR%\benchmark_kernel.exe" ^
-    /I"%SRC_DIR%" ^
-    /D_CRT_SECURE_NO_WARNINGS ^
+"%CXX_PATH%" -O3 -mavx512f -mavx512vl -o "%BUILD_DIR%\benchmark_kernel.exe" ^
+    -I"%SRC_DIR%" ^
+    -D_CRT_SECURE_NO_WARNINGS ^
     "%TEST_DIR%\benchmark_kernel.cpp" ^
-    "%BUILD_DIR%\TSCMonitor.obj" ^
+    "%BUILD_DIR%\TSCMonitor.o" ^
     "%BUILD_DIR%\ApplyLoRA_Optimized.obj" ^
-    /link /SUBSYSTEM:CONSOLE /MACHINE:X64 2>&1
+    -static-libgcc -static-libstdc++ 2>&1
 
 if errorlevel 1 (
     echo ERROR: Failed to build benchmark
