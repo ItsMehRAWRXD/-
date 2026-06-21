@@ -1,5 +1,5 @@
-#include "../telemetry/FeedbackCollector.h"
-#include "../fusion/AdaptiveFusionEngine.h"
+#include "telemetry/FeedbackCollector.h"
+#include "fusion/AdaptiveFusionEngine.h"
 #include <iostream>
 #include <cassert>
 #include <chrono>
@@ -11,8 +11,8 @@ namespace RawrXD {
 void RunFusionIntegrationTest() {
     std::cout << "[Test] Starting Fusion Engine Integration Test..." << std::endl;
 
-    auto& collector = FeedbackCollector::instance();
-    auto& fusion = AdaptiveFusionEngine::instance();
+    auto& collector = Telemetry::FeedbackCollector::instance();
+    auto& fusion = Fusion::AdaptiveFusionEngine::instance();
 
     // Initialize the fusion engine
     Fusion::AdaptiveFusionConfig config;
