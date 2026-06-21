@@ -1,5 +1,5 @@
 # RawrXD IDE - Comprehensive Feature Matrix
-**Version:** 1.0-PHASE21  
+**Version:** 1.0-PHASE22  
 **Last Updated:** 2026-06-21  
 **Total Source Files:** 5,189 (2,794 .cpp, 1,823 .h/.hpp, 572 .asm)
 
@@ -142,11 +142,11 @@
 |---------|--------|----------------|-------|
 | **Syntax Highlighting** | ✅ Complete | syntax_highlighter.cpp | Full C++20 support |
 | **Code Completion** | ✅ Complete | CompletionEngine.cpp | IntelliSense-style |
-| **Error Detection** | 🟡 Partial | diagnostics_provider.cpp | LSP-based, needs wiring |
-| **Warning Detection** | 🟡 Partial | diagnostics_provider.cpp | LSP-based |
+| **Error Detection** | ✅ Complete | lsp_client_wired.cpp | Phase 22: LSP wired to ProblemsPanel |
+| **Warning Detection** | ✅ Complete | lsp_client_wired.cpp | Phase 22: Real-time diagnostics |
 | **Go to Definition** | ✅ Complete | ast_completion_bridge.cpp | AST-based navigation |
 | **Find All References** | 🟡 Partial | ast_completion_bridge.cpp | Basic implementation |
-| **Rename Symbol** | 🟡 Partial | refactoring_plugin.cpp | UI exists, needs backend |
+| **Rename Symbol** | ✅ Complete | lsp_client_wired.cpp | Phase 22: LSP refactor support |
 | **Extract Function** | 🔴 Missing | - | Not implemented |
 | **Extract Variable** | 🔴 Missing | - | Not implemented |
 | **Code Formatting** | 🟡 Partial | format_router.cpp | Basic formatting |
@@ -331,6 +331,39 @@
 | **Model Switching** | ✅ Complete | model_router_adapter.cpp | Dynamic routing |
 | **Streaming Responses** | ✅ Complete | streaming_completion_engine.cpp | Real-time tokens |
 | **Token Counting** | ✅ Complete | ai_tokenizer.cpp | Usage tracking |
+
+---
+
+## 6.5 LSP / DIAGNOSTICS (Phase 22 Complete)
+
+### 6.5.1 LSP Client Infrastructure
+| Feature | Status | Implementation | Notes |
+|---------|--------|----------------|-------|
+| **LSP Client Wiring** | ✅ Complete | lsp_client_wired.cpp | JSON-RPC 2.0 over stdio |
+| **Process Management** | ✅ Complete | lsp_client_wired.cpp | Server lifecycle (Windows) |
+| **Reader Thread** | ✅ Complete | lsp_client_wired.cpp | Async message dispatch |
+| **Request/Response** | ✅ Complete | lsp_client_wired.cpp | Thread-safe with timeouts |
+| **File Notifications** | ✅ Complete | lsp_client_wired.cpp | didOpen/didChange/didClose/didSave |
+
+### 6.5.2 Diagnostics Pipeline
+| Feature | Status | Implementation | Notes |
+|---------|--------|----------------|-------|
+| **Diagnostic Consumer** | ✅ Complete | diagnostic_consumer.cpp | Thread-safe aggregation |
+| **Problems Aggregator** | ✅ Complete | problems_aggregator.cpp | Unified LSP/SAST/SCA/Build |
+| **Problems Panel** | ✅ Complete | Win32IDE_ProblemsPanel.cpp | Real-time error display |
+| **Auto-Refresh** | ✅ Complete | Win32IDE_ProblemsPanel.cpp | 2-second polling timer |
+| **Error Navigation** | ✅ Complete | Win32IDE_ProblemsPanel.cpp | Click to jump to line |
+
+### 6.5.3 LSP Features
+| Feature | Status | Implementation | Notes |
+|---------|--------|----------------|-------|
+| **Hover Info** | ✅ Complete | lsp_client_wired.cpp | Symbol documentation |
+| **Go to Definition** | ✅ Complete | lsp_client_wired.cpp | Symbol navigation |
+| **Auto-Complete** | ✅ Complete | lsp_client_wired.cpp | Ghost-text support |
+| **Rename Symbol** | ✅ Complete | lsp_client_wired.cpp | Refactor tool wiring |
+| **Diagnostic Publishing** | ✅ Complete | lsp_client_wired.cpp | Server → UI pipeline |
+
+**Phase 22 Achievement:** The IDE is now **self-diagnostic**. Build errors, LSP diagnostics, and static analysis results all flow to the unified ProblemsPanel with real-time updates.
 
 ---
 
@@ -540,22 +573,22 @@
 1. ✅ ~~CMake MASM Integration~~ - **COMPLETE** (Phase 21)
 2. ✅ ~~LoRAContext Offset Verification~~ - **COMPLETE** (Phase 21)  
 3. ✅ ~~ASM Error Parsing~~ - **COMPLETE** (Phase 22)
-4. Debugger Backend Wiring - Complete CDB integration
+4. ✅ ~~LSP Diagnostics Display~~ - **COMPLETE** (Phase 22)
+5. Debugger Backend Wiring - Complete CDB integration
 
 ### P1 (High - Major Impact)
-5. LSP Diagnostics Display - Hook to UI
 6. MASM IntelliSense - Basic completion
 7. Refactoring Tools - Complete rename/extract
-7. Advanced Editor - Multi-cursor, column select
-8. Live Share - Real-time collaboration
+8. Advanced Editor - Multi-cursor, column select
+9. Live Share - Real-time collaboration
 
-### P3 (Low - Future Work)
-9. Remote Development - SSH/Containers
-10. Extension Marketplace - Full ecosystem
-11. Cloud IDE - Codespaces/Gitpod
+### P2 (Medium - Nice to Have)
+10. Remote Development - SSH/Containers
+11. Extension Marketplace - Full ecosystem
+12. Cloud IDE - Codespaces/Gitpod
 
 ---
 
-*Document Version: 1.0*  
+*Document Version: 1.0-PHASE22*  
 *Generated: 2026-06-21*  
 *Source: d:\rawrxd\src\ (5,189 files)*
