@@ -1683,6 +1683,18 @@ else()
     set(RAWR_HAS_TELEMETRY OFF)
 endif()
 
+# Phase 18B: Adaptive Fusion Engine
+option(RAWR_ENABLE_ADAPTIVE_FUSION "Enable online learning for Trie/Semantic fusion weights" ON)
+
+if(RAWR_ENABLE_ADAPTIVE_FUSION AND RAWR_ENABLE_TELEMETRY)
+    message(STATUS "[Phase 18B] Adaptive Fusion Engine (Online Learning) enabled")
+    add_subdirectory(src/fusion)
+    set(RAWR_HAS_ADAPTIVE_FUSION ON)
+else()
+    message(STATUS "[Phase 18B] Adaptive Fusion Engine disabled (requires telemetry)")
+    set(RAWR_HAS_ADAPTIVE_FUSION OFF)
+endif()
+
 # =============================================================================
 # Reverse Engineering Suite (sub-module)
 # =============================================================================
