@@ -75,6 +75,10 @@ EXTERN GetLastError:PROC
 EXTERN GetProcessHeap:PROC
 EXTERN HeapAlloc:PROC
 EXTERN HeapFree:PROC
+EXTERN CreateEventW:PROC
+EXTERN CreateIoCompletionPort:PROC
+EXTERN CreateMutexW:PROC
+EXTERN SetEvent:PROC
 
 ; msvcrt string helpers
 EXTERN sprintf_s:PROC

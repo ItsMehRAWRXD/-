@@ -1,18 +1,18 @@
 ; RawrXD_Sidebar_x64.asm
-; Pure Win64 ABI — Zero Qt, Zero CRT, Zero masm64 SDK
+; Pure Win64 ABI ? Zero Qt, Zero CRT, Zero masm64 SDK
 ; Sidebar subsystems: Logger, Debug Engine, Tree Virtualization, DWM Dark Mode
 ;
 ; Assemble: ml64 /c /FoRawrXD_Sidebar_x64.obj RawrXD_Sidebar_x64.asm
 ; Link:     link RawrXD_Sidebar_x64.obj kernel32.lib user32.lib dwmapi.lib
 ;
 ; Exports (extern "C" from C++):
-;   RawrXD_Logger_Init      — Open log file + capture tick baseline
-;   RawrXD_Logger_Write     — Format & emit to OutputDebugString + file
-;   RawrXD_Debug_Attach     — DebugActiveProcess wrapper
-;   RawrXD_Debug_Wait       — WaitForDebugEvent wrapper
-;   RawrXD_Debug_Step       — Single-step via trap flag (hardware)
-;   RawrXD_Tree_LazyLoad    — Set TVS_HASBUTTONS|LINES|LINESATROOT + EX_DOUBLEBUFFER
-;   RawrXD_DarkMode_Force   — DwmSetWindowAttribute IMMERSIVE_DARK_MODE
+;   RawrXD_Logger_Init      ? Open log file + capture tick baseline
+;   RawrXD_Logger_Write     ? Format & emit to OutputDebugString + file
+;   RawrXD_Debug_Attach     ? DebugActiveProcess wrapper
+;   RawrXD_Debug_Wait       ? WaitForDebugEvent wrapper
+;   RawrXD_Debug_Step       ? Single-step via trap flag (hardware)
+;   RawrXD_Tree_LazyLoad    ? Set TVS_HASBUTTONS|LINES|LINESATROOT + EX_DOUBLEBUFFER
+;   RawrXD_DarkMode_Force   ? DwmSetWindowAttribute IMMERSIVE_DARK_MODE
 
 extrn OutputDebugStringA:proc
 extrn WriteFile:proc
@@ -159,7 +159,7 @@ RawrXD_Logger_Write proc
 
     lea rdi, [rsp+50h]          ; Build output buffer on stack
 
-    ; ── Prefix "[RAWRXD] " ──
+    ; ?? Prefix "[RAWRXD] " ??
     lea rsi, szPrefix
 @@: mov al, [rsi]
     test al, al
@@ -172,7 +172,7 @@ RawrXD_Logger_Write proc
     mov byte ptr [rdi], ' '
     inc rdi
 
-    ; ── Tick delta (16-char hex) ──
+    ; ?? Tick delta (16-char hex) ??
     call GetTickCount64
     sub rax, qwTickBase
     mov rcx, rax
@@ -182,7 +182,7 @@ RawrXD_Logger_Write proc
     mov byte ptr [rdi], ' '
     inc rdi
 
-    ; ── PID (decimal) ──
+    ; ?? PID (decimal) ??
     call GetCurrentProcessId
     mov rcx, rax
     mov rdx, rdi
@@ -191,7 +191,7 @@ RawrXD_Logger_Write proc
     mov byte ptr [rdi], ' '
     inc rdi
 
-    ; ── Level string ──
+    ; ?? Level string ??
     mov rsi, [rsp+28h]
 @@: mov al, [rsi]
     test al, al
@@ -204,7 +204,7 @@ RawrXD_Logger_Write proc
     mov byte ptr [rdi], ' '
     inc rdi
 
-    ; ── Message string ──
+    ; ?? Message string ??
     mov rsi, [rsp+40h]
 @@: mov al, [rsi]
     test al, al
@@ -218,16 +218,16 @@ RawrXD_Logger_Write proc
     mov [rdi], ax
     add rdi, 2
 
-    ; ── Calculate total length ──
+    ; ?? Calculate total length ??
     lea rax, [rsp+50h]
     sub rdi, rax
     mov rbx, rdi                ; rbx = byte count
 
-    ; ── OutputDebugStringA (always) ──
+    ; ?? OutputDebugStringA (always) ??
     lea rcx, [rsp+50h]
     call OutputDebugStringA
 
-    ; ── WriteFile to log (if open) ──
+    ; ?? WriteFile to log (if open) ??
     mov rax, hLogFile
     cmp rax, -1
     je @skip
@@ -246,7 +246,7 @@ RawrXD_Logger_Write proc
 RawrXD_Logger_Write endp
 
 ; =========================================================
-; Debug Engine — Real Hardware Stepping
+; Debug Engine ? Real Hardware Stepping
 ; =========================================================
 
 ; RawrXD_Debug_Attach
@@ -265,8 +265,8 @@ RawrXD_Debug_Attach endp
 ; Returns: BOOL
 RawrXD_Debug_Wait proc
     sub rsp, 28h
-    mov r8, rdx                 ; timeout → r8 (WaitForDebugEvent param 2)
-    mov rdx, rcx                ; lpDebugEvent → rdx (param 1)
+    mov r8, rdx                 ; timeout ? r8 (WaitForDebugEvent param 2)
+    mov rdx, rcx                ; lpDebugEvent ? rdx (param 1)
     call WaitForDebugEvent
     add rsp, 28h
     ret
@@ -298,7 +298,7 @@ RawrXD_Debug_Step proc
     mov rdx, r12
     call SetThreadContext
 
-    ; Resume execution — will break after one instruction
+    ; Resume execution ? will break after one instruction
     mov rcx, rbx
     call ResumeThread
 
@@ -309,7 +309,7 @@ RawrXD_Debug_Step proc
 RawrXD_Debug_Step endp
 
 ; =========================================================
-; Tree Virtualization — Lazy Load Style Setup
+; Tree Virtualization ? Lazy Load Style Setup
 ; RCX = hWndTree (TreeView control handle)
 ; =========================================================
 RawrXD_Tree_LazyLoad proc
@@ -330,7 +330,7 @@ RawrXD_Tree_LazyLoad proc
 
     ; Set extended style: TVS_EX_DOUBLEBUFFER | TVS_EX_FADEINOUTEXPANDOS
     mov rcx, rbx
-    mov rdx, 1100h + 44        ; TVM_SETEXTENDEDSTYLE = TVM_FIRST (0x1100) + 44
+    mov rdx, 1100h + 44        ; TVM_SETEXTENDEDSTYLE = TVM_FIRST (01100h) + 44
     xor r8, r8                  ; mask = 0 (set all)
     mov r9, 44h                 ; TVS_EX_DOUBLEBUFFER(4) | TVS_EX_FADEINOUTEXPANDOS(40)
     call SendMessageA
@@ -341,7 +341,7 @@ RawrXD_Tree_LazyLoad proc
 RawrXD_Tree_LazyLoad endp
 
 ; =========================================================
-; Dark Mode Force — DWM Immersive Dark Mode Attribute
+; Dark Mode Force ? DWM Immersive Dark Mode Attribute
 ; RCX = hWnd
 ; =========================================================
 RawrXD_DarkMode_Force proc
@@ -362,3 +362,4 @@ RawrXD_DarkMode_Force proc
 RawrXD_DarkMode_Force endp
 
 end
+

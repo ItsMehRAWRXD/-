@@ -1,5 +1,5 @@
 ; ============================================================
-; GenesisP0_BuildOrchestrator.asm — Parallel job scheduler for builds
+; GenesisP0_BuildOrchestrator.asm ? Parallel job scheduler for builds
 ; Exports: BuildOrc_Init, BuildOrc_AddJob, BuildOrc_ExecuteParallel, BuildOrc_WaitAll, BuildOrc_Shutdown
 ; ============================================================
 OPTION CASEMAP:NONE
@@ -163,7 +163,7 @@ BuildOrc_ExecuteParallel PROC
 
     ; Create thread
     xor ecx, ecx                ; Security
-    mov edx, 0                  ; Stack size
+    mov edx, 0                  ; Stack m_size
     lea r8, JobThreadProc
     mov r9d, edi                ; Context = job index
     mov QWORD PTR [rsp+20h], 0  ; Creation flags
@@ -261,3 +261,4 @@ BuildOrc_Shutdown PROC
 BuildOrc_Shutdown ENDP
 
 END
+

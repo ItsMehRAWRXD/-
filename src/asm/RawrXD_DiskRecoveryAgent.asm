@@ -10,7 +10,7 @@
 ;          kernel32.lib ntdll.lib user32.lib
 ;
 ; Build (as library kernel linked into RawrXD-Shell):
-;   Included in CMakeLists.txt ASM_KERNEL_SOURCES — exports C-callable procs.
+;   Included in CMakeLists.txt ASM_KERNEL_SOURCES ? exports C-callable procs.
 ;
 ; Pattern: PatchResult (RAX=0 success, RAX=NTSTATUS on error, RDX=detail)
 ; Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
@@ -102,7 +102,7 @@ MAX_BAD_SECTORS          equ 65536    ; Max entries in bad map
 CHECKPOINT_INTERVAL      equ 1000     ; Save progress every N sectors
 
 ; =============================================================================
-; Bridge type enum
+; Bridge m_type enum
 ; =============================================================================
 BRIDGE_UNKNOWN           equ 0
 BRIDGE_JMS567            equ 1
@@ -110,7 +110,7 @@ BRIDGE_NS1066            equ 2
 
 ; =============================================================================
 ; SCSI_PASS_THROUGH_DIRECT (x64 layout, matches Windows SDK)
-; Total size: 56 bytes (without sense data appended)
+; Total m_size: 56 bytes (without sense data appended)
 ; NOTE: ml64 struct layout differs from SDK due to packing.
 ; We use a flat byte buffer and access via offsets for correctness.
 ; =============================================================================
@@ -138,7 +138,7 @@ SENSE_SIZE               equ 32
 SPTD_WITH_SENSE          equ SPTD_TOTAL_SIZE + SENSE_SIZE  ; 88 bytes
 
 ; =============================================================================
-; DISK_RECOVERY_CONTEXT — Tracks the full recovery session
+; DISK_RECOVERY_CONTEXT ? Tracks the full recovery session
 ; =============================================================================
 DISK_RECOVERY_CONTEXT STRUCT 8
     hSource              QWORD   ?   ; Source drive handle
@@ -158,7 +158,7 @@ DISK_RECOVERY_CONTEXT STRUCT 8
 DISK_RECOVERY_CONTEXT ENDS
 
 ; =============================================================================
-; .data — Static strings and global context
+; .data ? Static strings and global context
 ; =============================================================================
 .data
 
@@ -202,18 +202,18 @@ DISK_RECOVERY_CONTEXT ENDS
     szInitError          db "[-] Initialization error.",13,10,0
     szBridgeJMS567       db "[+] Bridge identified: JMicron JMS567",13,10,0
     szBridgeNS1066       db "[+] Bridge identified: Norelsys NS1066",13,10,0
-    szBridgeUnknown      db "[?] Bridge type unknown — generic SCSI mode.",13,10,0
+    szBridgeUnknown      db "[?] Bridge m_type unknown ? generic SCSI mode.",13,10,0
 
     ; Formatting scratch buffer
     align 8
     FmtBuf               db 256 dup(0)
 
 ; =============================================================================
-; .data? — Uninitialized (BSS) data
+; .data? ? Uninitialized (BSS) data
 ; =============================================================================
 .data?
 
-    ; Transfer buffer (page-alignment via align 16 — max for .data? segment)
+    ; Transfer buffer (page-alignment via align 16 ? max for .data? segment)
     align 16
     TransferBuffer       db BUFFER_SIZE dup(?)
 
@@ -230,14 +230,14 @@ DISK_RECOVERY_CONTEXT ENDS
 .code
 
 ; =============================================================================
-; ConsolePrint — Write a null-terminated string to stdout
+; ConsolePrint ? Write a null-terminated string to stdout
 ; RCX = ptr to string
 ; Clobbers: RAX, RCX, RDX, R8, R9
 ; =============================================================================
 ConsolePrint PROC
     push rbx
     push rsi
-    sub  rsp, 40              ; Shadow + local (2 pushes + 40 = 56 ≡ 8+56=64 → 0 mod 16)
+    sub  rsp, 40              ; Shadow + local (2 pushes + 40 = 56 ? 8+56=64 ? 0 mod 16)
 
     mov  rsi, rcx             ; Save string ptr
 
@@ -271,7 +271,7 @@ cp_done:
 ConsolePrint ENDP
 
 ; =============================================================================
-; PrintU64 — Print a QWORD as decimal to console
+; PrintU64 ? Print a QWORD as decimal to console
 ; RCX = value
 ; Clobbers: RAX, RCX, RDX, R8, R9
 ; =============================================================================
@@ -320,7 +320,7 @@ pu64_print:
 PrintU64 ENDP
 
 ; =============================================================================
-; ScsiInquiryQuick — Fast INQUIRY with custom timeout
+; ScsiInquiryQuick ? Fast INQUIRY with custom timeout
 ; RCX = hDevice, EDX = TimeoutMS
 ; Returns: RAX = 0 success, nonzero = GetLastError code
 ; Clobbers: all volatile regs
@@ -332,7 +332,7 @@ ScsiInquiryQuick PROC
 
     push rbx
     push rdi
-    push r12                  ; R12 is non-volatile — must save
+    push r12                  ; R12 is non-volatile ? must save
 
     mov  rbx, rcx             ; hDevice
     mov  r12d, edx            ; Timeout
@@ -359,7 +359,7 @@ ScsiInquiryQuick PROC
     mov  byte ptr  [rdi+SPTD_CDB+0], SCSI_INQUIRY
     mov  byte ptr  [rdi+SPTD_CDB+4], 36             ; Allocation length
 
-    ; DeviceIoControl (8 params: 4 reg + 4 stack → need 64 bytes)
+    ; DeviceIoControl (8 params: 4 reg + 4 stack ? need 64 bytes)
     sub  rsp, 64
     mov  rcx, rbx                                    ; hDevice
     mov  edx, IOCTL_SCSI_PASS_THROUGH_DIRECT         ; dwIoControlCode
@@ -391,9 +391,9 @@ inq_exit:
 ScsiInquiryQuick ENDP
 
 ; =============================================================================
-; WdPingBridge — Identify WD bridge controller type via vendor SCSI commands
+; WdPingBridge ? Identify WD bridge controller m_type via vendor SCSI commands
 ; RCX = hDevice
-; Returns: EAX = BRIDGE_* type (0=None, 1=JMS567, 2=NS1066)
+; Returns: EAX = BRIDGE_* m_type (0=None, 1=JMS567, 2=NS1066)
 ; =============================================================================
 WdPingBridge PROC
     LOCAL sptd_buf[SPTD_WITH_SENSE]:BYTE
@@ -503,7 +503,7 @@ ping_exit:
 WdPingBridge ENDP
 
 ; =============================================================================
-; FindDyingDrive — Scans PhysicalDrive0-15 for WD signature
+; FindDyingDrive ? Scans PhysicalDrive0-15 for WD signature
 ; Returns: EAX = drive number (0-15), or -1 if not found
 ; =============================================================================
 FindDyingDrive PROC
@@ -515,7 +515,7 @@ FindDyingDrive PROC
     push rsi
     push rdi
     push r12
-    sub  rsp, 64              ; 4 pushes (32) + 64 = 96 → 0 mod 16; room for 7-param CreateFileA
+    sub  rsp, 64              ; 4 pushes (32) + 64 = 96 ? 0 mod 16; room for 7-param CreateFileA
 
     mov  driveNum, 0
 
@@ -533,7 +533,7 @@ scan_loop:
     mov  byte ptr [rdi], al
     mov  byte ptr [rdi+1], 0
 
-    ; CreateFileA — NO_BUFFERING prevents Windows metadata probing
+    ; CreateFileA ? NO_BUFFERING prevents Windows metadata probing
     lea  rcx, devPath
     mov  edx, GENERIC_READ
     mov  r8d, FILE_SHARE_READ or FILE_SHARE_WRITE
@@ -556,11 +556,11 @@ scan_loop:
     test eax, eax
     jz   inquiry_ok
 
-    ; Inquiry failed — if timeout, might be our dying drive
+    ; Inquiry failed ? if timeout, might be our dying drive
     cmp  eax, ERROR_SEM_TIMEOUT
     jne  close_next
 
-    ; Timeout → try vendor ping to confirm WD bridge
+    ; Timeout ? try vendor ping to confirm WD bridge
     mov  rcx, hDevice
     call WdPingBridge
     test eax, eax
@@ -569,7 +569,7 @@ scan_loop:
     jmp  close_next
 
 inquiry_ok:
-    ; Inquiry succeeded — still check if it's a WD bridge
+    ; Inquiry succeeded ? still check if it's a WD bridge
     mov  rcx, hDevice
     call WdPingBridge
     test eax, eax
@@ -584,7 +584,7 @@ next_drive:
     jmp  scan_loop
 
 found_it:
-    ; EAX already has bridge type — save it
+    ; EAX already has bridge m_type ? save it
     mov  g_Context.BridgeType, eax
 
     mov  rcx, hDevice
@@ -606,7 +606,7 @@ find_exit:
 FindDyingDrive ENDP
 
 ; =============================================================================
-; ExtractEncryptionKey — Dump AES-256 key from bridge EEPROM
+; ExtractEncryptionKey ? Dump AES-256 key from bridge EEPROM
 ; RCX = ptr to DISK_RECOVERY_CONTEXT
 ; Returns: RAX = 1 success (key in context), 0 = fail
 ; =============================================================================
@@ -616,12 +616,12 @@ ExtractEncryptionKey PROC
     LOCAL bytesRet:DWORD
 
     push rbx
-    push rsi                  ; RSI used by rep movsb — must save
+    push rsi                  ; RSI used by rep movsb ? must save
     push rdi
 
     mov  rbx, rcx
 
-    ; Only works if bridge type is known
+    ; Only works if bridge m_type is known
     cmp  (DISK_RECOVERY_CONTEXT ptr [rbx]).BridgeType, BRIDGE_UNKNOWN
     je   ek_fail
 
@@ -647,13 +647,13 @@ ExtractEncryptionKey PROC
     ;   [0] = A1h (opcode)
     ;   [1] = 00h (security protocol = vendor)
     ;   [2] = 01h (protocol specific = key extraction)
-    ;   [6-9] = allocation length (512 = 0x200)
+    ;   [6-9] = allocation length (512 = 0200h)
     mov  byte ptr  [rdi+SPTD_CDB+0], WD_SECURITY_PROTOCOL
     mov  byte ptr  [rdi+SPTD_CDB+1], 0
     mov  byte ptr  [rdi+SPTD_CDB+2], 01h
     mov  byte ptr  [rdi+SPTD_CDB+6], 0
     mov  byte ptr  [rdi+SPTD_CDB+7], 0
-    mov  byte ptr  [rdi+SPTD_CDB+8], 02h            ; 0x200 = 512
+    mov  byte ptr  [rdi+SPTD_CDB+8], 02h            ; 0200h = 512
     mov  byte ptr  [rdi+SPTD_CDB+9], 0
 
     ; DeviceIoControl
@@ -700,15 +700,15 @@ ek_exit:
 ExtractEncryptionKey ENDP
 
 ; =============================================================================
-; SaveEncryptionKey — Write extracted key to D:\Recovery\aes_key.bin
+; SaveEncryptionKey ? Write extracted key to D:\Recovery\aes_key.bin
 ; RCX = ptr to DISK_RECOVERY_CONTEXT
 ; =============================================================================
 SaveEncryptionKey PROC
     LOCAL bytesWritten:DWORD
 
     push rbx
-    push r12                  ; R12 is non-volatile — must save
-    sub  rsp, 56              ; 2 pushes (16) + LOCAL frame + 56 → aligned; room for 7-param CreateFileA
+    push r12                  ; R12 is non-volatile ? must save
+    sub  rsp, 56              ; 2 pushes (16) + LOCAL frame + 56 ? aligned; room for 7-param CreateFileA
 
     mov  rbx, rcx
 
@@ -749,7 +749,7 @@ sk_done:
 SaveEncryptionKey ENDP
 
 ; =============================================================================
-; HammerReadSector — High-reliability sector read with retry + sense decoding
+; HammerReadSector ? High-reliability sector read with retry + sense decoding
 ; RCX = ptr to Context
 ; RDX = LBA (QWORD)
 ; R8  = ptr to output buffer
@@ -766,7 +766,7 @@ HammerReadSector PROC
     push r12
     push r13
     push r14
-    sub  rsp, 80              ; 6 pushes (48) + 80 = 128 → 0 mod 16; room for 8-param DeviceIoControl
+    sub  rsp, 80              ; 6 pushes (48) + 80 = 128 ? 0 mod 16; room for 8-param DeviceIoControl
 
     mov  rbx, rcx             ; Context ptr
     mov  r12, rdx             ; LBA
@@ -803,7 +803,7 @@ retry_read:
     bswap eax
     mov  dword ptr [rdi+SPTD_CDB+2], eax
 
-    ; Transfer length = 1 sector, big-endian (0x0001)
+    ; Transfer length = 1 sector, big-endian (00001h)
     mov  byte ptr  [rdi+SPTD_CDB+7], 0
     mov  byte ptr  [rdi+SPTD_CDB+8], 1
 
@@ -823,7 +823,7 @@ retry_read:
     test eax, eax
     jnz  hr_check_scsi_status
 
-    ; Win32 error — check type
+    ; Win32 error ? check m_type
     call GetLastError
 
     cmp  eax, ERROR_SEM_TIMEOUT
@@ -832,11 +832,11 @@ retry_read:
     cmp  eax, ERROR_GEN_FAILURE
     je   hr_check_sense
 
-    ; Unknown error — retry anyway
+    ; Unknown error ? retry anyway
     jmp  hr_retry
 
 hr_check_scsi_status:
-    ; DeviceIoControl succeeded — check SCSI status byte
+    ; DeviceIoControl succeeded ? check SCSI status byte
     lea  rdi, sptd_buf
     movzx eax, byte ptr [rdi+SPTD_SCSISTATUS]
     test al, al
@@ -845,7 +845,7 @@ hr_check_scsi_status:
     cmp  al, 02h               ; CHECK CONDITION
     je   hr_check_sense
 
-    ; Other SCSI status — retry
+    ; Other SCSI status ? retry
     jmp  hr_retry
 
 hr_check_sense:
@@ -855,20 +855,20 @@ hr_check_sense:
     movzx eax, byte ptr [rdi+2]
     and  al, 0Fh
 
-    cmp  al, 03h               ; MEDIUM ERROR — permanent
+    cmp  al, 03h               ; MEDIUM ERROR ? permanent
     je   sector_dead
 
-    cmp  al, 05h               ; ILLEGAL REQUEST — permanent
+    cmp  al, 05h               ; ILLEGAL REQUEST ? permanent
     je   sector_dead
 
-    ; Hardware error (04h) or other — may recover with retry
+    ; Hardware error (04h) or other ? may recover with retry
     jmp  hr_retry
 
 hr_retry:
     inc  retryCount
 
     ; Exponential backoff: Sleep(10 * retryCount)
-    mov  ecx, retryCount      ; Read full DWORD (was word ptr — fragile)
+    mov  ecx, retryCount      ; Read full DWORD (was word ptr ? fragile)
     imul ecx, ecx, 10
     call Sleep
 
@@ -898,7 +898,7 @@ hr_exit:
 HammerReadSector ENDP
 
 ; =============================================================================
-; LogBadSector — Append LBA to bad sector map (binary: 8 bytes per entry)
+; LogBadSector ? Append LBA to bad sector map (binary: 8 bytes per entry)
 ; RCX = Context ptr, RDX = LBA
 ; =============================================================================
 LogBadSector PROC
@@ -906,7 +906,7 @@ LogBadSector PROC
     LOCAL lbaValue:QWORD
 
     push rbx
-    sub  rsp, 40              ; 1 push (8) + LOCAL frame + 40 → aligned
+    sub  rsp, 40              ; 1 push (8) + LOCAL frame + 40 ? aligned
 
     mov  rbx, rcx
     mov  lbaValue, rdx
@@ -927,7 +927,7 @@ LogBadSector PROC
 LogBadSector ENDP
 
 ; =============================================================================
-; SaveCheckpoint — Write resume position to log file
+; SaveCheckpoint ? Write resume position to log file
 ; RCX = Context ptr
 ; =============================================================================
 SaveCheckpoint PROC
@@ -935,7 +935,7 @@ SaveCheckpoint PROC
     LOCAL liZero:QWORD
 
     push rbx
-    sub  rsp, 40              ; 1 push (8) + LOCAL frame + 40 → aligned
+    sub  rsp, 40              ; 1 push (8) + LOCAL frame + 40 ? aligned
 
     mov  rbx, rcx
 
@@ -972,7 +972,7 @@ SaveCheckpoint PROC
 SaveCheckpoint ENDP
 
 ; =============================================================================
-; DisplayProgress — Print recovery statistics
+; DisplayProgress ? Print recovery statistics
 ; RCX = Context ptr
 ; =============================================================================
 DisplayProgress PROC
@@ -1029,7 +1029,7 @@ dp_skip_pct:
 DisplayProgress ENDP
 
 ; =============================================================================
-; RecoveryWorker — Main imaging loop with resume + checkpoint
+; RecoveryWorker ? Main imaging loop with resume + checkpoint
 ; RCX = ptr to DISK_RECOVERY_CONTEXT
 ; =============================================================================
 RecoveryWorker PROC
@@ -1060,7 +1060,7 @@ main_loop:
     test eax, eax
     jz   rw_bad_sector
 
-    ; Success — write sector to image file
+    ; Success ? write sector to image file
     mov  rcx, (DISK_RECOVERY_CONTEXT ptr [rbx]).hTarget
     lea  rdx, TransferBuffer
     mov  r8d, SECTOR_SIZE
@@ -1100,7 +1100,7 @@ rw_next:
     test edx, edx
     jnz  main_loop
 
-    ; Save checkpoint + display stats
+    ; Save checkpoint + display m_stats
     mov  rcx, rbx
     call SaveCheckpoint
     mov  rcx, rbx
@@ -1121,7 +1121,7 @@ worker_done:
 RecoveryWorker ENDP
 
 ; =============================================================================
-; SetSparseFile — Mark a file handle as sparse via FSCTL_SET_SPARSE
+; SetSparseFile ? Mark a file handle as sparse via FSCTL_SET_SPARSE
 ; RCX = hFile
 ; =============================================================================
 SetSparseFile PROC
@@ -1146,7 +1146,7 @@ SetSparseFile PROC
 SetSparseFile ENDP
 
 ; =============================================================================
-; InitializeRecoveryContext — Open device, create output files
+; InitializeRecoveryContext ? Open device, create output files
 ; ECX = Drive number (0-15)
 ; Returns: RAX = ptr to DISK_RECOVERY_CONTEXT, or 0 on failure
 ; =============================================================================
@@ -1226,7 +1226,7 @@ InitializeRecoveryContext PROC
     cmp  rax, INVALID_HANDLE_VALUE
     je   ic_create_log
 
-    ; Existing log found — try to read resume LBA
+    ; Existing log found ? try to read resume LBA
     mov  r12, rax
     mov  rcx, rax
     lea  rdx, g_Context.CurrentLBA
@@ -1279,7 +1279,7 @@ ic_log_done:
     ; The RecoveryWorker will stop at this or at abort signal
     mov  g_Context.TotalSectors, 488281250
 
-    ; Report bridge type
+    ; Report bridge m_type
     mov  eax, g_Context.BridgeType
     cmp  eax, BRIDGE_JMS567
     je   ic_report_jms
@@ -1318,7 +1318,7 @@ ic_exit:
 InitializeRecoveryContext ENDP
 
 ; =============================================================================
-; CleanupRecovery — Close all handles
+; CleanupRecovery ? Close all handles
 ; RCX = ptr to Context
 ; =============================================================================
 CleanupRecovery PROC
@@ -1360,7 +1360,7 @@ CleanupRecovery ENDP
 ; C-callable exports for C++ wrapper integration
 ; =============================================================================
 
-; DiskRecovery_FindDrive — returns drive number or -1
+; DiskRecovery_FindDrive ? returns drive number or -1
 ; extern "C" int DiskRecovery_FindDrive();
 PUBLIC DiskRecovery_FindDrive
 DiskRecovery_FindDrive PROC
@@ -1370,7 +1370,7 @@ DiskRecovery_FindDrive PROC
     ret
 DiskRecovery_FindDrive ENDP
 
-; DiskRecovery_Init — returns context ptr or NULL
+; DiskRecovery_Init ? returns context ptr or NULL
 ; extern "C" void* DiskRecovery_Init(int driveNum);
 PUBLIC DiskRecovery_Init
 DiskRecovery_Init PROC
@@ -1381,7 +1381,7 @@ DiskRecovery_Init PROC
     ret
 DiskRecovery_Init ENDP
 
-; DiskRecovery_ExtractKey — returns 1/0
+; DiskRecovery_ExtractKey ? returns 1/0
 ; extern "C" int DiskRecovery_ExtractKey(void* ctx);
 PUBLIC DiskRecovery_ExtractKey
 DiskRecovery_ExtractKey PROC
@@ -1391,7 +1391,7 @@ DiskRecovery_ExtractKey PROC
     ret
 DiskRecovery_ExtractKey ENDP
 
-; DiskRecovery_Run — runs the recovery loop (blocks until complete/abort)
+; DiskRecovery_Run ? runs the recovery loop (blocks until complete/abort)
 ; extern "C" void DiskRecovery_Run(void* ctx);
 PUBLIC DiskRecovery_Run
 DiskRecovery_Run PROC
@@ -1401,7 +1401,7 @@ DiskRecovery_Run PROC
     ret
 DiskRecovery_Run ENDP
 
-; DiskRecovery_Abort — thread-safe abort signal
+; DiskRecovery_Abort ? thread-safe abort signal
 ; extern "C" void DiskRecovery_Abort(void* ctx);
 PUBLIC DiskRecovery_Abort
 DiskRecovery_Abort PROC
@@ -1409,7 +1409,7 @@ DiskRecovery_Abort PROC
     ret
 DiskRecovery_Abort ENDP
 
-; DiskRecovery_Cleanup — close handles
+; DiskRecovery_Cleanup ? close handles
 ; extern "C" void DiskRecovery_Cleanup(void* ctx);
 PUBLIC DiskRecovery_Cleanup
 DiskRecovery_Cleanup PROC
@@ -1419,7 +1419,7 @@ DiskRecovery_Cleanup PROC
     ret
 DiskRecovery_Cleanup ENDP
 
-; DiskRecovery_GetStats — fill caller-provided stat buffer
+; DiskRecovery_GetStats ? fill caller-provided stat buffer
 ; extern "C" void DiskRecovery_GetStats(void* ctx, uint64_t* outGood, uint64_t* outBad, uint64_t* outCurrent, uint64_t* outTotal);
 PUBLIC DiskRecovery_GetStats
 DiskRecovery_GetStats PROC
@@ -1447,7 +1447,7 @@ DiskRecovery_Main PROC
     ; Save non-volatile registers used below (R12, RBX)
     push rbx
     push r12
-    sub  rsp, 48              ; 2 pushes (16) + 48 = 64 → 0 mod 16 for entry point ✓
+    sub  rsp, 48              ; 2 pushes (16) + 48 = 64 ? 0 mod 16 for entry point ?
 
     ; Banner
     lea  rcx, szBanner
@@ -1509,7 +1509,7 @@ dm_start_recovery:
     mov  rcx, rbx
     call RecoveryWorker
 
-    ; Final stats
+    ; Final m_stats
     mov  rcx, rbx
     call DisplayProgress
 
@@ -1538,3 +1538,5 @@ dm_init_err:
 DiskRecovery_Main ENDP
 
 END
+
+

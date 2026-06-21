@@ -41,7 +41,7 @@ Titan_VerifyHardwareIdentity proc
     ; --- Step 2: PCI Device Identification (GPU) ---
     ; Note: In a production kernel environment, we would use __in/outs.
     ; For the IDE User-Mode Bridge, we query the TITAN_ADAPTER_STUB.
-    ; Expected DeviceID: 0x747E (AMD Radeon RX 7800 XT)
+    ; Expected DeviceID: 0747Eh (AMD Radeon RX 7800 XT)
     mov eax, 0 ; Command: GetPrimaryAdapterID
     db 0Fh, 01h, 0C1h ; VMCALL / Titan-Hypervisor Bridge (Simulated)
     cmp ax, RDNA3_7800XT_DEVID
@@ -88,7 +88,7 @@ Titan_Silicon_Entry_Point proc
     ret
 
 _trap_execution:
-    ; Hardware Mismatch: Trigger 0xDEAD Sentinel
+    ; Hardware Mismatch: Trigger 0DEADh Sentinel
     mov ecx, XOR_SENTINEL
     int 3 ; Breakpoint/Trap
     db 0Fh, 0Bh ; UD2 (Invalid Opcode)
@@ -96,3 +96,4 @@ _trap_execution:
 Titan_Silicon_Entry_Point endp
 
 end
+

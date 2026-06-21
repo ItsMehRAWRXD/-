@@ -236,6 +236,13 @@ enum CmdFlags : uint32_t
     X(4167, PLAN_ORCHESTRATOR_VIEW_PLAN, "planOrchestrator.viewPlan", "!plan_view", BOTH, "PlanOrchestrator",          \
       handlePlanOrchestratorViewPlan, CMD_NONE)                                                                        \
                                                                                                                        \
+    /* ═══════════════════ HEXMAG JIT (4170-4173) ═══════════════════ */                                               \
+    X(4170, HEXMAG_JIT_INIT, "hexmag.jitInit", "!hexmag_init", BOTH, "HexMag", handleHexMagJIT_Init, CMD_NONE)       \
+    X(4171, HEXMAG_JIT_EMIT, "hexmag.jitEmit", "!hexmag_emit", BOTH, "HexMag", handleHexMagJIT_Emit, CMD_NONE)       \
+    X(4172, HEXMAG_JIT_RUN, "hexmag.jitRun", "!hexmag_run", BOTH, "HexMag", handleHexMagJIT_Run, CMD_NONE)           \
+    X(4173, HEXMAG_JIT_SHUTDOWN, "hexmag.jitShutdown", "!hexmag_shutdown", BOTH, "HexMag",                           \
+      handleHexMagJIT_Shutdown, CMD_NONE)                                                                              \
+                                                                                                                       \
     /* ═══════════════════ AI MODE (4200-4203) ═══════════════════ */                                                  \
     X(4200, AI_MODE_MAX, "ai.maxMode", "!max", BOTH, "AIMode", handleAIMaxMode, CMD_NONE)                              \
     X(4201, AI_MODE_DEEP_THINK, "ai.deepThinking", "!deep", BOTH, "AIMode", handleAIDeepThinking, CMD_NONE)            \

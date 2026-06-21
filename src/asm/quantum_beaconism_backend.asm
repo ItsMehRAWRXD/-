@@ -49,7 +49,7 @@ g_QPCFrequency          QWORD 0
 
 ; ============================================================
 ; Titan_ExecuteComputeKernel
-; RCX = kernelType, RDX = srcAddr, R8 = destAddr, R9 = size
+; RCX = kernelType, RDX = srcAddr, R8 = destAddr, R9 = m_size
 ; Returns EAX = result code
 ; ============================================================
 Titan_ExecuteComputeKernel PROC FRAME
@@ -60,18 +60,18 @@ Titan_ExecuteComputeKernel ENDP
 
 ; ============================================================
 ; Titan_PerformCopy
-; RCX = src, RDX = dst, R8 = size, R9 = copyType
+; RCX = src, RDX = dst, R8 = m_size, R9 = copyType
 ; Returns RAX = bytes copied
 ; ============================================================
 Titan_PerformCopy PROC FRAME
     .ENDPROLOG
-    mov rax, r8          ; Return size
+    mov rax, r8          ; Return m_size
     ret
 Titan_PerformCopy ENDP
 
 ; ============================================================
 ; Titan_PerformDMA
-; RCX = src, RDX = dst, R8 = size, R9 = dmaType
+; RCX = src, RDX = dst, R8 = m_size, R9 = dmaType
 ; Returns EAX = result code
 ; ============================================================
 Titan_PerformDMA PROC FRAME
@@ -102,7 +102,7 @@ Titan_ShutdownDMA ENDP
 
 ; ============================================================
 ; Titan_GetDMAStats
-; RCX = pointer to stats structure
+; RCX = pointer to m_stats structure
 ; Returns EAX = result code
 ; ============================================================
 Titan_GetDMAStats PROC FRAME
@@ -138,3 +138,4 @@ SSOT_GetActiveOwner PROC
 SSOT_GetActiveOwner ENDP
 
 END
+

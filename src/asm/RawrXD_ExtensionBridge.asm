@@ -142,3 +142,4 @@ RawrXD_ExtensionStorage_GetPath_MASM PROC
 RawrXD_ExtensionStorage_GetPath_MASM ENDP
 
 END
+

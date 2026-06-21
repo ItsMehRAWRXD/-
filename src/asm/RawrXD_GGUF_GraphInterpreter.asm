@@ -233,7 +233,7 @@ GGML_OP_CROSS_ENTROPY_LOSS_BACK EQU 73
 GGML_OP_OPT_STEP_ADAMW      EQU 74
 GGML_OP_COUNT               EQU 75
 
-; GGML Type Codes
+; GGML memType Codes
 GGML_TYPE_F32       EQU 0
 GGML_TYPE_F16       EQU 1
 GGML_TYPE_Q4_0      EQU 2
@@ -299,7 +299,7 @@ TENSOR_SRC_0        EQU 88      ; 8 bytes: source tensor 0
 TENSOR_SRC_1        EQU 96      ; 8 bytes: source tensor 1
 TENSOR_DATA         EQU 104     ; 8 bytes: data pointer
 TENSOR_NAME         EQU 112     ; 64 bytes: name string
-TENSOR_SIZEOF       EQU 176     ; Total size
+TENSOR_SIZEOF       EQU 176     ; Total blockSize
 
 ; Graph node structure
 NODE_TENSOR         EQU 0       ; 8 bytes: tensor pointer
@@ -404,7 +404,7 @@ ggml_op_table LABEL QWORD
     QWORD Op_GGML_CROSS_ENTROPY_LOSS_BACK ; 73
     QWORD Op_GGML_OPT_STEP_ADAMW        ; 74
 
-; Type size lookup table
+; memType blockSize lookup table
 ALIGN 4
 ggml_type_size LABEL DWORD
     DWORD 4         ; F32
@@ -424,7 +424,7 @@ ggml_type_size LABEL DWORD
     DWORD 210       ; Q6_K block
     DWORD 292       ; Q8_K block
 
-; Type block size (weights per block)
+; memType block blockSize (weights per block)
 ALIGN 4
 ggml_type_blck_size LABEL DWORD
     DWORD 1         ; F32
@@ -444,21 +444,22 @@ ggml_type_blck_size LABEL DWORD
     DWORD 256       ; Q6_K
     DWORD 256       ; Q8_K
 
-; Constants
-align 16
-const_one_f32       DD 16 DUP(1.0)
-const_neg_one_f32   DD 16 DUP(-1.0)
-const_half_f32      DD 16 DUP(0.5)
-const_two_f32       DD 16 DUP(2.0)
-const_epsilon       DD 16 DUP(1.0e-5)
-const_neg_inf       DD 16 DUP(0FF800000h)  ; -INF
+; Constants - use REAL4 for floating point values
+ALIGN 16
+const_one_f32       REAL4 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+const_neg_one_f32   REAL4 -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0
+const_half_f32      REAL4 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5
+const_two_f32       REAL4 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0
+const_epsilon       REAL4 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5, 1.0e-5
+const_neg_inf       DWORD 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h
+                    DWORD 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h, 0FF800000h
 
 ; GELU constants
-ALIGN 16
-gelu_a              DD 0.044715
-gelu_sqrt_2_pi      DD 0.7978845608
-gelu_one            DD 1.0
-gelu_half           DD 0.5
+ALIGN 4
+gelu_a              REAL4 0.044715
+gelu_sqrt_2_pi      REAL4 0.7978845608
+gelu_one            REAL4 1.0
+gelu_half           REAL4 0.5
 
 ; =============================================================================
 ; BSS SECTION
@@ -488,13 +489,17 @@ graph_scratch       BYTE 1048576 DUP(?) ; 1MB scratch for graph computation
 ;   RDX = max_leafs
 ; Returns: RAX = graph context pointer (or NULL on failure)
 ; -----------------------------------------------------------------------------
-GGUF_Graph_Init PROC
+GGUF_Graph_Init PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rdi
+    .pushreg rdi
     sub     rsp, 40
+    .allocstack 40
+    .endprolog
 
-    mov     [rel graph_n_nodes], 0
-    mov     [rel graph_n_leafs], 0
+    mov     graph_n_nodes, 0
+    mov     graph_n_leafs, 0
 
     ; Calculate memory needed: max_nodes * NODE_SIZEOF + max_leafs * 8
     mov     eax, ecx
@@ -504,7 +509,7 @@ GGUF_Graph_Init PROC
     add     eax, ebx
 
     ; Return scratch area as context
-    lea     rax, [rel graph_scratch]
+    lea     rax, OFFSET graph_scratch
 
     add     rsp, 40
     pop     rdi
@@ -518,12 +523,18 @@ GGUF_Graph_Init ENDP
 ;   RCX = root tensor
 ; Returns: RAX = number of nodes
 ; -----------------------------------------------------------------------------
-GGUF_Graph_Build PROC
+GGUF_Graph_Build PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     sub     rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov     r12, rcx                    ; root tensor
 
@@ -531,13 +542,13 @@ GGUF_Graph_Build PROC
     ; For simplicity, build linear order from ops
 
     xor     eax, eax
-    mov     [rel graph_n_nodes], eax
+    mov     graph_n_nodes, eax
 
     ; Visit root tensor and all its sources recursively
     mov     rcx, r12
     call    GGUF_Node_Visit
 
-    mov     eax, [rel graph_n_nodes]
+    mov     eax, graph_n_nodes
 
     add     rsp, 48
     pop     r12
@@ -552,43 +563,45 @@ GGUF_Graph_Build ENDP
 ; Visit tensor node (DFS)
 ;   RCX = tensor pointer
 ; -----------------------------------------------------------------------------
-GGUF_Node_Visit PROC
+GGUF_Node_Visit PROC FRAME
     push    rbx
+    .pushreg rbx
     push    r12
+    .pushreg r12
     sub     rsp, 32
+    .allocstack 32
+    .endprolog
 
     mov     r12, rcx
 
     ; Check if tensor has sources
     mov     rax, [r12 + TENSOR_SRC_0]
     test    rax, rax
-    jz      @@no_src0
+    jz      @F
     mov     rcx, rax
     call    GGUF_Node_Visit
-@@no_src0:
-
+@@:
     mov     rax, [r12 + TENSOR_SRC_1]
     test    rax, rax
-    jz      @@no_src1
+    jz      @F
     mov     rcx, rax
     call    GGUF_Node_Visit
-@@no_src1:
-
+@@:
     ; Add this node to graph
-    mov     eax, [rel graph_n_nodes]
-    lea     rbx, [rel graph_scratch]
+    mov     eax, OFFSET graph_n_nodes
+    lea     rbx, OFFSET graph_scratch
     imul    ecx, eax, NODE_SIZEOF
     add     rbx, rcx
 
     ; Store tensor pointer and op
-    mov     [rbx + NODE_TENSOR], r12
+    mov     qword ptr [rbx + NODE_TENSOR], r12
     mov     eax, [r12 + TENSOR_OP]
-    mov     [rbx + NODE_OP], eax
+    mov     dword ptr [rbx + NODE_OP], eax
 
     ; Increment node count
-    mov     eax, [rel graph_n_nodes]
+    mov     eax, graph_n_nodes
     inc     eax
-    mov     [rel graph_n_nodes], eax
+    mov     graph_n_nodes, eax
 
     add     rsp, 32
     pop     r12
@@ -602,13 +615,20 @@ GGUF_Node_Visit ENDP
 ;   RCX = n_threads (hint)
 ; Returns: RAX = 0 (success)
 ; -----------------------------------------------------------------------------
-GGUF_Graph_Compute PROC
+GGUF_Graph_Compute PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     sub     rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov     r13d, ecx                   ; n_threads
 
@@ -616,11 +636,11 @@ GGUF_Graph_Compute PROC
     xor     r12d, r12d                  ; node index
 
 @@compute_loop:
-    cmp     r12d, [rel graph_n_nodes]
+    cmp     r12d, OFFSET graph_n_nodes
     jge     @@compute_done
 
     ; Get node
-    lea     rbx, [rel graph_scratch]
+    lea     rbx, OFFSET graph_scratch
     imul    eax, r12d, NODE_SIZEOF
     add     rbx, rax
 
@@ -664,7 +684,7 @@ GGUF_OpDispatch PROC
     jge     @@invalid_op
 
     ; Load handler from table
-    lea     rbx, [rel ggml_op_table]
+    lea     rbx, OFFSET ggml_op_table
     mov     rax, [rbx + rax*8]
 
     ; Call handler
@@ -694,10 +714,14 @@ Op_GGML_NONE ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_DUP - Duplicate tensor
 ; -----------------------------------------------------------------------------
-Op_GGML_DUP PROC
+Op_GGML_DUP PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rsi, rcx                    ; dst tensor
     mov     rbx, [rsi + TENSOR_SRC_0]   ; src tensor
@@ -729,13 +753,20 @@ Op_GGML_DUP ENDP
 ; Op_GGML_ADD - Element-wise addition
 ;   dst = src0 + src1
 ; -----------------------------------------------------------------------------
-Op_GGML_ADD PROC
+Op_GGML_ADD PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     push    r14
+    .pushreg r14
+    .endprolog
 
     mov     r14, rcx                    ; dst tensor
     mov     r12, [r14 + TENSOR_SRC_0]   ; src0
@@ -760,10 +791,10 @@ Op_GGML_ADD PROC
     cmp     rcx, rbx
     jge     @@add_done
 
-    vmovups zmm0, [rsi + rcx*4]
-    vmovups zmm1, [r8 + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [r8 + rcx*4]
     vaddps  zmm0, zmm0, zmm1
-    vmovups [rdi + rcx*4], zmm0
+    vmovups zmmword ptr [rdi + rcx*4], zmm0
 
     add     rcx, 16
     jmp     @@add_loop
@@ -782,13 +813,20 @@ Op_GGML_ADD ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_SUB - Element-wise subtraction
 ; -----------------------------------------------------------------------------
-Op_GGML_SUB PROC
+Op_GGML_SUB PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     push    r14
+    .pushreg r14
+    .endprolog
 
     mov     r14, rcx
     mov     r12, [r14 + TENSOR_SRC_0]
@@ -808,10 +846,10 @@ Op_GGML_SUB PROC
 @@sub_loop:
     cmp     rcx, rbx
     jge     @@sub_done
-    vmovups zmm0, [rsi + rcx*4]
-    vmovups zmm1, [r8 + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [r8 + rcx*4]
     vsubps  zmm0, zmm0, zmm1
-    vmovups [rdi + rcx*4], zmm0
+    vmovups zmmword ptr [rdi + rcx*4], zmm0
     add     rcx, 16
     jmp     @@sub_loop
 @@sub_done:
@@ -828,13 +866,20 @@ Op_GGML_SUB ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_MUL - Element-wise multiplication
 ; -----------------------------------------------------------------------------
-Op_GGML_MUL PROC
+Op_GGML_MUL PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     push    r14
+    .pushreg r14
+    .endprolog
 
     mov     r14, rcx
     mov     r12, [r14 + TENSOR_SRC_0]
@@ -854,10 +899,10 @@ Op_GGML_MUL PROC
 @@mul_loop:
     cmp     rcx, rbx
     jge     @@mul_done
-    vmovups zmm0, [rsi + rcx*4]
-    vmovups zmm1, [r8 + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [r8 + rcx*4]
     vmulps  zmm0, zmm0, zmm1
-    vmovups [rdi + rcx*4], zmm0
+    vmovups zmmword ptr [rdi + rcx*4], zmm0
     add     rcx, 16
     jmp     @@mul_loop
 @@mul_done:
@@ -874,13 +919,20 @@ Op_GGML_MUL ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_DIV - Element-wise division
 ; -----------------------------------------------------------------------------
-Op_GGML_DIV PROC
+Op_GGML_DIV PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     push    r14
+    .pushreg r14
+    .endprolog
 
     mov     r14, rcx
     mov     r12, [r14 + TENSOR_SRC_0]
@@ -900,10 +952,10 @@ Op_GGML_DIV PROC
 @@div_loop:
     cmp     rcx, rbx
     jge     @@div_done
-    vmovups zmm0, [rsi + rcx*4]
-    vmovups zmm1, [r8 + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [r8 + rcx*4]
     vdivps  zmm0, zmm0, zmm1
-    vmovups [rdi + rcx*4], zmm0
+    vmovups zmmword ptr [rdi + rcx*4], zmm0
     add     rcx, 16
     jmp     @@div_loop
 @@div_done:
@@ -920,10 +972,14 @@ Op_GGML_DIV ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_SQR - Element-wise square
 ; -----------------------------------------------------------------------------
-Op_GGML_SQR PROC
+Op_GGML_SQR PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -941,9 +997,9 @@ Op_GGML_SQR PROC
 @@sqr_loop:
     cmp     rcx, rbx
     jge     @@sqr_done
-    vmovups zmm0, [rsi + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
     vmulps  zmm0, zmm0, zmm0
-    vmovups [r8 + rcx*4], zmm0
+    vmovups zmmword ptr [r8 + rcx*4], zmm0
     add     rcx, 16
     jmp     @@sqr_loop
 @@sqr_done:
@@ -957,10 +1013,14 @@ Op_GGML_SQR ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_SQRT - Element-wise square root
 ; -----------------------------------------------------------------------------
-Op_GGML_SQRT PROC
+Op_GGML_SQRT PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -978,9 +1038,9 @@ Op_GGML_SQRT PROC
 @@sqrt_loop:
     cmp     rcx, rbx
     jge     @@sqrt_done
-    vmovups zmm0, [rsi + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
     vsqrtps zmm0, zmm0
-    vmovups [r8 + rcx*4], zmm0
+    vmovups zmmword ptr [r8 + rcx*4], zmm0
     add     rcx, 16
     jmp     @@sqrt_loop
 @@sqrt_done:
@@ -1004,10 +1064,14 @@ Op_GGML_LOG ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_SUM - Sum all elements
 ; -----------------------------------------------------------------------------
-Op_GGML_SUM PROC
+Op_GGML_SUM PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -1027,7 +1091,7 @@ Op_GGML_SUM PROC
 @@sum_loop:
     cmp     rcx, rbx
     jge     @@sum_reduce
-    vmovups zmm1, [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [rsi + rcx*4]
     vaddps  zmm0, zmm0, zmm1
     add     rcx, 16
     jmp     @@sum_loop
@@ -1040,7 +1104,7 @@ Op_GGML_SUM PROC
     vaddps  xmm0, xmm0, xmm1
     vhaddps xmm0, xmm0, xmm0
     vhaddps xmm0, xmm0, xmm0
-    vmovss  [r8], xmm0
+    vmovss  dword ptr [r8], xmm0
 
     xor     eax, eax
     pop     rdi
@@ -1052,10 +1116,14 @@ Op_GGML_SUM ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_MEAN - Mean of all elements
 ; -----------------------------------------------------------------------------
-Op_GGML_MEAN PROC
+Op_GGML_MEAN PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -1075,7 +1143,7 @@ Op_GGML_MEAN PROC
 @@mean_loop:
     cmp     rcx, rbx
     jge     @@mean_reduce
-    vmovups zmm1, [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [rsi + rcx*4]
     vaddps  zmm0, zmm0, zmm1
     add     rcx, 16
     jmp     @@mean_loop
@@ -1091,7 +1159,7 @@ Op_GGML_MEAN PROC
     ; Divide by count
     vcvtsi2ss xmm1, xmm1, rbx
     vdivss  xmm0, xmm0, xmm1
-    vmovss  [r8], xmm0
+    vmovss  dword ptr [r8], xmm0
 
     xor     eax, eax
     pop     rdi
@@ -1104,13 +1172,20 @@ Op_GGML_MEAN ENDP
 ; Op_GGML_RMS_NORM - RMS Normalization
 ; y = x / sqrt(mean(x^2) + eps) * weight
 ; -----------------------------------------------------------------------------
-Op_GGML_RMS_NORM PROC
+Op_GGML_RMS_NORM PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     sub     rsp, 32
+    .allocstack 32
+    .endprolog
 
     mov     r12, rcx                    ; dst tensor
     mov     r13, [r12 + TENSOR_SRC_0]   ; src tensor
@@ -1128,7 +1203,7 @@ Op_GGML_RMS_NORM PROC
 @@rms_sq_loop:
     cmp     rcx, rbx
     jge     @@rms_sq_done
-    vmovups zmm1, [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [rsi + rcx*4]
     vfmadd231ps zmm0, zmm1, zmm1
     add     rcx, 16
     jmp     @@rms_sq_loop
@@ -1147,7 +1222,7 @@ Op_GGML_RMS_NORM PROC
     vdivss  xmm0, xmm0, xmm1
 
     ; Add epsilon and rsqrt
-    vaddss  xmm0, xmm0, [rel const_epsilon]
+    vaddss  xmm0, xmm0, dword ptr [const_epsilon]
     vrsqrtss xmm0, xmm0, xmm0
     vbroadcastss zmm0, xmm0
 
@@ -1156,9 +1231,9 @@ Op_GGML_RMS_NORM PROC
 @@rms_norm_loop:
     cmp     rcx, rbx
     jge     @@rms_done
-    vmovups zmm1, [rsi + rcx*4]
+    vmovups zmm1, zmmword ptr [rsi + rcx*4]
     vmulps  zmm1, zmm1, zmm0
-    vmovups [rdi + rcx*4], zmm1
+    vmovups zmmword ptr [rdi + rcx*4], zmm1
     add     rcx, 16
     jmp     @@rms_norm_loop
 
@@ -1177,15 +1252,24 @@ Op_GGML_RMS_NORM ENDP
 ; Op_GGML_MUL_MAT - Matrix multiplication
 ; dst[M,N] = src0[M,K] @ src1[K,N]
 ; -----------------------------------------------------------------------------
-Op_GGML_MUL_MAT PROC
+Op_GGML_MUL_MAT PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     push    r14
+    .pushreg r14
     push    r15
+    .pushreg r15
     sub     rsp, 64
+    .allocstack 64
+    .endprolog
 
     mov     r12, rcx                    ; dst tensor
     mov     r13, [r12 + TENSOR_SRC_0]   ; src0 (weights)
@@ -1203,7 +1287,7 @@ Op_GGML_MUL_MAT PROC
     mov     r8,  [r13 + TENSOR_DATA]    ; src0 data (weights)
     mov     r9,  [r14 + TENSOR_DATA]    ; src1 data (input)
 
-    ; Check type for quantized matmul
+    ; Check memType for quantized matmul
     mov     eax, [r13 + TENSOR_TYPE]
     cmp     eax, GGML_TYPE_Q4_0
     je      @@matmul_q4_0
@@ -1245,7 +1329,7 @@ Op_GGML_MUL_MAT PROC
     mov     r11, rax
     imul    r11, r15                    ; k * N
     add     r11, rdx                    ; + j
-    vmovups zmm2, [r9 + r11*4]
+    vmovups zmm2, zmmword ptr [r9 + r11*4]
 
     ; FMA
     vfmadd231ps zmm0, zmm1, zmm2
@@ -1259,7 +1343,7 @@ Op_GGML_MUL_MAT PROC
     mov     r10, rcx
     imul    r10, r15
     add     r10, rdx
-    vmovups [rdi + r10*4], zmm0
+    vmovups zmmword ptr [rdi + r10*4], zmm0
 
     add     rdx, 16
     jmp     @@col_loop
@@ -1296,12 +1380,18 @@ Op_GGML_MUL_MAT ENDP
 ; Op_GGML_SOFT_MAX - Softmax
 ; y_i = exp(x_i - max) / sum(exp(x - max))
 ; -----------------------------------------------------------------------------
-Op_GGML_SOFT_MAX PROC
+Op_GGML_SOFT_MAX PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     sub     rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov     r12, rcx                    ; dst
     mov     rsi, [r12 + TENSOR_SRC_0]   ; src
@@ -1311,12 +1401,12 @@ Op_GGML_SOFT_MAX PROC
     mov     rsi, [rsi + TENSOR_DATA]
 
     ; 1. Find max
-    vmovups zmm15, [rsi]
+    vmovups zmm15, zmmword ptr [rsi]
     mov     ecx, 16
 @@max_loop:
     cmp     rcx, rbx
     jge     @@max_done
-    vmovups zmm0, [rsi + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
     vmaxps  zmm15, zmm15, zmm0
     add     rcx, 16
     jmp     @@max_loop
@@ -1339,11 +1429,11 @@ Op_GGML_SOFT_MAX PROC
 @@exp_loop:
     cmp     rcx, rbx
     jge     @@exp_done
-    vmovups zmm0, [rsi + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
     vsubps  zmm0, zmm0, zmm15
     ; Fast exp using vexp2ps (AVX-512) or polynomial
     ; Simplified: use direct exp
-    vmovups [rdi + rcx*4], zmm0         ; Store x - max
+    vmovups zmmword ptr [rdi + rcx*4], zmm0 ; Store x - max
     ; Actual exp would go here
     vaddps  zmm14, zmm14, zmm0
     add     rcx, 16
@@ -1360,14 +1450,14 @@ Op_GGML_SOFT_MAX PROC
     vbroadcastss zmm14, xmm14
 
     ; 3. Normalize
-    vrcpps  zmm14, zmm14
+    vrcp14ps zmm14, zmm14
     xor     ecx, ecx
 @@norm_loop:
     cmp     rcx, rbx
     jge     @@softmax_done
-    vmovups zmm0, [rdi + rcx*4]
+    vmovups zmm0, zmmword ptr [rdi + rcx*4]
     vmulps  zmm0, zmm0, zmm14
-    vmovups [rdi + rcx*4], zmm0
+    vmovups zmmword ptr [rdi + rcx*4], zmm0
     add     rcx, 16
     jmp     @@norm_loop
 
@@ -1384,13 +1474,20 @@ Op_GGML_SOFT_MAX ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_ROPE - Rotary Position Embedding
 ; -----------------------------------------------------------------------------
-Op_GGML_ROPE PROC
+Op_GGML_ROPE PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     sub     rsp, 64
+    .allocstack 64
+    .endprolog
 
     mov     r12, rcx                    ; dst
     mov     r13, [r12 + TENSOR_SRC_0]   ; src
@@ -1420,13 +1517,20 @@ Op_GGML_ROPE ENDP
 ; Op_GGML_DIAG_MASK_INF - Causal attention mask
 ; Mask future positions with -INF
 ; -----------------------------------------------------------------------------
-Op_GGML_DIAG_MASK_INF PROC
+Op_GGML_DIAG_MASK_INF PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     sub     rsp, 32
+    .allocstack 32
+    .endprolog
 
     mov     r12, rcx                    ; dst
     mov     r13, [r12 + TENSOR_SRC_0]   ; src (attention scores)
@@ -1437,7 +1541,7 @@ Op_GGML_DIAG_MASK_INF PROC
     mov     rsi, [r13 + TENSOR_DATA]
 
     ; For row i, mask positions j > i with -INF
-    vbroadcastss zmm15, [rel const_neg_inf]
+    vbroadcastss zmm15, dword ptr [const_neg_inf]
 
     xor     r8d, r8d                    ; i = 0
 
@@ -1454,8 +1558,11 @@ Op_GGML_DIAG_MASK_INF PROC
     cmp     r10, rbx
     jge     @@next_mask_row
 
-    ; Load value
-    vmovss  xmm0, [rsi + r9*4 + r10*4]
+    ; Load value - compute address to avoid multiple index registers
+    mov     rax, r9
+    shl     rax, 2                      ; r9 * 4
+    add     rax, rsi                    ; base + row offset
+    vmovss  xmm0, dword ptr [rax + r10*4]
 
     ; Check if j > i (future position)
     cmp     r10, r8
@@ -1465,7 +1572,10 @@ Op_GGML_DIAG_MASK_INF PROC
     vmovaps xmm0, xmm15
 
 @@no_mask:
-    vmovss  [rdi + r9*4 + r10*4], xmm0
+    mov     rax, r9
+    shl     rax, 2
+    add     rax, rdi
+    vmovss  dword ptr [rax + r10*4], xmm0
 
     inc     r10
     jmp     @@mask_col
@@ -1489,14 +1599,22 @@ Op_GGML_DIAG_MASK_INF ENDP
 ; Op_GGML_GET_ROWS - Token embedding lookup
 ; dst[n_tokens, hidden] = embedding[token_ids, hidden]
 ; -----------------------------------------------------------------------------
-Op_GGML_GET_ROWS PROC
+Op_GGML_GET_ROWS PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
     push    r12
+    .pushreg r12
     push    r13
+    .pushreg r13
     push    r14
+    .pushreg r14
     sub     rsp, 32
+    .allocstack 32
+    .endprolog
 
     mov     r12, rcx                    ; dst
     mov     r13, [r12 + TENSOR_SRC_0]   ; embedding table
@@ -1536,8 +1654,16 @@ Op_GGML_GET_ROWS PROC
 @@copy_emb:
     cmp     rdx, rbx
     jge     @@next_token
-    vmovups zmm0, [r8 + r10*4 + rdx*4]
-    vmovups [rdi + r11*4 + rdx*4], zmm0
+    ; Compute source address to avoid multiple index registers
+    mov     rax, r10
+    shl     rax, 2
+    add     rax, r8
+    vmovups zmm0, zmmword ptr [rax + rdx*4]
+    ; Compute dest address
+    mov     rax, r11
+    shl     rax, 2
+    add     rax, rdi
+    vmovups zmmword ptr [rax + rdx*4], zmm0
     add     rdx, 16
     jmp     @@copy_emb
 
@@ -1565,7 +1691,7 @@ Op_GGML_GET_ROWS ENDP
 ; Op_GGML_UNARY - Dispatch unary operation
 ; -----------------------------------------------------------------------------
 Op_GGML_UNARY PROC
-    ; Get unary op type from tensor params
+    ; Get unary op memType from tensor params
     ; For now, dispatch based on op_params[0]
     xor     eax, eax
     ret
@@ -1574,10 +1700,14 @@ Op_GGML_UNARY ENDP
 ; -----------------------------------------------------------------------------
 ; Op_GGML_UNARY_RELU - ReLU activation
 ; -----------------------------------------------------------------------------
-Op_GGML_UNARY_RELU PROC
+Op_GGML_UNARY_RELU PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -1597,9 +1727,9 @@ Op_GGML_UNARY_RELU PROC
 @@relu_loop:
     cmp     rcx, rbx
     jge     @@relu_done
-    vmovups zmm0, [rsi + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
     vmaxps  zmm0, zmm0, zmm15           ; max(x, 0)
-    vmovups [r8 + rcx*4], zmm0
+    vmovups zmmword ptr [r8 + rcx*4], zmm0
     add     rcx, 16
     jmp     @@relu_loop
 @@relu_done:
@@ -1614,10 +1744,14 @@ Op_GGML_UNARY_RELU ENDP
 ; Op_GGML_UNARY_GELU - GELU activation
 ; GELU(x) = 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
 ; -----------------------------------------------------------------------------
-Op_GGML_UNARY_GELU PROC
+Op_GGML_UNARY_GELU PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -1632,16 +1766,16 @@ Op_GGML_UNARY_GELU PROC
     mov     rsi, [rsi + TENSOR_DATA]
 
     ; Load constants
-    vbroadcastss zmm13, [rel gelu_a]
-    vbroadcastss zmm14, [rel gelu_sqrt_2_pi]
-    vbroadcastss zmm15, [rel gelu_half]
+    vbroadcastss zmm13, dword ptr [gelu_a]
+    vbroadcastss zmm14, dword ptr [gelu_sqrt_2_pi]
+    vbroadcastss zmm15, dword ptr [gelu_half]
 
     xor     ecx, ecx
 @@gelu_loop:
     cmp     rcx, rbx
     jge     @@gelu_done
 
-    vmovups zmm0, [rsi + rcx*4]         ; x
+    vmovups zmm0, zmmword ptr [rsi + rcx*4] ; x
 
     ; x^3
     vmulps  zmm1, zmm0, zmm0
@@ -1661,11 +1795,11 @@ Op_GGML_UNARY_GELU PROC
     ; For full precision, implement tanh
 
     ; 0.5 * x * (1 + tanh(...))
-    vaddps  zmm1, zmm1, [rel const_one_f32]
+    vaddps  zmm1, zmm1, dword ptr [const_one_f32]
     vmulps  zmm1, zmm1, zmm0
     vmulps  zmm1, zmm1, zmm15
 
-    vmovups [r8 + rcx*4], zmm1
+    vmovups zmmword ptr [r8 + rcx*4], zmm1
 
     add     rcx, 16
     jmp     @@gelu_loop
@@ -1682,10 +1816,14 @@ Op_GGML_UNARY_GELU ENDP
 ; Op_GGML_UNARY_SILU - SiLU (Swish) activation
 ; SiLU(x) = x * sigmoid(x)
 ; -----------------------------------------------------------------------------
-Op_GGML_UNARY_SILU PROC
+Op_GGML_UNARY_SILU PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -1704,7 +1842,7 @@ Op_GGML_UNARY_SILU PROC
     cmp     rcx, rbx
     jge     @@silu_done
 
-    vmovups zmm0, [rsi + rcx*4]         ; x
+    vmovups zmm0, zmmword ptr [rsi + rcx*4] ; x
 
     ; sigmoid(x) = 1 / (1 + exp(-x))
     ; Fast approximation
@@ -1712,12 +1850,12 @@ Op_GGML_UNARY_SILU PROC
     vsubps  zmm1, zmm1, zmm0            ; -x
     ; exp(-x) approximation
     ; 1 / (1 + exp(-x))
-    vaddps  zmm1, zmm1, [rel const_one_f32]
-    vrcpps  zmm1, zmm1                  ; 1 / (1 + exp(-x))
+    vaddps  zmm1, zmm1, dword ptr [const_one_f32]
+    vrcp14ps zmm1, zmm1                  ; 1 / (1 + exp(-x))
 
     ; x * sigmoid(x)
     vmulps  zmm0, zmm0, zmm1
-    vmovups [r8 + rcx*4], zmm0
+    vmovups zmmword ptr [r8 + rcx*4], zmm0
 
     add     rcx, 16
     jmp     @@silu_loop
@@ -1800,10 +1938,14 @@ Op_GGML_OUT_PROD PROC
     ret
 Op_GGML_OUT_PROD ENDP
 
-Op_GGML_SCALE PROC
+Op_GGML_SCALE PROC FRAME
     push    rbx
+    .pushreg rbx
     push    rsi
+    .pushreg rsi
     push    rdi
+    .pushreg rdi
+    .endprolog
 
     mov     rdi, rcx
     mov     rsi, [rdi + TENSOR_SRC_0]
@@ -1819,15 +1961,15 @@ Op_GGML_SCALE PROC
 
     ; Scale factor would be in op_params
     ; For now, use 1.0
-    vbroadcastss zmm15, [rel const_one_f32]
+    vbroadcastss zmm15, dword ptr [const_one_f32]
 
     xor     ecx, ecx
 @@scale_loop:
     cmp     rcx, rbx
     jge     @@scale_done
-    vmovups zmm0, [rsi + rcx*4]
+    vmovups zmm0, zmmword ptr [rsi + rcx*4]
     vmulps  zmm0, zmm0, zmm15
-    vmovups [r8 + rcx*4], zmm0
+    vmovups zmmword ptr [r8 + rcx*4], zmm0
     add     rcx, 16
     jmp     @@scale_loop
 @@scale_done:
@@ -2116,8 +2258,8 @@ Op_GGML_UNARY_EXP ENDP
 ; GGUF_Graph_Reset - Reset graph state
 ; -----------------------------------------------------------------------------
 GGUF_Graph_Reset PROC
-    mov     dword ptr [rel graph_n_nodes], 0
-    mov     dword ptr [rel graph_n_leafs], 0
+    mov     graph_n_nodes, 0
+    mov     graph_n_leafs, 0
     xor     eax, eax
     ret
 GGUF_Graph_Reset ENDP
@@ -2147,3 +2289,4 @@ GGUF_Node_Connect PROC
 GGUF_Node_Connect ENDP
 
 END
+

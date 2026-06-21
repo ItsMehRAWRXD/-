@@ -1,15 +1,15 @@
 ; =============================================================================
-; disk_recovery_scsi.asm — SCSI Hammer Kernel for Disk Recovery Agent
+; disk_recovery_scsi.asm ? SCSI Hammer Kernel for Disk Recovery Agent
 ; =============================================================================
 ; Direct SCSI pass-through routines for dying USB bridge recovery.
 ; Bypasses Windows USBSTOR driver via IOCTL_SCSI_PASS_THROUGH_DIRECT.
 ;
 ; Exports:
-;   asm_scsi_hammer_read    — Retry-loop sector read with exponential backoff
-;   asm_scsi_inquiry_quick  — Fast INQUIRY with custom timeout
-;   asm_scsi_read_capacity  — Read drive capacity via READ CAPACITY(10)
-;   asm_scsi_request_sense  — Issue REQUEST SENSE after error
-;   asm_extract_bridge_key  — Vendor-specific EEPROM key extraction
+;   asm_scsi_hammer_read    ? Retry-loop sector read with exponential backoff
+;   asm_scsi_inquiry_quick  ? Fast INQUIRY with custom timeout
+;   asm_scsi_read_capacity  ? Read drive capacity via READ CAPACITY(10)
+;   asm_scsi_request_sense  ? Issue REQUEST SENSE after error
+;   asm_extract_bridge_key  ? Vendor-specific EEPROM key extraction
 ;
 ; Architecture: x64 MASM | Windows ABI | No exceptions | No CRT
 ; Build: ml64.exe /c /Zi /Zd /Fo disk_recovery_scsi.obj disk_recovery_scsi.asm
@@ -54,7 +54,7 @@ SCSI_DATA_NONE          EQU 0
 SCSI_DATA_IN            EQU 1
 SCSI_DATA_OUT           EQU 2
 
-; SPTD structure size (x64: Length(2) + Status(1) + PathId(1) + TargetId(1) +
+; SPTD structure m_size (x64: Length(2) + Status(1) + PathId(1) + TargetId(1) +
 ;   Lun(1) + CdbLength(1) + SenseLength(1) + DataIn(1) + pad(3) +
 ;   DataTransferLen(4) + TimeOut(4) + pad(4) + DataBuf(8) +
 ;   SenseOffset(4) + CDB(16) = ~56 bytes; we allocate 64 for alignment)
@@ -114,7 +114,7 @@ RECOVERY_ILLEGAL_REQ    EQU 5
 ; RCX = device HANDLE (from CreateFileA on \\.\PhysicalDriveX)
 ; RDX = LBA (64-bit, truncated to 32-bit for READ10)
 ; R8  = destination buffer (must be >= sectorSize bytes)
-; R9D = sector size in bytes (typically 512 or 4096)
+; R9D = sector m_size in bytes (typically 512 or 4096)
 ; [RSP+40] = max retries (DWORD)
 ; [RSP+48] = timeout per attempt in ms (DWORD)
 ;
@@ -144,7 +144,7 @@ asm_scsi_hammer_read PROC FRAME
     mov     r12, rcx                    ; r12 = hDevice
     mov     r13, rdx                    ; r13 = LBA
     mov     r14, r8                     ; r14 = dest buffer
-    mov     r15d, r9d                   ; r15d = sector size
+    mov     r15d, r9d                   ; r15d = sector m_size
     mov     esi, dword ptr [rsp + 160 + 56 + 40]   ; max retries (past pushed regs + alloc + ret)
     mov     edi, dword ptr [rsp + 160 + 56 + 48]   ; timeout ms
 
@@ -170,7 +170,7 @@ asm_scsi_hammer_read PROC FRAME
     mov     byte ptr  [rax + SPTD_OFF_CDBLENGTH],   10      ; READ(10) = 10 byte CDB
     mov     byte ptr  [rax + SPTD_OFF_SENSEINFOLEN], SENSE_BUFFER_SIZE
     mov     byte ptr  [rax + SPTD_OFF_DATAIN],      SCSI_DATA_IN
-    mov     dword ptr [rax + SPTD_OFF_DATAXFERLEN], r15d    ; sector size
+    mov     dword ptr [rax + SPTD_OFF_DATAXFERLEN], r15d    ; sector m_size
     mov     dword ptr [rax + SPTD_OFF_TIMEOUT],     edi     ; timeout ms
     mov     qword ptr [rax + SPTD_OFF_DATABUF],     r14     ; dest buffer
 
@@ -211,7 +211,7 @@ asm_scsi_hammer_read PROC FRAME
     test    eax, eax
     jnz     @@hammer_check_scsi_status
 
-    ; ---- DeviceIoControl failed — classify error ----
+    ; ---- DeviceIoControl failed ? classify error ----
     call    GetLastError
     cmp     eax, ERROR_SEM_TIMEOUT
     je      @@hammer_retry_backoff
@@ -219,11 +219,11 @@ asm_scsi_hammer_read PROC FRAME
     cmp     eax, ERROR_GEN_FAILURE
     je      @@hammer_check_sense
 
-    ; Unknown error — retry anyway
+    ; Unknown error ? retry anyway
     jmp     @@hammer_retry_backoff
 
 @@hammer_check_scsi_status:
-    ; IOCTL succeeded — check SCSI status byte
+    ; IOCTL succeeded ? check SCSI status byte
     lea     rax, [rsp + 32]
     movzx   ecx, byte ptr [rax + SPTD_OFF_SCSISTATUS]
     test    ecx, ecx
@@ -232,7 +232,7 @@ asm_scsi_hammer_read PROC FRAME
     cmp     cl, 02h                     ; CHECK CONDITION
     je      @@hammer_check_sense
 
-    ; Other SCSI status — retry
+    ; Other SCSI status ? retry
     jmp     @@hammer_retry_backoff
 
 @@hammer_check_sense:
@@ -251,20 +251,20 @@ asm_scsi_hammer_read PROC FRAME
     je      @@hammer_illegal
 
     cmp     cl, SENSE_KEY_NOT_READY
-    je      @@hammer_retry_backoff      ; Drive spinning up — retry
+    je      @@hammer_retry_backoff      ; Drive spinning up ? retry
 
     cmp     cl, SENSE_KEY_UNIT_ATTN
-    je      @@hammer_retry_backoff      ; Unit attention — retry
+    je      @@hammer_retry_backoff      ; Unit attention ? retry
 
     cmp     cl, SENSE_KEY_RECOVERED
     je      @@hammer_success            ; Recovered error = data OK
 
-    ; Unknown sense key — retry
+    ; Unknown sense key ? retry
     jmp     @@hammer_retry_backoff
 
 @@hammer_retry_backoff:
     inc     ebx
-    ; Exponential backoff: Sleep(10 * retryCount) — caps at ~1s
+    ; Exponential backoff: Sleep(10 * retryCount) ? caps at ~1s
     mov     ecx, ebx
     imul    ecx, 10
     cmp     ecx, 1000
@@ -317,7 +317,7 @@ asm_scsi_hammer_read ENDP
 ;
 ; RCX = hDevice
 ; RDX = buffer for inquiry data (min 36 bytes)
-; R8D = buffer size
+; R8D = buffer m_size
 ; R9D = timeout in ms
 ;
 ; Returns: RAX = 0 on success, GetLastError on failure
@@ -394,11 +394,11 @@ asm_scsi_inquiry_quick ENDP
 
 ; =============================================================================
 ; asm_scsi_read_capacity
-; Issue READ CAPACITY(10) to get total sectors and sector size.
+; Issue READ CAPACITY(10) to get total sectors and sector m_size.
 ;
 ; RCX = hDevice
 ; RDX = ptr to QWORD for total sectors (output)
-; R8  = ptr to DWORD for sector size (output)
+; R8  = ptr to DWORD for sector m_size (output)
 ;
 ; Returns: RAX = 0 on success, error code on failure
 ; =============================================================================
@@ -440,7 +440,7 @@ asm_scsi_read_capacity PROC FRAME
     mov     qword ptr [rax + SPTD_OFF_DATABUF],     rcx
     mov     dword ptr [rax + SPTD_OFF_SENSEOFFSET], SPTD_SIZE
 
-    ; CDB: READ CAPACITY(10) = 0x25
+    ; CDB: READ CAPACITY(10) = 025h
     lea     rcx, [rax + SPTD_OFF_CDB]
     mov     byte ptr [rcx], SCSI_OP_READ_CAPACITY
 
@@ -460,7 +460,7 @@ asm_scsi_read_capacity PROC FRAME
     test    eax, eax
     jz      @@cap_fail
 
-    ; Parse response: bytes 0-3 = last LBA (big-endian), 4-7 = sector size (big-endian)
+    ; Parse response: bytes 0-3 = last LBA (big-endian), 4-7 = sector m_size (big-endian)
     lea     rax, [rsp + 112]
     mov     ecx, dword ptr [rax]        ; Last LBA (BE)
     bswap   ecx
@@ -468,7 +468,7 @@ asm_scsi_read_capacity PROC FRAME
     mov     dword ptr [r12], ecx        ; Store total sectors (32-bit)
     mov     dword ptr [r12 + 4], 0      ; Clear high DWORD
 
-    mov     ecx, dword ptr [rax + 4]    ; Sector size (BE)
+    mov     ecx, dword ptr [rax + 4]    ; Sector m_size (BE)
     bswap   ecx
     mov     dword ptr [r13], ecx
 
@@ -493,7 +493,7 @@ asm_scsi_read_capacity ENDP
 ;
 ; RCX = hDevice
 ; RDX = sense buffer (min 18 bytes)
-; R8D = buffer size
+; R8D = buffer m_size
 ;
 ; Returns: RAX = 0 on success, error code on failure
 ; =============================================================================
@@ -563,12 +563,12 @@ asm_scsi_request_sense ENDP
 
 ; =============================================================================
 ; asm_extract_bridge_key
-; Vendor-specific SECURITY PROTOCOL IN (0xA1) to extract AES key from
+; Vendor-specific SECURITY PROTOCOL IN (0A1h) to extract AES key from
 ; WD My Book JMS567/NS1066 bridge EEPROM.
 ;
 ; RCX = hDevice
 ; RDX = 32-byte key output buffer
-; R8D = bridge type (1=JMS567, 2=NS1066)
+; R8D = bridge m_type (1=JMS567, 2=NS1066)
 ;
 ; Returns: RAX = 0 on success (key populated), -1 on failure
 ; =============================================================================
@@ -585,7 +585,7 @@ asm_extract_bridge_key PROC FRAME
 
     mov     rbx, rcx                    ; hDevice
     mov     r12, rdx                    ; key dest (32 bytes)
-    mov     r13d, r8d                   ; bridge type
+    mov     r13d, r8d                   ; bridge m_type
 
     ; Zero SPTD region
     lea     rdi, [rsp + 32]
@@ -620,7 +620,7 @@ asm_extract_bridge_key PROC FRAME
     mov     byte ptr [rcx + 0], SCSI_OP_SECURITY_IN
     mov     byte ptr [rcx + 1], 0       ; Security Protocol = 0 (Vendor)
 
-    ; Protocol-specific field based on bridge type
+    ; Protocol-specific field based on bridge m_type
     cmp     r13d, 1
     je      @@jms567_cdb
     cmp     r13d, 2
@@ -628,13 +628,13 @@ asm_extract_bridge_key PROC FRAME
     jmp     @@key_fail                  ; Unknown bridge
 
 @@jms567_cdb:
-    ; JMS567: Protocol Specific = 0x0001 (key extraction)
+    ; JMS567: Protocol Specific = 00001h (key extraction)
     mov     byte ptr [rcx + 2], 00h     ; MSB
     mov     byte ptr [rcx + 3], 01h     ; LSB
     jmp     @@cdb_done
 
 @@ns1066_cdb:
-    ; NS1066: Protocol Specific = 0x00F0 (EEPROM page)
+    ; NS1066: Protocol Specific = 000F0h (EEPROM page)
     mov     byte ptr [rcx + 2], 00h
     mov     byte ptr [rcx + 3], 0F0h
     jmp     @@cdb_done
@@ -643,7 +643,7 @@ asm_extract_bridge_key PROC FRAME
     ; Allocation length = 512 (bytes 6-9, big-endian)
     mov     byte ptr [rcx + 6], 0
     mov     byte ptr [rcx + 7], 0
-    mov     byte ptr [rcx + 8], 02h     ; 0x200 = 512
+    mov     byte ptr [rcx + 8], 02h     ; 0200h = 512
     mov     byte ptr [rcx + 9], 0
 
     ; DeviceIoControl
@@ -689,3 +689,4 @@ asm_extract_bridge_key PROC FRAME
 asm_extract_bridge_key ENDP
 
 END
+

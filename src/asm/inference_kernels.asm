@@ -149,3 +149,4 @@ done:
 rmsnorm_avx512_masm endp
 
 end
+

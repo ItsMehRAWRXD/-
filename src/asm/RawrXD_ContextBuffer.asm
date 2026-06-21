@@ -23,17 +23,17 @@
 ;       Returns current length (bytes written, excluding null terminator).
 ;
 ;   ContextBuf_BuildPrompt(pGoal, pSystemPrompt, pOutBuf, dwOutSize)
-;       RCX = pGoal          – agent's current objective (ANSI string)
-;       RDX = pSystemPrompt  – base system instruction string (ANSI string)
-;       R8  = pOutBuf        – destination buffer for the assembled prompt
-;       R9  = dwOutSize      – byte capacity of pOutBuf
+;       RCX = pGoal          ? agent's current objective (ANSI string)
+;       RDX = pSystemPrompt  ? base system instruction string (ANSI string)
+;       R8  = pOutBuf        ? destination buffer for the assembled prompt
+;       R9  = dwOutSize      ? byte capacity of pOutBuf
 ;
 ;       Writes:  <pSystemPrompt>
 ;                Goal: <pGoal>
 ;
 ;                Previous execution context:
 ;                <g_ctxBuf>
-;       …all null-terminated and bounds-guarded.
+;       ?all null-terminated and bounds-guarded.
 ;
 ; Internal helper (not exported):
 ;   _CBuf_cat(pDst, pdwOffset, dwMax, pSrc)
@@ -67,8 +67,8 @@ CTXBUF_GUARD    EQU (CTXBUF_SIZE - 2)   ; max byte index that can receive a char
 ; =============================================================================
 ; ContextBuf_Reset
 ;   No args.  Sets g_ctxLen = 0 and writes NUL at buf[0].
-;   Stack: leaf – only 32-byte shadow, no push needed for 0-push alignment.
-;   After CALL: RSP = X-8; no pushes; sub rsp, 24 → RSP = X-32 (32%16=0 ✓)
+;   Stack: leaf ? only 32-byte shadow, no push needed for 0-push alignment.
+;   After CALL: RSP = X-8; no pushes; sub rsp, 24 ? RSP = X-32 (32%16=0 ?)
 ; =============================================================================
 ContextBuf_Reset PROC FRAME
     sub  rsp, 24
@@ -85,12 +85,12 @@ ContextBuf_Reset PROC FRAME
 ContextBuf_Reset ENDP
 
 ; =============================================================================
-; _CBuf_cat – internal append helper
+; _CBuf_cat ? internal append helper
 ;
-; RCX = pDst        – destination buffer base
-; RDX = pdwOffset   – pointer to QWORD holding current write offset
-; R8  = dwMax       – buffer capacity (bytes; NOT including null terminator)
-; R9  = pSrc        – source string (null-terminated)
+; RCX = pDst        ? destination buffer base
+; RDX = pdwOffset   ? pointer to QWORD holding current write offset
+; R8  = dwMax       ? buffer capacity (bytes; NOT including null terminator)
+; R9  = pSrc        ? source string (null-terminated)
 ;
 ; Pure register loop; leaf function; no stack frame needed.
 ; =============================================================================
@@ -98,7 +98,7 @@ _CBuf_cat PROC
     ; R10 = src char ptr
     ; R11 = dest write ptr  (pDst + *pdwOffset)
     ; RAX = current offset
-    ; All volatile – no preservation required.
+    ; All volatile ? no preservation required.
 
     mov  rax, qword ptr [rdx]       ; rax = current offset
     mov  r11, rcx
@@ -109,11 +109,11 @@ cc_loop:
     ; Bounds guard: need at least 2 bytes (char + null terminator)
     lea  r9, [rax + 2]
     cmp  r9, r8
-    jg   cc_done                    ; buffer would overflow – stop
+    jg   cc_done                    ; buffer would overflow ? stop
 
     movzx ecx, byte ptr [r10]
     test cl, cl
-    jz   cc_done                    ; hit NUL ∴ source exhausted
+    jz   cc_done                    ; hit NUL ? source exhausted
 
     mov  byte ptr [r11], cl
     inc  r10
@@ -133,8 +133,8 @@ _CBuf_cat ENDP
 ;
 ; Appends "Step: <toolName>\r\n"
 ;
-; Stack: 1 push (rbx) → N must be divisible by 16; use N=32.
-;   After CALL: RSP=X-8; push rbx → X-16; sub rsp,32 → X-48 (48%16=0 ✓)
+; Stack: 1 push (rbx) ? N must be divisible by 16; use N=32.
+;   After CALL: RSP=X-8; push rbx ? X-16; sub rsp,32 ? X-48 (48%16=0 ?)
 ; =============================================================================
 ContextBuf_AppendStep PROC FRAME
     push rbx
@@ -175,7 +175,7 @@ ContextBuf_AppendStep ENDP
 ; ContextBuf_AppendResult(pResult)   RCX = LPSTR pResult
 ;
 ; Appends "Result: <result>\r\n\r\n"
-; Stack: same 1-push pattern → N=32.
+; Stack: same 1-push pattern ? N=32.
 ; =============================================================================
 ContextBuf_AppendResult PROC FRAME
     push rbx
@@ -214,7 +214,7 @@ ContextBuf_AppendResult ENDP
 
 ; =============================================================================
 ; ContextBuf_Get() -> LPSTR
-;   Returns pointer to g_ctxBuf in RAX.  Leaf function – no stack frame.
+;   Returns pointer to g_ctxBuf in RAX.  Leaf function ? no stack frame.
 ; =============================================================================
 ContextBuf_Get PROC
     lea  rax, [g_ctxBuf]
@@ -233,18 +233,18 @@ ContextBuf_GetLen ENDP
 ; =============================================================================
 ; ContextBuf_BuildPrompt(pGoal, pSystemPrompt, pOutBuf, dwOutSize)
 ;
-;   RCX  LPSTR  pGoal          – agent's current objective
-;   RDX  LPSTR  pSystemPrompt  – system instruction prefix, may be NULL
-;   R8   LPBYTE pOutBuf        – destination buffer
-;   R9   DWORD  dwOutSize      – capacity of pOutBuf (bytes)
+;   RCX  LPSTR  pGoal          ? agent's current objective
+;   RDX  LPSTR  pSystemPrompt  ? system instruction prefix, may be NULL
+;   R8   LPBYTE pOutBuf        ? destination buffer
+;   R9   DWORD  dwOutSize      ? capacity of pOutBuf (bytes)
 ;
 ; Assembles: <pSystemPrompt> + "Goal: " + <pGoal> +
 ;            "\r\n\r\nPrevious execution context:\r\n" + g_ctxBuf
 ;
-; Stack: 3 scalars to save + pOutBuf/dwOutSize → 5 × 8 = 40 bytes locals.
-;   Total with shadow = 32 + 40 = 72. Need N ≡ 8 (mod 16) with 0 pushes.
-;   72 % 16 = 8  ✓  →  sub rsp, 72.
-;   RSP after = X - 8 - 72 = X - 80.  80 % 16 = 0  ✓
+; Stack: 3 scalars to save + pOutBuf/dwOutSize ? 5 ? 8 = 40 bytes locals.
+;   Total with shadow = 32 + 40 = 72. Need N ? 8 (mod 16) with 0 pushes.
+;   72 % 16 = 8  ?  ?  sub rsp, 72.
+;   RSP after = X - 8 - 72 = X - 80.  80 % 16 = 0  ?
 ; =============================================================================
 ContextBuf_BuildPrompt PROC FRAME
     sub  rsp, 72
@@ -314,3 +314,4 @@ PUBLIC ContextBuf_GetLen
 PUBLIC ContextBuf_BuildPrompt
 
 END
+

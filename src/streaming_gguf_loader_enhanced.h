@@ -11,6 +11,9 @@
 #include <condition_variable>
 #include <span>
 #include <cstddef>
+#include <queue>
+
+namespace RawrXD {
 
 // ============================================================================
 // ENHANCED STREAMING GGUF LOADER - Predictive, NVMe-optimized, parallelized
@@ -217,12 +220,18 @@ private:
     PerformanceMetrics metrics_;
     mutable std::mutex metrics_mutex_;
     
+    // ---- Zone offset table (used by NVMe/IORing direct I/O) ----
+    std::unordered_map<uint32_t, std::pair<uint64_t, uint64_t>> zone_offsets_;
+    std::wstring model_filepath_;
+
     // ---- Helper Methods ----
     void InitializeNVMeIfAvailable();
     void InitializeIORingIfAvailable();
     void InitializeHugePagePool();
     void InitializePredictor();
-    
+
+    bool IsTensorResident(const std::string& tensor_name) const { return false; }
+
     bool LoadWithNVMe(uint32_t zone_id, std::vector<uint8_t>& data);
     bool LoadWithIOring(uint32_t zone_id, std::vector<uint8_t>& data);
     bool LoadWithParallel(const std::string& tensor_name, std::vector<uint8_t>& data, int preferred_device);
@@ -263,6 +272,8 @@ namespace EnhancedLoaderUtils {
         return static_cast<double>(ticks) / 1000.0;
     }
 }
+
+} // namespace RawrXD
 
 // Header guard end
 // (Removed duplicate #endif to fix C1020 error)

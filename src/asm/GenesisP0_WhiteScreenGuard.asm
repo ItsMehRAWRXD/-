@@ -106,3 +106,4 @@ Genesis_WhiteScreenGuard_Patch PROC
 Genesis_WhiteScreenGuard_Patch ENDP
 
 END
+

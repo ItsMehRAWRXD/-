@@ -1,5 +1,5 @@
 ; =============================================================================
-; agenticide_main.asm — RawrXD Agentic IDE Entry Point (MASM64)
+; agenticide_main.asm ? RawrXD Agentic IDE Entry Point (MASM64)
 ; =============================================================================
 ;
 ; Pure MASM64 WinMain for the Agentic IDE shell.
@@ -168,7 +168,7 @@ szUser32        DB "user32.dll", 0
 szSetDpiCtx     DB "SetProcessDpiAwarenessContext", 0
 szExtHostPipe   DB "\\.\pipe\RawrXD_ExtHost", 0
 
-g_hInstance     DQ 0
+EXTERNDEF g_hInstance : QWORD
 g_hWndMain      DQ 0
 g_hExtHostPipe  DQ 0        ; Named pipe to ExtensionHost
 g_AgentMode     DD AGENT_MODE_AUTONOMOUS
@@ -184,7 +184,7 @@ ALIGN 16
 .code
 
 ; -----------------------------------------------------------------------------
-; AgenticIDE_WndProc — Main window message handler
+; AgenticIDE_WndProc ? Main window message handler
 ; RCX = hwnd, RDX = uMsg, R8 = wParam, R9 = lParam
 ; -----------------------------------------------------------------------------
 AgenticIDE_WndProc PROC FRAME
@@ -251,7 +251,7 @@ AgenticIDE_WndProc PROC FRAME
     jmp     @@done
 
 @@on_timer:
-    ; Agent tick — drain async queue and dispatch pending tasks
+    ; Agent tick ? drain async queue and dispatch pending tasks
     cmp     DWORD PTR [g_AgentRunning], 0
     je      @@timer_skip
 
@@ -272,7 +272,7 @@ AgenticIDE_WndProc PROC FRAME
     jmp     @@done
 
 @@on_command:
-    ; LOWORD(wParam) = command ID → dispatch through orchestrator
+    ; LOWORD(wParam) = command ID ? dispatch through orchestrator
     movzx   ecx, r8w                            ; opcode
     xor     edx, edx                            ; flags
     xor     r8, r8                              ; payload
@@ -320,7 +320,7 @@ EnsureDpiAwareness PROC FRAME
 EnsureDpiAwareness ENDP
 
 ; -----------------------------------------------------------------------------
-; ConnectExtensionHost — Open named pipe to RawrXD-ExtensionHost
+; ConnectExtensionHost ? Open named pipe to RawrXD-ExtensionHost
 ; Returns: RAX = pipe handle (or INVALID_HANDLE_VALUE on failure)
 ; -----------------------------------------------------------------------------
 ConnectExtensionHost PROC FRAME
@@ -351,7 +351,7 @@ ConnectExtensionHost PROC FRAME
 ConnectExtensionHost ENDP
 
 ; -----------------------------------------------------------------------------
-; WinMain — Agentic IDE entry point
+; WinMain ? Agentic IDE entry point
 ; RCX = hInstance, RDX = hPrevInstance, R8 = lpCmdLine, R9 = nCmdShow
 ; -----------------------------------------------------------------------------
 WinMain PROC FRAME
@@ -470,7 +470,7 @@ WinMain PROC FRAME
     jmp     @@msg_loop
 
 @@idle:
-    ; No messages — yield briefly to avoid CPU spin
+    ; No messages ? yield briefly to avoid CPU spin
     mov     ecx, 1
     call    Sleep
     jmp     @@msg_loop
@@ -509,13 +509,13 @@ WinMain ENDP
 ;                         EXPORTED UTILITY
 ; =============================================================================
 
-; AgenticIDE_GetHwnd — Returns main window HWND
+; AgenticIDE_GetHwnd ? Returns main window HWND
 AgenticIDE_GetHwnd PROC
     mov     rax, [g_hWndMain]
     ret
 AgenticIDE_GetHwnd ENDP
 
-; AgenticIDE_DispatchAgent — Dispatch an opcode through the orchestrator
+; AgenticIDE_DispatchAgent ? Dispatch an opcode through the orchestrator
 ; RCX = opcode, RDX = payloadPtr, R8 = payloadLen
 AgenticIDE_DispatchAgent PROC FRAME
     push    rbp
@@ -528,10 +528,10 @@ AgenticIDE_DispatchAgent PROC FRAME
 
     ; RCX already = opcode
     ; RDX already = payload
-    mov     r9, r8                              ; payloadLen → r9
+    mov     r9, r8                              ; payloadLen ? r9
     xor     r8, r8                              ; flags = 0
     ; Reorder: dispatch(opcode, flags, payload, len)
-    mov     r8, rdx                             ; payload → r8
+    mov     r8, rdx                             ; payload ? r8
     xor     edx, edx                            ; flags = 0
     call    asm_orchestrator_dispatch
 
@@ -540,7 +540,7 @@ AgenticIDE_DispatchAgent PROC FRAME
     ret
 AgenticIDE_DispatchAgent ENDP
 
-; AgenticIDE_QueueTask — Queue async task to orchestrator SPSC ring
+; AgenticIDE_QueueTask ? Queue async task to orchestrator SPSC ring
 ; RCX = opcode, RDX = payloadPtr, R8 = payloadLen
 AgenticIDE_QueueTask PROC FRAME
     push    rbp
@@ -568,3 +568,5 @@ public AgenticIDE_DispatchAgent
 public AgenticIDE_QueueTask
 
 END
+
+

@@ -8,10 +8,10 @@
 ;
 ; PUBLIC API
 ;   PipeCapture_Run(pCmdLine, pOutBuf, dwBufSize, pdwBytesRead) -> DWORD
-;       RCX  LPSTR       pCmdLine      – ANSI command; mutable (CreateProcessA may modify)
-;       RDX  LPBYTE      pOutBuf       – caller buffer that receives captured output
-;       R8   DWORD       dwBufSize     – byte capacity of pOutBuf
-;       R9   LPDWORD     pdwBytesRead  – receives total bytes captured (may be NULL)
+;       RCX  LPSTR       pCmdLine      ? ANSI command; mutable (CreateProcessA may modify)
+;       RDX  LPBYTE      pOutBuf       ? caller buffer that receives captured output
+;       R8   DWORD       dwBufSize     ? byte capacity of pOutBuf
+;       R9   LPDWORD     pdwBytesRead  ? receives total bytes captured (may be NULL)
 ;       Returns 0 on success, Win32 error code on failure
 ; =============================================================================
 
@@ -32,7 +32,7 @@ HANDLE_FLAG_INHERIT     EQU 1
 CREATE_NO_WINDOW        EQU 08000000h    ; child has no console window
 INFINITE_WAIT           EQU 0FFFFFFFFh
 
-; ---- SECURITY_ATTRIBUTES field offsets (x64 – pointer-aligned layout) ------
+; ---- SECURITY_ATTRIBUTES field offsets (x64 ? pointer-aligned layout) ------
 SA_nLength              EQU  0           ; DWORD  (4 bytes)
 ;                            4           ; padding (4 bytes)
 SA_lpSecDesc            EQU  8           ; QWORD pointer (8 bytes)
@@ -77,21 +77,21 @@ SIZEOF_PI               EQU  24
 ;   push rbx:        RSP = X - 16
 ;   sub rsp, 336:    RSP = X - 352   (352 % 16 == 0 => 16-byte aligned for inner calls)
 ;
-;   [rsp +  0 ..  31]  32 bytes  – shadow space for callees
-;   [rsp + 32 ..  79]  48 bytes  – stack arg slots for >4-arg calls (slots 5–10)
-;   [rsp + 80 ..  87]   8 bytes  – saved pCmdLine  (RCX)
-;   [rsp + 88 ..  95]   8 bytes  – saved pOutBuf   (RDX)
-;   [rsp + 96 .. 103]   8 bytes  – saved dwBufSize (R8, stored as QWORD)
-;   [rsp +104 .. 111]   8 bytes  – saved pdwBytesRead (R9)
-;   [rsp +112 .. 119]   8 bytes  – qTotalRead
-;   [rsp +120 .. 127]   8 bytes  – hRead
-;   [rsp +128 .. 135]   8 bytes  – hWrite
-;   [rsp +136 .. 143]   8 bytes  – cbNow (DWORD @ +136, pad @ +140)
-;   [rsp +144 .. 167]  24 bytes  – SECURITY_ATTRIBUTES
-;   [rsp +168 .. 271] 104 bytes  – STARTUPINFOA
-;   [rsp +272 .. 295]  24 bytes  – PROCESS_INFORMATION
-;   [rsp +296 .. 303]   8 bytes  – qRetVal
-;   [rsp +304 .. 335]  32 bytes  – alignment padding to fill 336
+;   [rsp +  0 ..  31]  32 bytes  ? shadow space for callees
+;   [rsp + 32 ..  79]  48 bytes  ? stack arg slots for >4-arg calls (slots 5?10)
+;   [rsp + 80 ..  87]   8 bytes  ? saved pCmdLine  (RCX)
+;   [rsp + 88 ..  95]   8 bytes  ? saved pOutBuf   (RDX)
+;   [rsp + 96 .. 103]   8 bytes  ? saved dwBufSize (R8, stored as QWORD)
+;   [rsp +104 .. 111]   8 bytes  ? saved pdwBytesRead (R9)
+;   [rsp +112 .. 119]   8 bytes  ? qTotalRead
+;   [rsp +120 .. 127]   8 bytes  ? hRead
+;   [rsp +128 .. 135]   8 bytes  ? hWrite
+;   [rsp +136 .. 143]   8 bytes  ? cbNow (DWORD @ +136, pad @ +140)
+;   [rsp +144 .. 167]  24 bytes  ? SECURITY_ATTRIBUTES
+;   [rsp +168 .. 271] 104 bytes  ? STARTUPINFOA
+;   [rsp +272 .. 295]  24 bytes  ? PROCESS_INFORMATION
+;   [rsp +296 .. 303]   8 bytes  ? qRetVal
+;   [rsp +304 .. 335]  32 bytes  ? alignment padding to fill 336
 ; =============================================================================
 
 .code
@@ -121,7 +121,7 @@ PipeCapture_Run PROC FRAME
     mov  qword ptr [rsp +160], rax
     ; Set required fields
     mov  dword ptr [rsp +144 + SA_nLength],         SIZEOF_SA
-    mov  dword ptr [rsp +144 + SA_bInheritHandle],  1   ; TRUE – child inherits
+    mov  dword ptr [rsp +144 + SA_bInheritHandle],  1   ; TRUE ? child inherits
 
     ; ---- Zero STARTUPINFOA (13 QWORDs = 104 bytes) -------------------------
     lea  rbx, [rsp +168]
@@ -138,7 +138,7 @@ PipeCapture_Run PROC FRAME
     mov  qword ptr [rbx + 80], rax
     mov  qword ptr [rbx + 88], rax
     mov  qword ptr [rbx + 96], rax
-    ; Set required fields (rbx → &si)
+    ; Set required fields (rbx ? &si)
     mov  dword ptr [rbx + SI_cb],      SIZEOF_SI
     mov  dword ptr [rbx + SI_dwFlags], STARTF_USESTDHANDLES
 
@@ -163,14 +163,14 @@ PipeCapture_Run PROC FRAME
     call SetHandleInformation
     ; failure is non-critical; continue regardless
 
-    ; ---- Wire hWrite into STARTUPINFOA (rbx still → &si) -------------------
+    ; ---- Wire hWrite into STARTUPINFOA (rbx still ? &si) -------------------
     mov  rax, qword ptr [rsp +128]  ; hWrite
     mov  qword ptr [rbx + SI_hStdOutput], rax
     mov  qword ptr [rbx + SI_hStdError],  rax
-    ; si.hStdInput stays NULL – child inherits parent console stdin (safe default)
+    ; si.hStdInput stays NULL ? child inherits parent console stdin (safe default)
 
     ; ---- CreateProcessA (10 args: 4 in regs, 6 on stack) -------------------
-    ; Stack slots [rsp+32..79] are reserved for the 5th–10th arguments
+    ; Stack slots [rsp+32..79] are reserved for the 5th?10th arguments
     mov  qword ptr [rsp + 32], 1                ; bInheritHandles = TRUE
     mov  qword ptr [rsp + 40], CREATE_NO_WINDOW ; dwCreationFlags
     mov  qword ptr [rsp + 48], 0                ; lpEnvironment      = NULL
@@ -200,12 +200,12 @@ pcr_read_loop:
     mov  rax, qword ptr [rsp +112]          ; qTotalRead
     mov  r10d, dword ptr [rsp + 96]         ; dwBufSize (zero-ext to 64-bit)
     cmp  rax, r10
-    jge  pcr_read_done                      ; buffer full – stop
+    jge  pcr_read_done                      ; buffer full ? stop
 
     mov  r11, qword ptr [rsp + 88]          ; pOutBuf
     add  r11, rax                           ; cursor = pOutBuf + totalRead
 
-    ; remaining = bufSize - totalRead  (fits in DWORD since both are ≤ DWORD_MAX)
+    ; remaining = bufSize - totalRead  (fits in DWORD since both are ? DWORD_MAX)
     sub  r10, rax                           ; r10 = remaining bytes
 
     ; Set cbNow = 0 before ReadFile
@@ -299,3 +299,4 @@ PipeCapture_Run ENDP
 PUBLIC PipeCapture_Run
 
 END
+

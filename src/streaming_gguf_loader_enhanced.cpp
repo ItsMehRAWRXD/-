@@ -5,6 +5,8 @@
 #include <cmath>
 #include <iostream> // For debug output instead of Diagnostics
 
+namespace RawrXD {
+
 // ============================================================================
 // CONSTRUCTION & INITIALIZATION
 // ============================================================================
@@ -195,32 +197,33 @@ std::span<const std::byte> EnhancedStreamingGGUFLoader::GetTensorView(
 {
     // Update metrics
     metrics_.total_tensor_loads++;
-    
+
     // Check if tensor is resident (cache hit)
     if (IsTensorResident(tensor_name)) {
         metrics_.cache_hits++;
-        
+
         // Trigger predictive prefetch for next likely zones
         auto predictions = PredictNextZones(2);
         for (uint32_t pred_zone : predictions) {
             PrefetchZoneAsync(pred_zone);
         }
-        
-        // Delegate to base class zero-copy
-        return StreamingGGUFLoader::GetTensorView(tensor_name, offset, length);
+
+        // Stub: base class does not provide GetTensorView; return empty span
+        (void)tensor_name; (void)offset; (void)length;
+        return {};
     }
-    
+
     // Cache miss - need to load zone first
     metrics_.cache_misses++;
-    
+
     // Synchronously load the zone
     std::string zone_name = GetTensorZone(tensor_name);
     if (!zone_name.empty()) {
         LoadZone(zone_name);
     }
-    
-    // Now return the view
-    return StreamingGGUFLoader::GetTensorView(tensor_name, offset, length);
+
+    // Stub: return empty span until zero-copy view is implemented
+    return {};
 }
 
 void EnhancedStreamingGGUFLoader::PrefetchTensorAsync(const std::string& tensor_name)
@@ -1102,3 +1105,5 @@ bool DecompressZSTD(const std::vector<uint8_t>& compressed,
 }
 
 }  // namespace EnhancedLoaderUtils
+
+}  // namespace RawrXD

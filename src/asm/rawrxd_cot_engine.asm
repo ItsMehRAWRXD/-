@@ -1,5 +1,5 @@
 ; =============================================================================
-; rawrxd_cot_engine.asm — Chain-of-Thought Engine Core (Pure x64 MASM DLL)
+; rawrxd_cot_engine.asm ? Chain-of-Thought Engine Core (Pure x64 MASM DLL)
 ; =============================================================================
 ;
 ; Phase 37: Full MASM64 reverse-engineering of chain_of_thought_engine.cpp
@@ -18,25 +18,25 @@
 ;   - Thread-safe via SRW lock (coordinated with rawrxd_cot_dll_entry.asm)
 ;
 ; Exports:
-;   CoT_Initialize_Core     — Reserve 1GB VA, init data structures
-;   CoT_Shutdown_Core       — Release all memory, zero state
-;   CoT_Set_Max_Steps       — Clamp to [1,8]
-;   CoT_Get_Max_Steps       — Returns current max
-;   CoT_Clear_Steps         — Remove all configured steps
-;   CoT_Add_Step            — Append a step (role, model, instruction, skip)
-;   CoT_Apply_Preset        — Load a named preset (6 built-in)
-;   CoT_Get_Step_Count      — Number of configured steps
-;   CoT_Execute_Chain       — Run the chain synchronously
-;   CoT_Cancel              — Set cancellation flag
-;   CoT_Is_Running          — Check if chain executing
-;   CoT_Get_Stats           — Copy statistics to caller buffer
-;   CoT_Reset_Stats         — Zero all counters
-;   CoT_Get_Status_JSON     — Build JSON status into caller buffer
-;   CoT_Get_Role_Info       — Get role name/label/icon/instruction by ID
-;   CoT_Append_Data         — Append raw token data to the 1GB arena
-;   CoT_Get_Data_Ptr        — Get base pointer to arena
-;   CoT_Get_Data_Used       — Get bytes used in arena
-;   CoT_Get_Version         — Returns engine version DWORD
+;   CoT_Initialize_Core     ? Reserve 1GB VA, init data structures
+;   CoT_Shutdown_Core       ? Release all memory, zero state
+;   CoT_Set_Max_Steps       ? Clamp to [1,8]
+;   CoT_Get_Max_Steps       ? Returns current max
+;   CoT_Clear_Steps         ? Remove all configured steps
+;   CoT_Add_Step            ? Append a step (role, model, instruction, skip)
+;   CoT_Apply_Preset        ? Load a named preset (6 built-in)
+;   CoT_Get_Step_Count      ? Number of configured steps
+;   CoT_Execute_Chain       ? Run the chain synchronously
+;   CoT_Cancel              ? Set cancellation flag
+;   CoT_Is_Running          ? Check if chain executing
+;   CoT_Get_Stats           ? Copy statistics to caller buffer
+;   CoT_Reset_Stats         ? Zero all counters
+;   CoT_Get_Status_JSON     ? Build JSON status into caller buffer
+;   CoT_Get_Role_Info       ? Get role name/label/icon/instruction by ID
+;   CoT_Append_Data         ? Append raw token data to the 1GB arena
+;   CoT_Get_Data_Ptr        ? Get base pointer to arena
+;   CoT_Get_Data_Used       ? Get bytes used in arena
+;   CoT_Get_Version         ? Returns engine version DWORD
 ;
 ; Architecture: x64 MASM | Windows ABI | SEH | No CRT dependency
 ; Build: ml64 /c /Zi /Zd /Fo rawrxd_cot_engine.obj rawrxd_cot_engine.asm
@@ -111,10 +111,10 @@ EXTERN CoT_UpdateTelemetry: PROC
 ;                            CONSTANTS
 ; =============================================================================
 
-; Engine version: 1.0.0 = 0x00010000
+; Engine version: 1.0.0 = 000010000h
 COT_ENGINE_VERSION          EQU     00010000h
 
-; Arena sizes — 100M tokens at ~10 bytes avg = ~1 GB
+; Arena sizes ? 100M tokens at ~10 bytes avg = ~1 GB
 COT_ARENA_RESERVE_SIZE      EQU     40000000h       ; 1 GB reserved
 COT_ARENA_INITIAL_COMMIT    EQU     00100000h       ; 1 MB initial commit
 COT_ARENA_COMMIT_GRANULE    EQU     00100000h       ; 1 MB commit chunks
@@ -166,7 +166,7 @@ CANARY_TAIL_MAGIC           EQU     4039CAFEBEEFDEADh
 ; Phase 39: Commit governor soft throttle limit (16 MB/sec)
 COMMIT_SOFT_LIMIT_BYTES     EQU     01000000h
 
-; Phase 39: Guard page size (one 4KB page)
+; Phase 39: Guard page m_size (one 4KB page)
 GUARD_PAGE_SIZE             EQU     1000h
 
 ; =============================================================================
@@ -270,7 +270,7 @@ g_stepResults           COT_STEP_RESULT COT_MAX_STEPS DUP(<>)
 g_defaultModel          DB COT_MAX_MODEL_NAME DUP(0)
 
 ; =============================================================================
-;                 ROLE INFO TABLE (.rdata — read-only strings)
+;                 ROLE INFO TABLE (.rdata ? read-only strings)
 ; =============================================================================
 .const
 
@@ -318,7 +318,7 @@ szIcon_Verifier         DB "[V]", 0
 szIcon_Refiner          DB "[Rf]", 0
 szIcon_Summarizer       DB "[Su]", 0
 
-; Role instructions (system prompts — matching chain_of_thought_engine.cpp)
+; Role instructions (system prompts ? matching chain_of_thought_engine.cpp)
 szInstr_Reviewer        DB "You are a code reviewer. Analyze the following carefully, identify issues, suggest improvements.", 0
 szInstr_Auditor         DB "You are a security/quality auditor. Check for vulnerabilities, correctness issues, edge cases, and compliance.", 0
 szInstr_Thinker         DB "You are a deep thinker. Reason step-by-step through the problem, consider alternatives, and explain your reasoning.", 0
@@ -434,7 +434,7 @@ szPreset_Custom         DB "custom", 0
 szPresetL_Custom        DB "Custom", 0
 
 ; --- Preset table (6 entries, each with step definitions) ---
-; Preset 0: review — reviewer -> critic -> synthesizer
+; Preset 0: review ? reviewer -> critic -> synthesizer
 ALIGN 8
 g_presetTable LABEL QWORD
     ; review
@@ -450,7 +450,7 @@ g_presetTable LABEL QWORD
     DD 0, 0
     DD 0, 0
 
-    ; audit — auditor -> verifier -> summarizer
+    ; audit ? auditor -> verifier -> summarizer
     DQ OFFSET szPreset_Audit
     DQ OFFSET szPresetL_Audit
     DD 3, 0
@@ -463,7 +463,7 @@ g_presetTable LABEL QWORD
     DD 0, 0
     DD 0, 0
 
-    ; think — brainstorm -> thinker -> refiner -> synthesizer
+    ; think ? brainstorm -> thinker -> refiner -> synthesizer
     DQ OFFSET szPreset_Think
     DQ OFFSET szPresetL_Think
     DD 4, 0
@@ -476,7 +476,7 @@ g_presetTable LABEL QWORD
     DD 0, 0
     DD 0, 0
 
-    ; research — researcher -> thinker -> verifier -> synthesizer
+    ; research ? researcher -> thinker -> verifier -> synthesizer
     DQ OFFSET szPreset_Research
     DQ OFFSET szPresetL_Research
     DD 4, 0
@@ -489,7 +489,7 @@ g_presetTable LABEL QWORD
     DD 0, 0
     DD 0, 0
 
-    ; debate — debater_for -> debater_against -> synthesizer
+    ; debate ? debater_for -> debater_against -> synthesizer
     DQ OFFSET szPreset_Debate
     DQ OFFSET szPresetL_Debate
     DD 3, 0
@@ -502,7 +502,7 @@ g_presetTable LABEL QWORD
     DD 0, 0
     DD 0, 0
 
-    ; custom — thinker (single step)
+    ; custom ? thinker (single step)
     DQ OFFSET szPreset_Custom
     DQ OFFSET szPresetL_Custom
     DD 1, 0
@@ -515,10 +515,10 @@ g_presetTable LABEL QWORD
     DD 0, 0
     DD 0, 0
 
-; Preset entry size (bytes) — computed: 2 DQ + 2 DD + 8*(2 DD) = 16+8+64 = 88
+; Preset entry m_size (bytes) ? computed: 2 DQ + 2 DD + 8*(2 DD) = 16+8+64 = 88
 PRESET_ENTRY_SIZE           EQU     88
 
-; Role entry size in bytes: 2 DD + 4 DQ = 8 + 32 = 40
+; Role entry m_size in bytes: 2 DD + 4 DQ = 8 + 32 = 40
 ROLE_ENTRY_SIZE             EQU     40
 
 ; JSON format strings
@@ -529,7 +529,7 @@ szJsonStatusFmt4    DB ',"maxSteps":', 0
 szJsonStatusFmt5    DB ',"stepCount":', 0
 szJsonStatusFmt6    DB ',"arenaUsedBytes":', 0
 szJsonStatusFmt7    DB ',"arenaCommittedBytes":', 0
-szJsonStatusFmt8    DB ',"stats":{"totalChains":', 0
+szJsonStatusFmt8    DB ',"m_stats":{"totalChains":', 0
 szJsonStatusFmt9    DB ',"successfulChains":', 0
 szJsonStatusFmt10   DB ',"failedChains":', 0
 szJsonStatusFmt11   DB ',"totalStepsExecuted":', 0
@@ -553,7 +553,7 @@ szDbg_AppendFault   DB "[CoT-ASM] Append_Data: SEH fault during copy!", 0
 .code
 
 ; =============================================================================
-; Internal: asm_strlen — compute length of ASCIIZ string
+; Internal: asm_strlen ? compute length of ASCIIZ string
 ;   RCX = pointer to string
 ;   Returns: RAX = length (not including NUL)
 ; =============================================================================
@@ -574,7 +574,7 @@ asm_strlen PROC
 asm_strlen ENDP
 
 ; =============================================================================
-; Internal: asm_strcpy — copy ASCIIZ string (NUL-terminated)
+; Internal: asm_strcpy ? copy ASCIIZ string (NUL-terminated)
 ;   RCX = dest
 ;   RDX = src
 ;   Returns: RAX = bytes copied (including NUL)
@@ -598,7 +598,7 @@ asm_strcpy PROC
 asm_strcpy ENDP
 
 ; =============================================================================
-; Internal: asm_strcmp — compare two ASCIIZ strings
+; Internal: asm_strcmp ? compare two ASCIIZ strings
 ;   RCX = str1
 ;   RDX = str2
 ;   Returns: EAX = 0 if equal, non-zero otherwise
@@ -627,7 +627,7 @@ asm_strcmp PROC
 asm_strcmp ENDP
 
 ; =============================================================================
-; Internal: asm_itoa — convert unsigned 64-bit integer to decimal ASCII
+; Internal: asm_itoa ? convert unsigned 64-bit integer to decimal ASCII
 ;   RCX = value
 ;   RDX = output buffer (must hold >= 21 chars)
 ;   Returns: RAX = length of string written
@@ -689,7 +689,7 @@ asm_itoa PROC FRAME
 asm_itoa ENDP
 
 ; =============================================================================
-; Internal: asm_append_str — append ASCIIZ string to buffer
+; Internal: asm_append_str ? append ASCIIZ string to buffer
 ;   RCX = dest buffer current write position
 ;   RDX = source string (ASCIIZ)
 ;   Returns: RAX = new write position (past last char, NOT past NUL)
@@ -713,7 +713,7 @@ asm_append_str PROC
 asm_append_str ENDP
 
 ; =============================================================================
-; Internal: asm_append_int — append decimal integer to buffer
+; Internal: asm_append_int ? append decimal integer to buffer
 ;   RCX = dest buffer current write position
 ;   RDX = integer value (unsigned 64-bit)
 ;   Returns: RAX = new write position
@@ -743,7 +743,7 @@ asm_append_int PROC FRAME
 asm_append_int ENDP
 
 ; =============================================================================
-; Internal: ensure_arena_committed — commit more pages if needed
+; Internal: ensure_arena_committed ? commit more pages if needed
 ;   RCX = required total bytes (g_arenaUsed + new data)
 ;   Returns: EAX = 0 on success, -1 if commit fails
 ; =============================================================================
@@ -771,14 +771,14 @@ ensure_arena_committed PROC FRAME
     ; VirtualAlloc(base + committed, roundedSize, MEM_COMMIT, PAGE_READWRITE)
     mov     rcx, QWORD PTR [g_arenaBase]
     add     rcx, rbx                        ; start of new commit region
-    mov     rdx, rax                        ; size
+    mov     rdx, rax                        ; m_size
     mov     r8d, MEM_COMMIT
     mov     r9d, PAGE_READWRITE
     call    VirtualAlloc
     test    rax, rax
     jz      @@eac_fail
 
-    ; Update committed size
+    ; Update committed m_size
     mov     rax, r12
     add     rax, COT_ARENA_COMMIT_GRANULE - 1
     and     rax, NOT (COT_ARENA_COMMIT_GRANULE - 1)
@@ -822,7 +822,7 @@ CoT_SEH_Handler PROC FRAME
     mov     rbx, rcx                        ; save ExceptionRecord
     mov     r12, r8                         ; save ContextRecord
 
-    ; Check if this is an access violation (0xC0000005)
+    ; Check if this is an access violation (0C0000005h)
     mov     eax, DWORD PTR [rbx]            ; ExceptionRecord->ExceptionCode
     cmp     eax, 0C0000005h
     jne     @@seh_continue
@@ -830,7 +830,7 @@ CoT_SEH_Handler PROC FRAME
     ; ---- Store fault info in per-thread TLS ----
     ; This captures the exact RIP where the AV occurred so C++ callers
     ; can retrieve it via CoT_TLS_GetFaultRIP() for diagnostics.
-    mov     ecx, DWORD PTR [rbx]            ; error code (0xC0000005)
+    mov     ecx, DWORD PTR [rbx]            ; error code (0C0000005h)
     mov     rdx, QWORD PTR [r12 + 0F8h]     ; CONTEXT.Rip (fault RIP)
     ; ExceptionRecord->ExceptionInformation[1] = fault address (for AV)
     mov     r8, QWORD PTR [rbx + 28h]       ; ExceptionInformation[1]
@@ -860,7 +860,7 @@ CoT_SEH_Handler PROC FRAME
     ret
 
 @@seh_resume_target:
-    ; This is never called directly — it's a target IP for the context fixup.
+    ; This is never called directly ? it's a target IP for the context fixup.
     ; Execution resumes here after SEH handler redirects CONTEXT.Rip.
     ret
 CoT_SEH_Handler ENDP
@@ -901,40 +901,40 @@ CoT_Initialize_Core PROC FRAME
     ; If SeLockMemoryPrivilege is available (checked in DllMain),
     ; try MEM_LARGE_PAGES for reduced TLB pressure on 100M token scans.
     ; MEM_LARGE_PAGES requires MEM_RESERVE|MEM_COMMIT together and
-    ; the size must be a multiple of GetLargePageMinimum().
+    ; the m_size must be a multiple of GetLargePageMinimum().
     call    CoT_Has_Large_Pages
     test    eax, eax
     jz      @@init_normal_alloc
 
-    ; Get large page minimum size
+    ; Get large page minimum m_size
     call    GetLargePageMinimum
     test    rax, rax
     jz      @@init_normal_alloc
 
     ; Round up 1GB to large page boundary (typically 2MB)
-    mov     rbx, rax                        ; rbx = large page size
+    mov     rbx, rax                        ; rbx = large page m_size
     mov     rdx, COT_ARENA_RESERVE_SIZE
     add     rdx, rbx
     dec     rdx
     neg     rbx
-    and     rdx, rbx                        ; rounded up size
-    neg     rbx                             ; restore rbx = page size
+    and     rdx, rbx                        ; rounded up m_size
+    neg     rbx                             ; restore rbx = page m_size
 
     ; VirtualAllocExNuma(GetCurrentProcess(), NULL, roundedSize,
     ;                    MEM_RESERVE|MEM_COMMIT|MEM_LARGE_PAGES,
     ;                    PAGE_READWRITE, PREFERRED_NUMA_NODE_ANY)
-    ; NUMA node 0xFFFFFFFF = let OS pick optimal node for calling thread.
+    ; NUMA node 0FFFFFFFFh = let OS pick optimal node for calling thread.
     ; On multi-socket EPYC/Xeon this binds to the local socket.
     call    GetCurrentProcess
     mov     rcx, rax                        ; hProcess
     xor     edx, edx                        ; lpAddress = NULL (let OS pick)
-    ; rdx was just zeroed, but we need the rounded size
+    ; rdx was just zeroed, but we need the rounded m_size
     mov     rdx, COT_ARENA_RESERVE_SIZE
     add     rdx, rbx
     dec     rdx
     mov     rax, rbx
     neg     rax
-    and     rdx, rax                        ; rounded size (recalculate)
+    and     rdx, rax                        ; rounded m_size (recalculate)
     mov     r8d, MEM_RESERVE OR MEM_COMMIT OR MEM_LARGE_PAGES
     mov     r9d, PAGE_READWRITE
     mov     DWORD PTR [rsp + 32], PREFERRED_NUMA_NODE_ANY  ; 6th arg
@@ -942,7 +942,7 @@ CoT_Initialize_Core PROC FRAME
     test    rax, rax
     jz      @@init_normal_alloc             ; fallback if large pages fail
 
-    ; Large page success — entire 1GB is committed (large pages are non-pageable)
+    ; Large page success ? entire 1GB is committed (large pages are non-pageable)
     mov     QWORD PTR [g_arenaBase], rax
     mov     r12, rax
     mov     QWORD PTR [g_arenaCommitted], COT_ARENA_RESERVE_SIZE
@@ -1046,7 +1046,7 @@ CoT_Initialize_Core PROC FRAME
     jmp     @@init_ret
 
 @@init_unlock_free:
-    ; Commit failed — release the reservation
+    ; Commit failed ? release the reservation
     mov     rcx, r12
     xor     edx, edx
     mov     r8d, MEM_RELEASE
@@ -1104,7 +1104,7 @@ CoT_Shutdown_Core PROC FRAME
     mov     DWORD PTR [g_executionState], STATE_IDLE
     mov     DWORD PTR [g_initialized], 0
 
-    ; Zero stats
+    ; Zero m_stats
     lea     rcx, g_stats
     xor     edx, edx
     mov     r8d, SIZEOF COT_STATS
@@ -1763,7 +1763,7 @@ CoT_Reset_Stats ENDP
 ; Build a JSON status string into the caller-provided buffer.
 ;
 ; RCX = output buffer
-; RDX = buffer size (bytes)
+; RDX = buffer m_size (bytes)
 ;
 ; Returns: RAX = bytes written (excluding NUL), 0 on error
 ; =============================================================================
@@ -1787,7 +1787,7 @@ CoT_Get_Status_JSON PROC FRAME
 
     mov     r12, rcx                        ; r12 = buffer start
     mov     r13, rcx                        ; r13 = current write position
-    mov     r14, rdx                        ; r14 = buffer size
+    mov     r14, rdx                        ; r14 = buffer m_size
 
     call    Acquire_CoT_Lock
 
@@ -1880,7 +1880,7 @@ CoT_Get_Status_JSON PROC FRAME
     call    asm_append_int
     mov     r13, rax
 
-    ; ,"stats":{"totalChains":
+    ; ,"m_stats":{"totalChains":
     mov     rcx, r13
     lea     rdx, szJsonStatusFmt8
     call    asm_append_str
@@ -2031,14 +2031,14 @@ CoT_Get_Role_Info ENDP
 ; FIXES APPLIED (Phase 37.1):
 ;   1. Race condition: non-atomic g_arenaUsed update replaced with lock xadd
 ;      so parallel CoT debate threads get unique insertion offsets.
-;   2. Register preservation: r12 is non-volatile per x64 ABI — now saved.
+;   2. Register preservation: r12 is non-volatile per x64 ABI ? now saved.
 ;   3. SEH safety: proper __try/__except around the copy with resume point
 ;      that accounts for the stack frame (sub rsp, 56).
 ;   4. Performance: fast path (movsq + movsb) for <256 byte token appends
 ;      to avoid ERMS microcode startup latency. prefetcht0 for large copies.
 ;
 ; RCX = source data pointer
-; RDX = data size in bytes
+; RDX = data m_size in bytes
 ;
 ; Returns: RAX = new total arena used (bytes), or 0 on failure
 ; =============================================================================
@@ -2064,7 +2064,7 @@ CoT_Append_Data PROC FRAME
     jz      @@ad_fail
 
     mov     r12, rcx                        ; r12 = source data ptr (non-vol, saved above)
-    mov     r13, rdx                        ; r13 = data size in bytes
+    mov     r13, rdx                        ; r13 = data m_size in bytes
 
     ; Check arena initialized
     mov     rax, QWORD PTR [g_arenaBase]
@@ -2102,7 +2102,7 @@ CoT_Append_Data PROC FRAME
     ; RAX = old g_arenaUsed (our insertion point)
     ; g_arenaUsed is now old + r13
 
-    ; Check capacity: insertion_point + size must not exceed 1GB reserve
+    ; Check capacity: insertion_point + m_size must not exceed 1GB reserve
     mov     rbx, rax                        ; rbx = insertion offset
     add     rax, r13                        ; rax = new total used
     cmp     rax, COT_ARENA_RESERVE_SIZE
@@ -2120,7 +2120,7 @@ CoT_Append_Data PROC FRAME
     add     rdi, rbx                        ; dest = base + reserved offset
     mov     rsi, r12                        ; src = caller data
 
-    ; Size check: if < 256 bytes, use movsq+movsb fast path
+    ; m_size check: if < 256 bytes, use movsq+movsb fast path
     ; to avoid ERMS microcode startup latency (~5 cycles on Zen4/Sapphire Rapids)
     cmp     r13, 256
     jb      @@ad_small_copy
@@ -2139,19 +2139,19 @@ CoT_Append_Data PROC FRAME
     ; ---- SMALL COPY PATH (< 256 bytes): movsq + movsb remainder ----
     ; This avoids the ~35 cycle ERMS startup penalty for small token appends
     mov     rcx, r13
-    shr     rcx, 3                          ; qword count = size / 8
+    shr     rcx, 3                          ; qword count = m_size / 8
     jz      @@ad_small_remainder
     rep     movsq                           ; copy 8 bytes at a time
 @@ad_small_remainder:
     mov     rcx, r13
-    and     rcx, 7                          ; remainder = size % 8
+    and     rcx, 7                          ; remainder = m_size % 8
     jz      @@ad_copy_done
     rep     movsb                           ; copy remaining 0-7 bytes
 
 @@ad_copy_done:
     ; --- Phase 39: Update commit governor EMA ---
     ; Simple EMA: rate = (old_rate * 7 + (bytes * 1000 / delta_ms)) / 8
-    ; This is an approximation — we track bytes per call for now
+    ; This is an approximation ? we track bytes per call for now
     call    GetTickCount64
     mov     rcx, rax
     sub     rcx, QWORD PTR [g_commitGovernor + 8]   ; delta = now - LastCommitTS
@@ -2170,7 +2170,7 @@ CoT_Append_Data PROC FRAME
     ; Update LastCommitTS
     call    GetTickCount64
     mov     QWORD PTR [g_commitGovernor + 8], rax
-    ; Check if EMA exceeds soft limit → update throttle level
+    ; Check if EMA exceeds soft limit ? update throttle level
     mov     rax, QWORD PTR [g_commitGovernor]        ; EMA
     cmp     rax, COMMIT_SOFT_LIMIT_BYTES
     jbe     @@ad_throttle_none
@@ -2192,7 +2192,7 @@ CoT_Append_Data PROC FRAME
     jmp     @@ad_done
 
 @@ad_rollback:
-    ; Capacity exceeded or commit failed — roll back the atomic reservation
+    ; Capacity exceeded or commit failed ? roll back the atomic reservation
     ; Subtract r13 back from g_arenaUsed to undo the xadd
     mov     rax, r13
     neg     rax
@@ -2215,7 +2215,7 @@ CoT_Append_Data PROC FRAME
     ret
 
 @@ad_seh_resume:
-    ; SEH resume target — if CoT_SEH_Handler redirects RIP here after AV
+    ; SEH resume target ? if CoT_SEH_Handler redirects RIP here after AV
     ; during the copy, we land here with the stack still at sub rsp,56
     lea     rcx, szDbg_AppendFault
     call    OutputDebugStringA
@@ -2251,7 +2251,7 @@ CoT_Get_Data_Used ENDP
 
 ; =============================================================================
 ; CoT_Get_Version
-; Returns: EAX = engine version (0x00010000 = 1.0.0)
+; Returns: EAX = engine version (000010000h = 1.0.0)
 ; =============================================================================
 CoT_Get_Version PROC
     mov     eax, COT_ENGINE_VERSION
@@ -2260,10 +2260,10 @@ CoT_Get_Version ENDP
 
 ; =============================================================================
 ; CoT_Release_Core
-; Public cleanup API — releases the 1GB arena via VirtualFree and resets state.
+; Public cleanup API ? releases the 1GB arena via VirtualFree and resets state.
 ; This is the externally-visible counterpart to CoT_Initialize_Core.
 ;
-; Unlike CoT_Shutdown_Core (which also zeros stats/steps), this only frees
+; Unlike CoT_Shutdown_Core (which also zeros m_stats/steps), this only frees
 ; the arena memory. Use for graceful teardown from C++ without full shutdown.
 ;
 ; Returns: RAX = 0 on success, STATUS_UNSUCCESSFUL if no arena allocated
@@ -2287,7 +2287,7 @@ CoT_Release_Core PROC FRAME
     xor     edx, edx
     mov     r8d, MEM_RELEASE
     call    VirtualFree
-    ; Ignore return value — VirtualFree can't really fail for MEM_RELEASE
+    ; Ignore return value ? VirtualFree can't really fail for MEM_RELEASE
     ; on a valid reservation
 
     ; Zero arena state
@@ -2311,3 +2311,4 @@ CoT_Release_Core PROC FRAME
 CoT_Release_Core ENDP
 
 END
+

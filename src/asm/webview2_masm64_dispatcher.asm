@@ -1,5 +1,5 @@
 ; ============================================================================
-; rawrxd_ui_dispatcher.asm — x64 MASM Native Win32 Message Loop
+; rawrxd_ui_dispatcher.asm ? x64 MASM Native Win32 Message Loop
 ; ============================================================================
 .code
 
@@ -10,7 +10,7 @@ EXTERN DispatchMessageA : PROC
 EXTERN PostQuitMessage : PROC
 EXTERN DefWindowProcA : PROC
 
-; Data for MSG structure (approx size)
+; Data for MSG structure (approx m_size)
 ; typedef struct tagMSG {
 ;   HWND   hwnd;
 ;   UINT   message;
@@ -20,7 +20,7 @@ EXTERN DefWindowProcA : PROC
 ;   POINT  pt;
 ;   DWORD  lPrivate;
 ; } MSG, *PMSG, *LPMSG;
-; Size is roughly 48 bytes on x64
+; m_size is roughly 48 bytes on x64
 
 rawrxd_run_message_loop PROC
     sub rsp, 56         ; Space for MSG struct + shadow space
@@ -66,3 +66,4 @@ L_default:
 rawrxd_dispatch_window_message ENDP
 
 END
+

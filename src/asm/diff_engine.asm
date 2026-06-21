@@ -24,7 +24,7 @@ rawrxd_generate_diff_asm PROC
     mov rbp, rsp
     sub rsp, 256
     
-    ; Simple copy with basic stats for bootstrap version
+    ; Simple copy with basic m_stats for bootstrap version
     ; (Native implementation of snake compute would go here)
     
     xor rax, rax ; bytes written
@@ -35,3 +35,4 @@ rawrxd_generate_diff_asm PROC
 rawrxd_generate_diff_asm ENDP
 
 END
+

@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_KQuant_Kernel.asm — Bare-Metal Q4_K Dequantization (AVX2 + AVX-512)
+; RawrXD_KQuant_Kernel.asm ? Bare-Metal Q4_K Dequantization (AVX2 + AVX-512)
 ; =============================================================================
 ;
 ; Optimized, register-pressure-minimized dequantization kernels for GGML
@@ -7,19 +7,19 @@
 ; into pure x64 MASM for maximum throughput during inference.
 ;
 ; Q4_K Super-Block Layout (144 bytes per 256 elements):
-;   +0:   d (fp16, 2 bytes) — super-block scale
-;   +2:   dmin (fp16, 2 bytes) — super-block minimum
-;   +4:   scales[12] — packed 6-bit scale/min pairs for 8 sub-blocks
-;   +16:  qs[128] — packed 4-bit quants (2 per byte, 256 elements)
+;   +0:   d (fp16, 2 bytes) ? super-block scale
+;   +2:   dmin (fp16, 2 bytes) ? super-block minimum
+;   +4:   scales[12] ? packed 6-bit scale/min pairs for 8 sub-blocks
+;   +16:  qs[128] ? packed 4-bit quants (2 per byte, 256 elements)
 ;
 ; Formula: output[i] = d * sc_j * quant_i - dmin * m_j
 ;   where sc_j/m_j are sub-block scale/min from scales[]
 ;
 ; Exports:
-;   asm_dequant_q4_k_avx2     — Per-block AVX2 dequantizer (256 elements)
-;   asm_dequant_q4_k_avx512   — Per-block AVX-512 dequantizer (256 elements)
-;   asm_dequant_q4_k_batch    — Multi-block wrapper with auto dispatch
-;   asm_kquant_cpuid_check     — Runtime AVX-512 feature detection
+;   asm_dequant_q4_k_avx2     ? Per-block AVX2 dequantizer (256 elements)
+;   asm_dequant_q4_k_avx512   ? Per-block AVX-512 dequantizer (256 elements)
+;   asm_dequant_q4_k_batch    ? Multi-block wrapper with auto dispatch
+;   asm_kquant_cpuid_check     ? Runtime AVX-512 feature detection
 ;
 ; Architecture: x64 MASM64 | Windows x64 ABI | No CRT | No exceptions
 ; Build: ml64.exe /c /Zi /Zd /Fo RawrXD_KQuant_Kernel.obj
@@ -58,7 +58,7 @@ PUBLIC asm_kquant_cpuid_check
 
 _DATA64 SEGMENT ALIGN(64) 'DATA'
 
-; Nibble isolation mask: 0x0F repeated (for AVX2 = 32 bytes, AVX-512 = 64 bytes)
+; Nibble isolation mask: 00Fh repeated (for AVX2 = 32 bytes, AVX-512 = 64 bytes)
 ALIGN 64
 kq_mask_0F_ymm:
     DB  0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh
@@ -77,7 +77,7 @@ kq_mask_0F_zmm:
     DB  0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh
     DB  0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh
 
-; 6-bit scale isolation mask (0x3F)
+; 6-bit scale isolation mask (03Fh)
 ALIGN 32
 kq_mask_3F:
     DD  03Fh, 03Fh, 03Fh, 03Fh, 03Fh, 03Fh, 03Fh, 03Fh
@@ -101,7 +101,7 @@ kq_avx512_available     DD  ?               ; 0 = no, 1 = AVX-512F present
 .code
 
 ; =============================================================================
-; asm_kquant_cpuid_check — Runtime AVX-512 feature detection
+; asm_kquant_cpuid_check ? Runtime AVX-512 feature detection
 ;
 ; Checks CPUID leaf 7, subleaf 0 for AVX-512F support.
 ; Result is cached in BSS for subsequent calls.
@@ -127,7 +127,7 @@ asm_kquant_cpuid_check PROC FRAME
     bt      ebx, CPUID_AVX512F_BIT
     jnc     @@cpuid_no_avx512
 
-    ; ── XGETBV gate: verify OS has enabled AVX-512 XSTATE ────────────
+    ; ?? XGETBV gate: verify OS has enabled AVX-512 XSTATE ????????????
     ; CPU may advertise AVX-512F but OS might not have enabled ZMM
     ; state in XCR0 (bits 5/6/7).  Without this check, executing a
     ; ZMM instruction would #UD on such a machine.
@@ -154,7 +154,7 @@ asm_kquant_cpuid_check PROC FRAME
 asm_kquant_cpuid_check ENDP
 
 ; =============================================================================
-; asm_dequant_q4_k_avx2 — Q4_K to FP32 dequantization (AVX2 + F16C)
+; asm_dequant_q4_k_avx2 ? Q4_K to FP32 dequantization (AVX2 + F16C)
 ;
 ; Dequantizes one Q4_K super-block (256 elements) from 144 bytes to 256 floats.
 ; Processes 8 sub-blocks of 32 elements each using AVX2 SIMD.
@@ -166,7 +166,7 @@ asm_kquant_cpuid_check ENDP
 ; Register allocation:
 ;   ymm12 = broadcast d (super-scale)
 ;   ymm13 = broadcast dmin (super-minimum)
-;   ymm15 = nibble mask (0x0F)
+;   ymm15 = nibble mask (00Fh)
 ;   r8    = quants pointer (advances per sub-block)
 ;   r9    = scales pointer
 ;   ebx   = sub-block counter
@@ -212,8 +212,8 @@ asm_dequant_q4_k_avx2 PROC FRAME
     ; ---- Unpack 6-bit scale (sc) and min (m) for this sub-block ----
     ; scales[12] packing for Q4_K:
     ;   For sub-block j (0..7):
-    ;     sc = (scales[j/2] >> ((j%2)*4)) & 0x3F    (bottom half)
-    ;     m  = (scales[j/2 + 6] >> ((j%2)*4)) & 0x3F  (top half)
+    ;     sc = (scales[j/2] >> ((j%2)*4)) & 03Fh    (bottom half)
+    ;     m  = (scales[j/2 + 6] >> ((j%2)*4)) & 03Fh  (top half)
     mov     ecx, ebx
     shr     ecx, 1                      ; j/2
     movzx   eax, byte ptr [r9 + rcx]   ; scales[j/2] for sc
@@ -243,21 +243,21 @@ asm_dequant_q4_k_avx2 PROC FRAME
     ; ---- Load 16 bytes of quants (32 x 4-bit values) ----
     vmovdqu xmm4, xmmword ptr [r8]
 
-    ; Extract low nibbles (elements 0,2,4,...,30 → first 16 values)
-    vpand   xmm5, xmm4, xmm15          ; Low nibbles (0x0F mask)
+    ; Extract low nibbles (elements 0,2,4,...,30 ? first 16 values)
+    vpand   xmm5, xmm4, xmm15          ; Low nibbles (00Fh mask)
 
-    ; Extract high nibbles (elements 1,3,5,...,31 → next 16 values)
+    ; Extract high nibbles (elements 1,3,5,...,31 ? next 16 values)
     vpsrlw  xmm6, xmm4, 4
     vpand   xmm6, xmm6, xmm15
 
-    ; ---- Process 8 low-nibble quants (first 8 bytes → 8 floats) ----
-    vpmovzxbd ymm7, xmm5               ; 8 bytes → 8 dwords (zero-extend)
-    vcvtdq2ps ymm7, ymm7               ; → 8 floats
+    ; ---- Process 8 low-nibble quants (first 8 bytes ? 8 floats) ----
+    vpmovzxbd ymm7, xmm5               ; 8 bytes ? 8 dwords (zero-extend)
+    vcvtdq2ps ymm7, ymm7               ; ? 8 floats
     vmulps  ymm7, ymm7, ymm10          ; d * sc * q
     vsubps  ymm7, ymm7, ymm11          ; - dmin * m
     vmovups ymmword ptr [rdi], ymm7     ; Store 8 floats (32 bytes)
 
-    ; ---- Process next 8 low-nibble quants (bytes 8-15 → 8 floats) ----
+    ; ---- Process next 8 low-nibble quants (bytes 8-15 ? 8 floats) ----
     vpsrldq xmm8, xmm5, 8             ; Shift right 8 bytes in xmm
     vpmovzxbd ymm8, xmm8
     vcvtdq2ps ymm8, ymm8
@@ -265,14 +265,14 @@ asm_dequant_q4_k_avx2 PROC FRAME
     vsubps  ymm8, ymm8, ymm11
     vmovups ymmword ptr [rdi + 32], ymm8
 
-    ; ---- Process 8 high-nibble quants (first 8 bytes → 8 floats) ----
+    ; ---- Process 8 high-nibble quants (first 8 bytes ? 8 floats) ----
     vpmovzxbd ymm7, xmm6
     vcvtdq2ps ymm7, ymm7
     vmulps  ymm7, ymm7, ymm10
     vsubps  ymm7, ymm7, ymm11
     vmovups ymmword ptr [rdi + 64], ymm7
 
-    ; ---- Process next 8 high-nibble quants (bytes 8-15 → 8 floats) ----
+    ; ---- Process next 8 high-nibble quants (bytes 8-15 ? 8 floats) ----
     vpsrldq xmm8, xmm6, 8
     vpmovzxbd ymm8, xmm8
     vcvtdq2ps ymm8, ymm8
@@ -282,7 +282,7 @@ asm_dequant_q4_k_avx2 PROC FRAME
 
     ; Advance pointers
     add     r8, 16                      ; 16 bytes of quants consumed
-    add     rdi, 128                    ; 32 floats × 4 bytes = 128 bytes
+    add     rdi, 128                    ; 32 floats ? 4 bytes = 128 bytes
     inc     ebx
     jmp     @@avx2_subblock
 
@@ -296,7 +296,7 @@ asm_dequant_q4_k_avx2 PROC FRAME
 asm_dequant_q4_k_avx2 ENDP
 
 ; =============================================================================
-; asm_dequant_q4_k_avx512 — Q4_K to FP32 dequantization (AVX-512F + F16C)
+; asm_dequant_q4_k_avx512 ? Q4_K to FP32 dequantization (AVX-512F + F16C)
 ;
 ; Same logic as AVX2 but uses 512-bit ZMM registers for 16-wide float ops.
 ; Each sub-block of 32 elements is processed in two ZMM iterations (16+16)
@@ -376,8 +376,8 @@ asm_dequant_q4_k_avx512 PROC FRAME
 
     ; ---- Low nibbles: 16 values processed in one ZMM pass ----
     vpandd  xmm5, xmm4, xmm15          ; Isolate low nibbles (16 bytes)
-    vpmovzxbd zmm7, xmm5               ; 16 bytes → 16 dwords in ZMM
-    vcvtdq2ps zmm7, zmm7               ; → 16 floats
+    vpmovzxbd zmm7, xmm5               ; 16 bytes ? 16 dwords in ZMM
+    vcvtdq2ps zmm7, zmm7               ; ? 16 floats
     vmulps  zmm7, zmm7, zmm10          ; d * sc * q
     vsubps  zmm7, zmm7, zmm11          ; - dmin * m
     vmovups zmmword ptr [rdi], zmm7     ; Store 16 floats (64 bytes)
@@ -385,7 +385,7 @@ asm_dequant_q4_k_avx512 PROC FRAME
     ; ---- High nibbles: 16 values processed in one ZMM pass ----
     vpsrlw  xmm6, xmm4, 4
     vpandd  xmm6, xmm6, xmm15
-    vpmovzxbd zmm8, xmm6               ; 16 bytes → 16 dwords
+    vpmovzxbd zmm8, xmm6               ; 16 bytes ? 16 dwords
     vcvtdq2ps zmm8, zmm8
     vmulps  zmm8, zmm8, zmm10
     vsubps  zmm8, zmm8, zmm11
@@ -393,7 +393,7 @@ asm_dequant_q4_k_avx512 PROC FRAME
 
     ; Advance
     add     r8, 16
-    add     rdi, 128                    ; 32 floats × 4 bytes
+    add     rdi, 128                    ; 32 floats ? 4 bytes
     inc     ebx
     jmp     @@avx512_subblock
 
@@ -407,7 +407,7 @@ asm_dequant_q4_k_avx512 PROC FRAME
 asm_dequant_q4_k_avx512 ENDP
 
 ; =============================================================================
-; asm_dequant_q4_k_batch — Multi-block Q4_K dequantization with auto-dispatch
+; asm_dequant_q4_k_batch ? Multi-block Q4_K dequantization with auto-dispatch
 ;
 ; Processes multiple Q4_K super-blocks, auto-selecting AVX-512 or AVX2
 ; based on CPUID detection. This is the primary entry point for the
@@ -459,7 +459,7 @@ asm_dequant_q4_k_batch PROC FRAME
 @@batch_advance:
     ; Advance pointers by one super-block
     add     r13, BLOCK_Q4_K_SIZE        ; +144 bytes input
-    add     r12, QK_K * 4               ; +256 floats × 4 bytes = +1024 bytes output
+    add     r12, QK_K * 4               ; +256 floats ? 4 bytes = +1024 bytes output
     add     r15, QK_K                   ; +256 elements
     jmp     @@batch_loop
 
@@ -477,3 +477,4 @@ asm_dequant_q4_k_batch ENDP
 ; End
 ; =============================================================================
 END
+

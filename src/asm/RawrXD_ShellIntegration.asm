@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_ShellIntegration.asm — Pure x64 MASM Shell Integration Kernel
+; RawrXD_ShellIntegration.asm ? Pure x64 MASM Shell Integration Kernel
 ; Production-Ready Command Detection via OSC 633 Escape Sequences
 ; =============================================================================
 ;
@@ -9,28 +9,28 @@
 ;   - Wait-free atomic ring buffer for command history (lock xadd reservation)
 ;   - Lock-free 64-bit performance counters (cache-line padded)
 ;   - Non-blocking overlapped pipe reads for real-time output streaming
-;   - Zero CRT dependency — direct Win32 API + raw MASM only
+;   - Zero CRT dependency ? direct Win32 API + raw MASM only
 ;
 ; OSC 633 Protocol (IDE Shell Integration):
-;   \x1b]633;A\x07     — Prompt Start
-;   \x1b]633;B\x07     — Prompt End / Command Start
-;   \x1b]633;C\x07     — Pre-Execution (command submitted)
-;   \x1b]633;D;N\x07   — Execution Done, N = exit code
-;   \x1b]633;E;cmd\x07 — Command Line echo
-;   \x1b]633;P;k=v\x07 — Shell Property announcement
+;   \x1b]633;A\x07     ? Prompt Start
+;   \x1b]633;B\x07     ? Prompt End / Command Start
+;   \x1b]633;C\x07     ? Pre-Execution (command submitted)
+;   \x1b]633;D;N\x07   ? Execution Done, N = exit code
+;   \x1b]633;E;cmd\x07 ? Command Line echo
+;   \x1b]633;P;k=v\x07 ? Shell Property announcement
 ;
 ; Exports:
-;   ShellInteg_Init              — Create shell process + pipes, initialize subsystem
-;   ShellInteg_Shutdown          — Drain buffers, terminate shell, close handles
-;   ShellInteg_ExecuteCommand    — Submit command with OSC 633 markers, capture output
-;   ShellInteg_ReadOutput        — Non-blocking read from shell stdout pipe
-;   ShellInteg_GetExitCode       — Retrieve last command exit code
-;   ShellInteg_InjectOSC633      — Inject specific OSC 633 sequence into output stream
-;   ShellInteg_GetCommandHistory — Read entry from history ring buffer
-;   ShellInteg_GetStats          — Return subsystem performance counters
-;   ShellInteg_SetProperty       — Set shell property (cwd, shell type, etc.)
-;   ShellInteg_IsAlive           — Check if child shell process is still running
-;   ShellInteg_CompleteCommand   — Close command lifecycle: update history, inject D
+;   ShellInteg_Init              ? Create shell process + pipes, initialize subsystem
+;   ShellInteg_Shutdown          ? Drain buffers, terminate shell, close handles
+;   ShellInteg_ExecuteCommand    ? Submit command with OSC 633 markers, capture output
+;   ShellInteg_ReadOutput        ? Non-blocking read from shell stdout pipe
+;   ShellInteg_GetExitCode       ? Retrieve last command exit code
+;   ShellInteg_InjectOSC633      ? Inject specific OSC 633 sequence into output stream
+;   ShellInteg_GetCommandHistory ? Read entry from history ring buffer
+;   ShellInteg_GetStats          ? Return subsystem performance counters
+;   ShellInteg_SetProperty       ? Set shell property (cwd, shell m_type, etc.)
+;   ShellInteg_IsAlive           ? Check if child shell process is still running
+;   ShellInteg_CompleteCommand   ? Close command lifecycle: update history, inject D
 ;
 ; Pattern: PatchResult (RAX=0 success, RAX=NTSTATUS-style error on failure)
 ;          RDX = detail pointer or supplemental data
@@ -79,7 +79,7 @@ STD_ERROR_HANDLE_ID         EQU -12
 WAIT_OBJECT_0               EQU 0
 WAIT_TIMEOUT                EQU 00000102h
 
-; Pipe buffer size
+; Pipe buffer m_size
 PIPE_BUFFER_SIZE            EQU 65536       ; 64 KB per pipe
 
 ; Command history ring buffer
@@ -189,9 +189,9 @@ CMD_HIST_CMD_MAXLEN         EQU 223    ; 224 - 1 for null terminator
 CMD_HIST_OUT_MAXLEN         EQU 255    ; 256 - 1 for null terminator
 
 ; =============================================================================
-;              Cache-Line Padded Counters — now in rawr_globals.asm
+;              Cache-Line Padded Counters ? now in rawr_globals.asm
 ; =============================================================================
-; g_ShellInteg_MetricStart..End, g_SI_Counter_* — accessed via EXTERNDEF
+; g_ShellInteg_MetricStart..End, g_SI_Counter_* ? accessed via EXTERNDEF
 INCLUDE rawr_globals.inc
 
 ; =============================================================================
@@ -260,27 +260,27 @@ INCLUDE rawr_globals.inc
     ; OSC 633 Escape Sequences (pre-built, null-terminated)
     ; =========================================================================
     ALIGN 8
-    ; \x1b]633;A\x07 — Prompt Start
+    ; \x1b]633;A\x07 ? Prompt Start
     szOSC633_A              db 1Bh, ']', '6', '3', '3', ';', 'A', 07h, 0
     szOSC633_A_Len          equ ($ - szOSC633_A - 1)
 
-    ; \x1b]633;B\x07 — Prompt End / Command Input Start
+    ; \x1b]633;B\x07 ? Prompt End / Command Input Start
     szOSC633_B              db 1Bh, ']', '6', '3', '3', ';', 'B', 07h, 0
     szOSC633_B_Len          equ ($ - szOSC633_B - 1)
 
-    ; \x1b]633;C\x07 — Pre-Execution
+    ; \x1b]633;C\x07 ? Pre-Execution
     szOSC633_C              db 1Bh, ']', '6', '3', '3', ';', 'C', 07h, 0
     szOSC633_C_Len          equ ($ - szOSC633_C - 1)
 
-    ; \x1b]633;D; — Execution Done prefix (exit code appended at runtime)
+    ; \x1b]633;D; ? Execution Done prefix (exit code appended at runtime)
     szOSC633_D_Prefix       db 1Bh, ']', '6', '3', '3', ';', 'D', ';', 0
     szOSC633_D_PrefixLen    equ ($ - szOSC633_D_Prefix - 1)
 
-    ; \x1b]633;E; — Command Line echo prefix (command appended at runtime)
+    ; \x1b]633;E; ? Command Line echo prefix (command appended at runtime)
     szOSC633_E_Prefix       db 1Bh, ']', '6', '3', '3', ';', 'E', ';', 0
     szOSC633_E_PrefixLen    equ ($ - szOSC633_E_Prefix - 1)
 
-    ; \x1b]633;P; — Property prefix (key=value appended at runtime)
+    ; \x1b]633;P; ? Property prefix (key=value appended at runtime)
     szOSC633_P_Prefix       db 1Bh, ']', '6', '3', '3', ';', 'P', ';', 0
     szOSC633_P_PrefixLen    equ ($ - szOSC633_P_Prefix - 1)
 
@@ -325,7 +325,7 @@ INCLUDE rawr_globals.inc
 .code
 
 ; =============================================================================
-; ShellInteg_Init — Initialize the shell integration subsystem
+; ShellInteg_Init ? Initialize the shell integration subsystem
 ;
 ; Creates anonymous pipes for stdin/stdout/stderr redirection, launches a
 ; child shell process (cmd.exe by default), and initializes the command
@@ -593,7 +593,7 @@ ShellInteg_Init PROC FRAME
 ShellInteg_Init ENDP
 
 ; =============================================================================
-; ShellInteg_Shutdown — Tear down shell integration subsystem
+; ShellInteg_Shutdown ? Tear down shell integration subsystem
 ;
 ; Drains pipe buffers, sends exit to child shell, waits briefly for
 ; termination, force-terminates if needed, closes all handles.
@@ -738,7 +738,7 @@ ShellInteg_Shutdown PROC FRAME
 ShellInteg_Shutdown ENDP
 
 ; =============================================================================
-; ShellInteg_ExecuteCommand — Submit a command with full OSC 633 lifecycle
+; ShellInteg_ExecuteCommand ? Submit a command with full OSC 633 lifecycle
 ;
 ; Sequence:
 ;   1. Inject OSC 633;B (Prompt End / command about to start)
@@ -885,7 +885,7 @@ ShellInteg_ExecuteCommand PROC FRAME
 
     ; NOTE: FlushFileBuffers on anonymous pipes is unnecessary and degrades
     ; latency. Pipe writes are committed on WriteFile completion.
-    ; (Removed per production audit — see AUDIT item #8)
+    ; (Removed per production audit ? see AUDIT item #8)
 
     ; Update bytes-written counter
     mov     rax, r15
@@ -940,9 +940,9 @@ ShellInteg_ExecuteCommand PROC FRAME
 ShellInteg_ExecuteCommand ENDP
 
 ; =============================================================================
-; ShellInteg_ReadOutput — Non-blocking read from shell stdout pipe
+; ShellInteg_ReadOutput ? Non-blocking read from shell stdout pipe
 ;
-; Peeks the pipe first; if data available, reads up to buffer size.
+; Peeks the pipe first; if data available, reads up to buffer m_size.
 ; Injects OSC 633;D;<exitcode> when command completion is detected.
 ;
 ; RCX = Output buffer pointer
@@ -1009,7 +1009,7 @@ ShellInteg_ReadOutput PROC FRAME
     test    eax, eax
     jz      @si_read_pipe_err
 
-    ; Check available bytes (slot survived — same rsp base)
+    ; Check available bytes (slot survived ? same rsp base)
     mov     eax, dword ptr [rsp + 64]   ; totalBytesAvail
     test    eax, eax
     jz      @si_read_empty
@@ -1110,7 +1110,7 @@ ShellInteg_ReadOutput PROC FRAME
 ShellInteg_ReadOutput ENDP
 
 ; =============================================================================
-; ShellInteg_GetExitCode — Retrieve exit code of the last command / child process
+; ShellInteg_GetExitCode ? Retrieve exit code of the last command / child process
 ;
 ; Returns: EAX = exit code (STILL_ACTIVE = 259 if process running)
 ; =============================================================================
@@ -1150,7 +1150,7 @@ ShellInteg_GetExitCode PROC FRAME
 ShellInteg_GetExitCode ENDP
 
 ; =============================================================================
-; ShellInteg_InjectOSC633 — Inject an OSC 633 escape sequence
+; ShellInteg_InjectOSC633 ? Inject an OSC 633 escape sequence
 ;
 ; Builds the appropriate escape sequence and writes it to the IDE's
 ; output stream (parent stdout) for command detection.
@@ -1277,7 +1277,7 @@ ShellInteg_InjectOSC633 PROC FRAME
 
 @si_osc_build_payload:
     ; Assemble: [prefix][payload][BEL] into g_SI_ScratchBuf
-    ; (reusing global scratch — caller holds pipe lock for E/D/P)
+    ; (reusing global scratch ? caller holds pipe lock for E/D/P)
     push    rdi
     lea     rdi, g_SI_ScratchBuf
 
@@ -1309,7 +1309,7 @@ ShellInteg_InjectOSC633 PROC FRAME
     pop     rsi
 @si_osc_no_payload_copy:
 
-    ; Append BEL (0x07)
+    ; Append BEL (007h)
     mov     byte ptr [rdi], 07h
     inc     rdi
 
@@ -1358,7 +1358,7 @@ ShellInteg_InjectOSC633 PROC FRAME
 ShellInteg_InjectOSC633 ENDP
 
 ; =============================================================================
-; ShellInteg_GetCommandHistory — Read an entry from the command history ring
+; ShellInteg_GetCommandHistory ? Read an entry from the command history ring
 ;
 ; RCX = Index into history (0 = most recent, 1 = previous, etc.)
 ; RDX = Output buffer pointer (must be >= CMD_ENTRY_SIZE bytes)
@@ -1439,7 +1439,7 @@ ShellInteg_GetCommandHistory PROC FRAME
 ShellInteg_GetCommandHistory ENDP
 
 ; =============================================================================
-; ShellInteg_GetStats — Return subsystem performance counters
+; ShellInteg_GetStats ? Return subsystem performance counters
 ;
 ; RCX = Pointer to output struct (9 QWORDs = 72 bytes minimum)
 ;       [0] = CmdsExecuted
@@ -1510,10 +1510,10 @@ ShellInteg_GetStats PROC FRAME
 ShellInteg_GetStats ENDP
 
 ; =============================================================================
-; ShellInteg_SetProperty — Announce a shell property via OSC 633;P
+; ShellInteg_SetProperty ? Announce a shell property via OSC 633;P
 ;
 ; Injects \x1b]633;P;<key>=<value>\x07 into the output stream.
-; Used for cwd, shell type, PID, and other IDE-consumable properties.
+; Used for cwd, shell m_type, PID, and other IDE-consumable properties.
 ;
 ; RCX = Key string (null-terminated, e.g., "Cwd")
 ; RDX = Value string (null-terminated, e.g., "C:\Users\Dev")
@@ -1598,7 +1598,7 @@ ShellInteg_SetProperty PROC FRAME
 ShellInteg_SetProperty ENDP
 
 ; =============================================================================
-; ShellInteg_IsAlive — Check if child shell process is still running
+; ShellInteg_IsAlive ? Check if child shell process is still running
 ;
 ; Returns: EAX = 1 if alive, 0 if dead/exited
 ; =============================================================================
@@ -1626,7 +1626,7 @@ ShellInteg_IsAlive PROC FRAME
     cmp     eax, WAIT_TIMEOUT
     je      @si_alive_yes
 
-    ; Process has exited — get exit code
+    ; Process has exited ? get exit code
     ; FIX (Audit #6): Use fixed local slot [rsp + 36] within our 48-byte
     ; frame. The slot must survive the sub rsp, 32 / add rsp, 32 dance.
     ; We point rdx at [rsp + 36] BEFORE the sub rsp, then after the call
@@ -1669,13 +1669,13 @@ ShellInteg_IsAlive PROC FRAME
 ShellInteg_IsAlive ENDP
 
 ; =============================================================================
-; ShellInteg_CompleteCommand — Close command lifecycle after execution
+; ShellInteg_CompleteCommand ? Close command lifecycle after execution
 ;
 ; Called when a command finishes (exit code available). Updates the most
 ; recent history ring entry with exit code + duration, injects OSC 633;D,
 ; and increments CmdsDetected.
 ;
-; This is the ONLY correct place to increment CmdsDetected — here we have
+; This is the ONLY correct place to increment CmdsDetected ? here we have
 ; a confirmed command boundary (the command actually completed).
 ;
 ; RCX = Exit code (DWORD, zero-extended)
@@ -1745,7 +1745,7 @@ ShellInteg_CompleteCommand PROC FRAME
     ; ---- 3. Inject OSC 633;D;<exitcode> ----
     call    si_inject_done_with_exitcode
 
-    ; ---- 4. Increment CmdsDetected (only here — confirmed boundary) ----
+    ; ---- 4. Increment CmdsDetected (only here ? confirmed boundary) ----
     lock inc qword ptr [g_SI_Counter_CmdsDetected]
 
     ; ---- 5. Inject OSC 633;A (next Prompt Start) ----
@@ -1776,7 +1776,7 @@ ShellInteg_CompleteCommand ENDP
 ; =============================================================================
 
 ; -----------------------------------------------------------------------------
-; si_close_all_pipes — Close all pipe handles (parent side)
+; si_close_all_pipes ? Close all pipe handles (parent side)
 ; Preserves: rdi, rsi, r12-r15
 ; Clobbers:  rax, rcx, rdx, r8, r9
 ; -----------------------------------------------------------------------------
@@ -1807,7 +1807,7 @@ si_close_all_pipes PROC FRAME
 si_close_all_pipes ENDP
 
 ; -----------------------------------------------------------------------------
-; si_close_one_handle — Close handle pointed to by RBX, set to INVALID
+; si_close_one_handle ? Close handle pointed to by RBX, set to INVALID
 ; -----------------------------------------------------------------------------
 si_close_one_handle PROC
     mov     rcx, qword ptr [rbx]
@@ -1822,7 +1822,7 @@ si_close_one_handle PROC
 si_close_one_handle ENDP
 
 ; -----------------------------------------------------------------------------
-; si_record_command_history — Write current command into history ring buffer
+; si_record_command_history ? Write current command into history ring buffer
 ;
 ; Expects:
 ;   r12 = command text pointer
@@ -1895,7 +1895,7 @@ si_record_command_history PROC FRAME
 si_record_command_history ENDP
 
 ; -----------------------------------------------------------------------------
-; si_inject_done_with_exitcode — Build and inject OSC 633;D;<exitcode>
+; si_inject_done_with_exitcode ? Build and inject OSC 633;D;<exitcode>
 ;
 ; Reads g_SI_LastExitCode, converts to ASCII decimal, injects via
 ; ShellInteg_InjectOSC633(OSC633_EXECUTION_DONE, ascii_string, len)
@@ -1930,7 +1930,7 @@ si_inject_done_with_exitcode PROC FRAME
 si_inject_done_with_exitcode ENDP
 
 ; -----------------------------------------------------------------------------
-; si_uint32_to_ascii — Convert unsigned 32-bit integer to decimal ASCII
+; si_uint32_to_ascii ? Convert unsigned 32-bit integer to decimal ASCII
 ;
 ; Input:  EAX = value to convert
 ;         RDI = output buffer (at least 11 bytes)
@@ -2000,3 +2000,4 @@ si_uint32_to_ascii PROC
 si_uint32_to_ascii ENDP
 
 END
+

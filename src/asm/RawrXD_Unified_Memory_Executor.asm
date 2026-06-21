@@ -91,7 +91,7 @@ ReadPciConfigAMD ENDP
 ; MmMapIoSpaceEx - Map physical memory to virtual address space
 ; Parameters:
 ;   RCX = physical address (64-bit)
-;   RDX = size (64-bit)
+;   RDX = m_size (64-bit)
 ;   R8D = flags (32-bit)
 ; Returns: RAX = virtual address (or NULL on failure)
 ; =============================================================================
@@ -107,13 +107,13 @@ MmMapIoSpaceEx PROC
     
     ; Save parameters
     mov r12, rcx                           ; Physical address
-    mov rsi, rdx                           ; Size
+    mov rsi, rdx                           ; m_size
     
     ; In production: Call driver IOCTL to map physical memory
     ; Return NULL to indicate driver mediation is required.
     ; Actual implementation would:
     ;   1. Open handle to kernel driver
-    ;   2. Send IOCTL with physical address and size
+    ;   2. Send IOCTL with physical address and m_size
     ;   3. Receive virtual address from driver
     ;   4. Return mapped address
     
@@ -130,7 +130,7 @@ MmMapIoSpaceEx ENDP
 ; TestUnifiedCoherency - Test memory coherency between CPU and GPU
 ; Parameters:
 ;   RCX = base address
-;   RDX = size
+;   RDX = m_size
 ; Returns: RAX = 0 on success, non-zero on failure
 ; =============================================================================
 TestUnifiedCoherency PROC
@@ -139,7 +139,7 @@ TestUnifiedCoherency PROC
     push rdi
     
     mov rsi, rcx                           ; Base address
-    mov rdi, rdx                           ; Size
+    mov rdi, rdx                           ; m_size
     
     ; Write test pattern (CPU side)
     mov rcx, rdi
@@ -211,7 +211,7 @@ HipInitUnifiedMemory ENDP
 ; =============================================================================
 ; UmAlloc - Allocate from unified heap (CPU and GPU see same memory)
 ; Parameters:
-;   RCX = size (64-bit)
+;   RCX = m_size (64-bit)
 ;   RDX = alignment (64-bit)
 ;   R8 = heap base pointer (64-bit)
 ;   R9 = heap pointer (atomic, 64-bit)
@@ -225,7 +225,7 @@ UmAlloc PROC
     push r12
     push r13
     
-    mov r12, rcx                           ; Size
+    mov r12, rcx                           ; m_size
     mov r13, rdx                           ; Alignment
     
     ; Load current heap pointer (atomic)
@@ -279,7 +279,7 @@ UmAlloc ENDP
 ; RtlZeroMemory - Zero memory region
 ; Parameters:
 ;   RCX = address
-;   RDX = size
+;   RDX = m_size
 ; =============================================================================
 RtlZeroMemory PROC
     push rdi
@@ -294,3 +294,4 @@ RtlZeroMemory PROC
 RtlZeroMemory ENDP
 
 END
+

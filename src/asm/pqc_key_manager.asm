@@ -1,5 +1,5 @@
 ; ============================================================================
-; pqc_key_manager.asm — PQC Handshake & Hardware Push (Batch 16)
+; pqc_key_manager.asm ? PQC Handshake & Hardware Push (Batch 16)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -14,7 +14,7 @@
 ; Shield_PQCPush
 ; RCX: Pointer to Kyber Ciphertext (1088 bytes)
 ; RDX: Pointer to Classical Signature (512 bytes)
-; R8:  Size of Ciphertext
+; R8:  m_size of Ciphertext
 PUBLIC Shield_PQCPush
 Shield_PQCPush PROC FRAME
     push    rbp
@@ -59,3 +59,4 @@ Shield_PQCPush PROC FRAME
 Shield_PQCPush ENDP
 
 END
+

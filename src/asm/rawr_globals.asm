@@ -1,5 +1,5 @@
 ; =============================================================================
-; rawr_globals.asm — Centralized Global State for RawrXD (x64 MASM64)
+; rawr_globals.asm ? Centralized Global State for RawrXD (x64 MASM64)
 ; =============================================================================
 ;
 ; Single translation unit that OWNS all cross-module shared state.
@@ -7,14 +7,14 @@
 ; (provided by rawr_globals.inc).
 ;
 ; Categories:
-;   1. CPU Feature Flags      — CPUID results cached at init
-;   2. Dispatch Pointers      — Function pointers for runtime dispatch
-;   3. Telemetry Counters     — Cache-line padded atomic counters
-;   4. Shell Integration      — Cache-line padded shell metrics
-;   5. Agentic Shell Bridge   — Cache-line padded AI bridge metrics
-;   6. Enterprise License     — Feature gate flags
-;   7. Flash Attention        — AVX-512 readiness + perf counters
-;   8. Inference Stats        — GEMM/GEMV accumulated metrics
+;   1. CPU Feature Flags      ? CPUID results cached at init
+;   2. Dispatch Pointers      ? Function pointers for runtime dispatch
+;   3. Telemetry Counters     ? Cache-line padded atomic counters
+;   4. Shell Integration      ? Cache-line padded shell metrics
+;   5. Agentic Shell Bridge   ? Cache-line padded AI bridge metrics
+;   6. Enterprise License     ? Feature gate flags
+;   7. Flash Attention        ? AVX-512 readiness + perf counters
+;   8. Inference m_stats        ? GEMM/GEMV accumulated metrics
 ;
 ; Build: ml64.exe /c /Zi /Zd /I"src/asm" rawr_globals.asm
 ; Rule:  NO SOURCE FILE IS TO BE SIMPLIFIED
@@ -27,7 +27,7 @@ option casemap:none
 ; =============================================================================
 _DATA64 SEGMENT ALIGN(64) 'DATA'
 
-; ─── CPUID Feature Flags (set by InferenceCore_Init) ─────────────────────────
+; ??? CPUID Feature Flags (set by InferenceCore_Init) ?????????????????????????
 PUBLIC g_HasAVX2
 PUBLIC g_HasFMA3
 PUBLIC g_HasAVX512F
@@ -37,7 +37,7 @@ g_HasFMA3               DD 0
 g_HasAVX512F            DD 0
                         DD 0            ; pad to 16 bytes
 
-; ─── Inference Performance Counters ──────────────────────────────────────────
+; ??? Inference Performance Counters ??????????????????????????????????????????
 PUBLIC g_GemmCalls
 PUBLIC g_GemvCalls
 PUBLIC g_GemmFlops
@@ -46,14 +46,14 @@ g_GemmCalls             DQ 0
 g_GemvCalls             DQ 0
 g_GemmFlops             DQ 0            ; Accumulated FLOPs
 
-; ─── Dispatch Function Pointers (set by Init to best available path) ─────────
+; ??? Dispatch Function Pointers (set by Init to best available path) ?????????
 PUBLIC g_GemmDispatch
 PUBLIC g_GemvDispatch
 
 g_GemmDispatch          DQ 0            ; -> sgemm_avx2 or sgemm_avx512
 g_GemvDispatch          DQ 0            ; -> sgemv_avx2 or sgemv_avx512
 
-; ─── Flash Attention AVX-512 ─────────────────────────────────────────────────
+; ??? Flash Attention AVX-512 ?????????????????????????????????????????????????
 ; Broadcast-ready constants (64-byte aligned for ZMM loads)
 PUBLIC g_NegInf
 PUBLIC g_AVX512Ready
@@ -230,7 +230,8 @@ AGENTSHELL_CL SEGMENT ALIGN(16) 'DATA'
 AGENTSHELL_CL ENDS
 
 ; =============================================================================
-; No code — this is a data-only translation unit.
+; No code ? this is a data-only translation unit.
 ; =============================================================================
 
 END
+

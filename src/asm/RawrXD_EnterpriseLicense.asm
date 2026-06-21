@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_EnterpriseLicense.asm — Enterprise "Pro" Unlock System
+; RawrXD_EnterpriseLicense.asm ? Enterprise "Pro" Unlock System
 ; =============================================================================
 ; Pure x64 MASM | Zero Dependencies (beyond Win32 CryptoAPI)
 ; RSA-4096 Signature Verification | Hardware Fingerprinting | Feature Gating
@@ -47,7 +47,7 @@ EXTERNDEF Unlock_800B_Kernel:PROC
 ; =============================================================================
 
 LICENSE_HEADER STRUCT
-    Magic               DD 0            ; RAWR_LICENSE_MAGIC (0x4C455852 = "RXEL")
+    Magic               DD 0            ; RAWR_LICENSE_MAGIC (04C455852h = "RXEL")
     Version             DW 0            ; License format version
     Flags               DW 0            ; Feature flags (lower 16 bits)
     FeatureMask         DQ 0            ; Full 64-bit feature bitmask
@@ -84,7 +84,7 @@ ENTERPRISE_CONTEXT ENDS
 ; =============================================================================
 ;                          GLOBAL DATA
 ; =============================================================================
-; g_800B_Unlocked, g_EnterpriseFeatures — now in rawr_globals.asm
+; g_800B_Unlocked, g_EnterpriseFeatures ? now in rawr_globals.asm
 INCLUDE rawr_globals.inc
 
 .data
@@ -95,14 +95,14 @@ ALIGN 8
 
 ; Embedded RSA-4096 Public Key Blob (CryptoAPI PUBLICKEYBLOB format)
 ; In production: replace zeroed modulus with your actual signing key's public component
-; Private key stays on your offline signing server — never shipped in binary
+; Private key stays on your offline signing server ? never shipped in binary
 RSA_PUBLIC_KEY_BLOB LABEL BYTE
     DD  00002400h           ; PUBLICKEYBLOB, version 2
     DD  0000A400h           ; CALG_RSA_KEYX
     DB  "RSA2"              ; Magic
     DD  4096                ; Bit length
-    DD  65537               ; Public exponent (0x10001)
-    ; 512 bytes of RSA modulus (n) — zeroed template
+    DD  65537               ; Public exponent (010001h)
+    ; 512 bytes of RSA modulus (n) ? zeroed template
     DB  512 DUP(0)
 RSA_PUBLIC_KEY_SIZE EQU $ - RSA_PUBLIC_KEY_BLOB
 
@@ -130,14 +130,14 @@ szSeparator             BYTE ", ", 0
 ; Debug strings
 IFDEF DEBUG_BUILD
 szDbgInitOK             BYTE "[Enterprise] License system initialized", 0
-szDbgValidOK            BYTE "[Enterprise] License validated — Enterprise mode active", 0
-szDbgNoLicense          BYTE "[Enterprise] No license found — Community mode", 0
+szDbgValidOK            BYTE "[Enterprise] License validated ? Enterprise mode active", 0
+szDbgNoLicense          BYTE "[Enterprise] No license found ? Community mode", 0
 szDbgCryptoFail         BYTE "[Enterprise] CryptoAPI initialization failed", 0
 szDbgSigFail            BYTE "[Enterprise] RSA signature verification failed", 0
 szDbgExpired            BYTE "[Enterprise] License expired", 0
 szDbgHWMismatch         BYTE "[Enterprise] Hardware fingerprint mismatch", 0
 szDbg800BUnlock         BYTE "[Enterprise] 800B Dual-Engine UNLOCKED", 0
-szDbgTamper             BYTE "[Enterprise] Tamper detected — features disabled", 0
+szDbgTamper             BYTE "[Enterprise] Tamper detected ? features disabled", 0
 ENDIF
 
 ; =============================================================================
@@ -287,7 +287,7 @@ Enterprise_InitLicenseSystem PROC FRAME
     test    eax, eax
     jz      @@success
 
-    ; Validation failed — run in community mode (not a fatal error)
+    ; Validation failed ? run in community mode (not a fatal error)
     jmp     @@no_license
 
 @@success:
@@ -297,7 +297,7 @@ Enterprise_InitLicenseSystem PROC FRAME
     jmp     @@exit
 
 @@no_license:
-    ; No valid license — community mode (features limited, not an error)
+    ; No valid license ? community mode (features limited, not an error)
     mov     g_EntCtx.State, LICENSE_INVALID
     mov     g_EntCtx.Initialized, 1
     DBG_PRINT szDbgNoLicense
@@ -322,7 +322,7 @@ Enterprise_InitLicenseSystem ENDP
 ; Full cryptographic validation pipeline:
 ;   1. Magic check
 ;   2. Version check
-;   3. Expiry check (via GetSystemTimeAsFileTime → Unix)
+;   3. Expiry check (via GetSystemTimeAsFileTime ? Unix)
 ;   4. Hardware fingerprint check (if bound)
 ;   5. RSA-4096 signature verification (SHA-512 hash of header)
 ;   6. Feature activation on success
@@ -366,10 +366,10 @@ Enterprise_ValidateLicense PROC FRAME
 
     ; Convert FILETIME (100ns intervals since 1601) to Unix epoch (seconds since 1970)
     mov     rax, fileTime
-    mov     rcx, 116444736000000000          ; FILETIME offset: Jan 1 1601 → Jan 1 1970
+    mov     rcx, 116444736000000000          ; FILETIME offset: Jan 1 1601 ? Jan 1 1970
     sub     rax, rcx
     xor     edx, edx
-    mov     rcx, 10000000                    ; 100ns → seconds
+    mov     rcx, 10000000                    ; 100ns ? seconds
     div     rcx
     mov     unixTime, rax
 
@@ -432,7 +432,7 @@ Enterprise_ValidateLicense PROC FRAME
     test    eax, eax
     jz      @@sig_invalid
 
-    ; ---- 6. Signature Valid — Activate Features ----
+    ; ---- 6. Signature Valid ? Activate Features ----
     lea     rsi, g_EntCtx.LicenseData
     mov     rax, (LICENSE_HEADER PTR [rsi]).FeatureMask
     mov     g_EntCtx.FeatureMask, rax
@@ -509,7 +509,7 @@ Enterprise_ValidateLicense ENDP
 
 ; =============================================================================
 ; Enterprise_CheckFeature
-; Fast runtime check — called by engines, registry, server before any gated op.
+; Fast runtime check ? called by engines, registry, server before any gated op.
 ; Designed for minimum overhead on the hot path.
 ;
 ; RCX = Feature bitmask to check (e.g., FEATURE_800B_DUALENGINE)
@@ -630,7 +630,7 @@ Enterprise_GenerateHardwareHash ENDP
 ; Validates cryptographically before persisting to registry.
 ;
 ; RCX = Pointer to license blob
-; RDX = Size of license blob
+; RDX = m_size of license blob
 ; R8  = Pointer to RSA signature (RSA_SIGNATURE_SIZE bytes)
 ; Returns: RAX = 0 on success, NTSTATUS error code on failure
 ; =============================================================================
@@ -652,7 +652,7 @@ Enterprise_InstallLicense PROC FRAME
     mov     cbLicense, rdx
     mov     pSignature, r8
 
-    ; Validate size bounds
+    ; Validate m_size bounds
     cmp     rdx, SIZEOF LICENSE_HEADER
     jb      @@invalid_size
     cmp     rdx, LICENSE_BLOB_MAX_SIZE
@@ -759,7 +759,7 @@ Enterprise_GetLicenseStatus ENDP
 ; Builds human-readable feature list for About dialog / diagnostics.
 ;
 ; RCX = Output buffer pointer
-; RDX = Buffer size (bytes)
+; RDX = Buffer m_size (bytes)
 ; Returns: RAX = Number of bytes written
 ; =============================================================================
 Enterprise_GetFeatureString PROC FRAME
@@ -787,7 +787,7 @@ Enterprise_GetFeatureString PROC FRAME
     jz      @@community
 
     ; Build comma-separated feature string
-    ; Each feature check: test bit → append name → append separator
+    ; Each feature check: test bit ? append name ? append separator
 
     test    rax, FEATURE_800B_DUALENGINE
     jz      @@chk_avx
@@ -875,7 +875,7 @@ Enterprise_GetFeatureString PROC FRAME
     ret
 
 @@community:
-    ; No enterprise features — show community string
+    ; No enterprise features ? show community string
     mov     rcx, pBuf
     lea     rdx, szCommunityEdition
     call    strcpy
@@ -952,7 +952,7 @@ Titan_CheckEnterpriseUnlock PROC
 Titan_CheckEnterpriseUnlock ENDP
 
 ; Called before allocating large DMA/VRAM buffers for enterprise engines
-; RCX = requested allocation size
+; RCX = requested allocation m_size
 ; Returns: EAX = 1 if budget approved, 0 if community-limited
 Streaming_CheckEnterpriseBudget PROC FRAME
     LOCAL   requestedSize:QWORD
@@ -991,3 +991,4 @@ Streaming_CheckEnterpriseBudget PROC FRAME
 Streaming_CheckEnterpriseBudget ENDP
 
 END
+

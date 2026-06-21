@@ -1,5 +1,5 @@
 ; ============================================================================
-; RawrXD Codebase Audit System — Pure x64 MASM Implementation
+; RawrXD Codebase Audit System ? Pure x64 MASM Implementation
 ; SCAFFOLD_186: Audit detect stubs and report
 ; SCAFFOLD_206: Audit log immutable checksum
 ; SCAFFOLD_325: Stub vs production wording sweep
@@ -14,7 +14,7 @@
 ; .model flat, stdcall
 ; .option casemap:none
 ; .option frame:auto
-; .option win64:3
+; .OPTION CASEMAP:NONE
 
 ; ============================================================================
 ; EXTERNAL IMPORTS
@@ -241,3 +241,4 @@ AuditSystem_Shutdown PROC
 AuditSystem_Shutdown ENDP
 
 END
+

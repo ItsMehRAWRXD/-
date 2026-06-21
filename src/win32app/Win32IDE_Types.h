@@ -528,6 +528,10 @@ struct IDESettings
     bool modelPrefetchEnabled = true;
     bool modelWorkingSetLockEnabled = false;
     bool silencePrivilegeWarnings = true;
+
+    // HexMag settings
+    bool hexmagGgufFallbackEnabled = false;
+    bool hexmagRouteCopilotPanel = false;
 };
 
 struct LocalServerStats

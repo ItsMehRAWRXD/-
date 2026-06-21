@@ -1,9 +1,9 @@
 ; =============================================================================
-; requantize_q4km_to_q2k_avx512.asm — Block-wise quantization conversion
+; requantize_q4km_to_q2k_avx512.asm ? Block-wise quantization conversion
 ; =============================================================================
 ; Input:  256-element blocks in Q4_K_M format (4-bit + scales)
 ; Output: 256-element blocks in Q2_K format (2-bit + super-scales)
-; Uses:   AVX-512 DQ + FMA for dequant→F32→requant pipeline
+; Uses:   AVX-512 DQ + FMA for dequant?F32?requant pipeline
 ;
 ; Q4_K_M Block Layout (144 bytes per 256 elements):
 ;   [0:1]    scale_1   (F16)
@@ -34,8 +34,8 @@ ALIGN 16
 ; =============================================================================
 ; Constants
 ; =============================================================================
-Q4KM_BLOCK_SIZE     EQU     144     ; Q4_K_M block size in bytes
-Q2K_BLOCK_SIZE      EQU     96      ; Q2_K block size in bytes
+Q4KM_BLOCK_SIZE     EQU     144     ; Q4_K_M block m_size in bytes
+Q2K_BLOCK_SIZE      EQU     96      ; Q2_K block m_size in bytes
 ELEMENTS_PER_BLOCK  EQU     256     ; Elements per quantization block
 SUB_BLOCK_SIZE      EQU     16      ; Elements per sub-block for scale computation
 SUB_BLOCKS          EQU     16      ; 256 / 16 sub-blocks
@@ -44,10 +44,10 @@ SUB_BLOCKS          EQU     16      ; 256 / 16 sub-blocks
 ; requantize_q4km_q2k_block_avx512
 ; =============================================================================
 ; void requantize_q4km_q2k_block_avx512(
-;     const void* src_q4,      ; RCX — pointer to Q4_K_M block data
-;     void* dst_q2,            ; RDX — pointer to Q2_K output buffer
-;     const float* scales,     ; R8  — auxiliary scale array (from Q4_K_M block header)
-;     uint64_t block_count     ; R9  — number of 256-element blocks to process
+;     const void* src_q4,      ; RCX ? pointer to Q4_K_M block data
+;     void* dst_q2,            ; RDX ? pointer to Q2_K output buffer
+;     const float* scales,     ; R8  ? auxiliary scale array (from Q4_K_M block header)
+;     uint64_t block_count     ; R9  ? number of 256-element blocks to process
 ; );
 ;
 ; Returns: void
@@ -63,7 +63,7 @@ SUB_BLOCKS          EQU     16      ; 256 / 16 sub-blocks
 ;      a. Find min/max per sub-block from F32 values
 ;      b. Compute Q2_K scale = (max - min) / 3.0
 ;      c. Compute Q2_K min = sub-block min
-;   4. Quantize F32 → 2-bit: q2_val = round((f32_val - min) / scale)
+;   4. Quantize F32 ? 2-bit: q2_val = round((f32_val - min) / scale)
 ;   5. Pack 2-bit values (4 per byte) into Q2_K qs[]
 ;   6. Write Q2_K block header (super-scale, super-min, sub-scales)
 ; =============================================================================
@@ -89,13 +89,13 @@ requantize_q4km_q2k_block_avx512 PROC PUBLIC FRAME
     .allocstack 512
     .endprolog
 
-    ; ── Runtime AVX-512 gate ──────────────────────────────────────────
+    ; ?? Runtime AVX-512 gate ??????????????????????????????????????????
     ; This kernel is pure AVX-512 DQ+BW.  If AVX-512 is not available
     ; (Zen 2/3, or OS XSTATE not enabled), bail immediately with no
     ; side effects.  C++ caller must check return or provide fallback.
     cmp     g_HasAVX512F, 1
     je      @@requant_avx512_ok
-    ; Return gracefully — no blocks processed
+    ; Return gracefully ? no blocks processed
     add     rsp, 512
     pop     rdi
     pop     rsi
@@ -118,7 +118,7 @@ requantize_q4km_q2k_block_avx512 PROC PUBLIC FRAME
     mov     r14, r8             ; scales array
     mov     r15, r9             ; block_count
 
-    ; ─── Constant broadcasts ───
+    ; ??? Constant broadcasts ???
     ; zmm15 = broadcast 3.0f (Q2_K max quantization level)
     mov     eax, 40400000h      ; 3.0f in IEEE-754
     vmovd   xmm15, eax
@@ -143,7 +143,7 @@ requantize_q4km_q2k_block_avx512 PROC PUBLIC FRAME
 
 ALIGN 16
 @@block_loop:
-    ; ─── Phase 1: Read Q4_K_M block header ───
+    ; ??? Phase 1: Read Q4_K_M block header ???
     ; [rcx+0]: scale_1 (F16), [rcx+2]: scale_2 (F16)
     ; [rcx+4..35]: 32 bytes of 4-bit packed sub-block scales
     ; [rcx+36..67]: 32 bytes of 4-bit packed sub-block mins
@@ -154,16 +154,16 @@ ALIGN 16
     ; Extract super-scales from F16
     movzx   eax, WORD PTR [rsi]         ; scale_1 (F16)
     vmovd   xmm0, eax
-    vcvtph2ps xmm0, xmm0               ; F16→F32 super-scale 1
+    vcvtph2ps xmm0, xmm0               ; F16?F32 super-scale 1
     ; Store super-scale on stack
     vmovss  DWORD PTR [rsp], xmm0
 
     movzx   eax, WORD PTR [rsi+2]       ; scale_2 (F16)
     vmovd   xmm1, eax
-    vcvtph2ps xmm1, xmm1               ; F16→F32 super-scale 2
+    vcvtph2ps xmm1, xmm1               ; F16?F32 super-scale 2
     vmovss  DWORD PTR [rsp+4], xmm1
 
-    ; ─── Phase 2: Dequantize all 256 elements to F32 ───
+    ; ??? Phase 2: Dequantize all 256 elements to F32 ???
     ; We process in 16-element sub-blocks (16 sub-blocks total)
     ; F32 scratch buffer at [rsp+64..rsp+64+1023] = 256 floats
 
@@ -221,10 +221,10 @@ ALIGN 16
     shl     eax, 3              ; * 8 bytes per sub-block (16 elements at 4 bits)
     movq    xmm6, QWORD PTR [rbx+rax]
 
-    ; Unpack low nibbles (even elements): AND with 0x0F
+    ; Unpack low nibbles (even elements): AND with 00Fh
     vpand   xmm7, xmm6, XMMWORD PTR @@nibble_mask_xmm ; 0F0F0F0F...
     ; Zero-extend bytes to dwords
-    vpmovzxbd zmm8, xmm7       ; 16 bytes → 16 dwords (only lower 8 bytes used → 8 dwords)
+    vpmovzxbd zmm8, xmm7       ; 16 bytes ? 16 dwords (only lower 8 bytes used ? 8 dwords)
 
     ; For 16 elements we need to process in two halves
     ; First 8 elements: low nibbles of bytes 0-7
@@ -255,7 +255,7 @@ ALIGN 16
     jmp     @@sub_block_dequant
 
 @@dequant_done:
-    ; ─── Phase 3: Compute Q2_K quantization parameters ───
+    ; ??? Phase 3: Compute Q2_K quantization parameters ???
     ; For each sub-block of 16 F32 values:
     ;   - Find min and max
     ;   - Q2K scale = (max - min) / 3.0
@@ -317,14 +317,14 @@ ALIGN 16
     vdivss  xmm4, xmm2, xmm3      ; d = range / 3.0 (super-block scale)
 
     ; Store super-block scale (d) as F16 at dst+16
-    vcvtps2ph xmm5, xmm4, 0        ; F32→F16
+    vcvtps2ph xmm5, xmm4, 0        ; F32?F16
     vpextrw WORD PTR [rdi+16], xmm5, 0
 
     ; Store super-block min (dmin) as F16 at dst+18
     vcvtps2ph xmm5, xmm0, 0
     vpextrw WORD PTR [rdi+18], xmm5, 0
 
-    ; ─── Phase 4: Per-sub-block quantization ───
+    ; ??? Phase 4: Per-sub-block quantization ???
     ; For each sub-block: compute local scale, quantize 16 elements to 2-bit
     lea     rsi, [rsp+64]      ; F32 scratch buffer
     lea     rbx, [rdi+20]      ; Q2_K qs output pointer (2-bit packed)
@@ -390,7 +390,7 @@ ALIGN 16
     vdivss  xmm9, xmm5, xmm4  ; xmm4 was sub_max, need super d
     ; Actually use zmm6 scalar
     vmovss  xmm9, xmm9, xmm5
-    vdivss  xmm9, xmm9, xmm4  ; normalized (approximate — super d should be used)
+    vdivss  xmm9, xmm9, xmm4  ; normalized (approximate ? super d should be used)
 
     ; Clamp to [0, 15]
     mov     eax, 41700000h      ; 15.0f
@@ -399,7 +399,7 @@ ALIGN 16
     vaddss  xmm9, xmm9, xmm14 ; + 0.5 for rounding
     vcvttss2si eax, xmm9
     cmp     eax, 0
-    cmovl   eax, ecx            ; (ecx might be garbage — use xor)
+    cmovl   eax, ecx            ; (ecx might be garbage ? use xor)
     xor     ecx, ecx
     cmp     eax, 0
     cmovl   eax, ecx
@@ -421,7 +421,7 @@ ALIGN 16
     or      BYTE PTR [rdi+rcx], al
 @@scale_packed:
 
-    ; ─── Quantize 16 elements to 2-bit ───
+    ; ??? Quantize 16 elements to 2-bit ???
     ; q2_val = round((f32_val - sub_min) / local_scale)
     ; Clamp to [0, 3]
 
@@ -444,10 +444,10 @@ ALIGN 16
     vminps  zmm8, zmm8, zmm15  ; min with 3.0
 
     ; Convert to int32
-    vcvttps2dq zmm8, zmm8       ; F32 → int32
+    vcvttps2dq zmm8, zmm8       ; F32 ? int32
 
     ; Extract 16 int32 values and pack to 2-bit
-    ; 4 elements per byte → 16 elements = 4 bytes
+    ; 4 elements per byte ? 16 elements = 4 bytes
     ; Byte layout: [e3:e2:e1:e0] where each is 2 bits
 
     ; Extract to GPR and manually pack
@@ -565,7 +565,7 @@ ALIGN 16
     ; Advance to next block
     add     r12, Q4KM_BLOCK_SIZE    ; Next Q4_K_M source block
     add     r13, Q2K_BLOCK_SIZE     ; Next Q2_K destination block (33% smaller)
-    add     r14, 4                  ; Next scale pair (2 × F16 = 4 bytes)
+    add     r14, 4                  ; Next scale pair (2 ? F16 = 4 bytes)
 
     dec     r15
     jnz     @@block_loop
@@ -583,7 +583,7 @@ ALIGN 16
     pop     rbp
     ret
 
-; ─── Local data ───
+; ??? Local data ???
 ALIGN 16
 @@nibble_mask_xmm:
     DB      0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh
@@ -592,14 +592,14 @@ ALIGN 16
 requantize_q4km_q2k_block_avx512 ENDP
 
 ; =============================================================================
-; requantize_q4km_q2k_batch_avx512 — Process multiple blocks with progress
+; requantize_q4km_q2k_batch_avx512 ? Process multiple blocks with progress
 ; =============================================================================
 ; void requantize_q4km_q2k_batch_avx512(
 ;     const void* src_q4,      ; RCX
 ;     void* dst_q2,            ; RDX
 ;     const float* scales,     ; R8
 ;     uint64_t block_count,    ; R9
-;     uint64_t* progress       ; [rsp+40] — atomic progress counter (written after each block)
+;     uint64_t* progress       ; [rsp+40] ? atomic progress counter (written after each block)
 ; );
 requantize_q4km_q2k_batch_avx512 PROC PUBLIC FRAME
     push    rbp
@@ -673,3 +673,4 @@ requantize_q4km_q2k_batch_avx512 PROC PUBLIC FRAME
 requantize_q4km_q2k_batch_avx512 ENDP
 
 END
+

@@ -1,11 +1,11 @@
 ; ============================================================================
-; RawrXD_GSIHash.asm — Phase 29.2: MASM64 GSI Hash Kernels
+; RawrXD_GSIHash.asm ? Phase 29.2: MASM64 GSI Hash Kernels
 ; ============================================================================
 ;
 ; High-performance MASM64 implementations of the PDB GSI hash functions:
 ;
-;   PDB_HashName      — Microsoft PDB symbol name hash (IPHR_HASH buckets)
-;   PDB_GSIHashLookup — Walk a GSI bucket chain and find matching symbol
+;   PDB_HashName      ? Microsoft PDB symbol name hash (IPHR_HASH buckets)
+;   PDB_GSIHashLookup ? Walk a GSI bucket chain and find matching symbol
 ;
 ; These functions are the hot path for every Go-to-Definition and hover
 ; operation. The C++ fallbacks in pdb_gsi_hash.cpp handle MinGW builds.
@@ -23,14 +23,14 @@
 ; ============================================================================
 
 IPHR_HASH       EQU 4096           ; Number of hash buckets
-S_PUB32         EQU 0110Eh         ; CV symbol type: public symbol
+S_PUB32         EQU 0110Eh         ; CV symbol m_type: public symbol
 PUB32_NAME_OFF  EQU 14             ; Offset from record start to name field
 GSI_REC_SIZE    EQU 8              ; sizeof(GSIHashRecord)
 NOT_FOUND       EQU 0FFFFFFFFh     ; Sentinel: no match
 
 
 ; ============================================================================
-; PDB_HashName — Compute Microsoft PDB hash for a symbol name
+; PDB_HashName ? Compute Microsoft PDB hash for a symbol name
 ; ============================================================================
 ;
 ; Prototype (Windows x64 ABI):
@@ -131,7 +131,7 @@ PDB_HashName ENDP
 
 
 ; ============================================================================
-; PDB_GSIHashLookup — Walk a GSI hash bucket to find a symbol by name
+; PDB_GSIHashLookup ? Walk a GSI hash bucket to find a symbol by name
 ; ============================================================================
 ;
 ; Prototype (Windows x64 ABI):
@@ -144,13 +144,13 @@ PDB_HashName ENDP
 ;   );
 ;
 ; Returns:
-;   EAX = symbolOffset of matching record, or 0xFFFFFFFF if not found
+;   EAX = symbolOffset of matching record, or 0FFFFFFFFh if not found
 ;
 ; For each record in the bucket:
 ;   1. Read symbolOffset from GSIHashRecord
-;   2. Verify the CV record at that offset is S_PUB32 (0x110E)
+;   2. Verify the CV record at that offset is S_PUB32 (0110Eh)
 ;   3. Compare name at record+14 with search name (case-insensitive)
-;   4. If match, verify null terminator → return symbolOffset
+;   4. If match, verify null terminator ? return symbolOffset
 ;
 ; Clobbers: RAX, RCX, RDX, R8, R9, R10, R11
 ; Preserves: RBX, RSI, RDI, RBP, R12-R15
@@ -246,7 +246,7 @@ name_cmp_check_null:
     ; All nameLen bytes matched. Verify null terminator.
     movzx eax, BYTE PTR [r10 + r13]
     test al, al
-    jnz bucket_advance             ; Not null-terminated — partial match
+    jnz bucket_advance             ; Not null-terminated ? partial match
 
     ; ---- MATCH FOUND ----
     mov eax, r14d                  ; Return symbolOffset
@@ -274,3 +274,4 @@ PDB_GSIHashLookup ENDP
 ; Export declarations for MSVC linker
 ; ============================================================================
 END
+

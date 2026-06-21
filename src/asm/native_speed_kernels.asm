@@ -1,5 +1,5 @@
 ; =============================================================================
-; native_speed_kernels.asm — MASM64 SIMD Kernels for NativeSpeedLayer
+; native_speed_kernels.asm ? MASM64 SIMD Kernels for NativeSpeedLayer
 ; =============================================================================
 ;
 ; Production-grade AVX2/AVX-512 kernels for transformer inference operations:
@@ -7,7 +7,7 @@
 ;   - SoftMax (AVX2 + AVX-512)
 ;   - RoPE (Rotary Positional Embedding, AVX2)
 ;   - Vector dot product (AVX2 + AVX-512)
-;   - Fused MLP (Linear → GeLU → Linear, AVX2)
+;   - Fused MLP (Linear ? GeLU ? Linear, AVX2)
 ;   - Non-temporal memcpy (AVX2)
 ;   - Dequantization kernels (Q4_0, Q8_0, Q2_K)
 ;   - Quantized GEMV (Q4_0, Q8_0)
@@ -15,12 +15,12 @@
 ; Architecture: x64 MASM64 | Windows x64 ABI
 ; Calling Convention: Microsoft x64 (RCX, RDX, R8, R9 + stack)
 ;
-; ╔═══════════════════════════════════════════════════════════════════════╗
-; ║  WINDOWS x64 REGISTER PRESERVATION CONTRACT                        ║
-; ║  Volatile:     RAX, RCX, RDX, R8, R9, R10, R11, XMM0-XMM5         ║
-; ║  Non-volatile: RBX, RBP, RSI, RDI, R12-R15, XMM6-XMM15            ║
-; ║  Stack: RSP 16-byte aligned before CALL, 32-byte shadow space      ║
-; ╚═══════════════════════════════════════════════════════════════════════╝
+; ?????????????????????????????????????????????????????????????????????????
+; ?  WINDOWS x64 REGISTER PRESERVATION CONTRACT                        ?
+; ?  Volatile:     RAX, RCX, RDX, R8, R9, R10, R11, XMM0-XMM5         ?
+; ?  Non-volatile: RBX, RBP, RSI, RDI, R12-R15, XMM6-XMM15            ?
+; ?  Stack: RSP 16-byte aligned before CALL, 32-byte shadow space      ?
+; ?????????????????????????????????????????????????????????????????????????
 ;
 ; Build: ml64.exe /c /Zi native_speed_kernels.asm
 ; Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
@@ -44,7 +44,7 @@ NEG_INF_F32     REAL4 0FF800000r, 0FF800000r, 0FF800000r, 0FF800000r
 HALF_F32        REAL4 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5
 
 ; GeLU approximation constants: 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))
-; sqrt(2/pi) ≈ 0.7978845608
+; sqrt(2/pi) ? 0.7978845608
 GELU_SQRT2PI    REAL4 0.7978845608, 0.7978845608, 0.7978845608, 0.7978845608
                 REAL4 0.7978845608, 0.7978845608, 0.7978845608, 0.7978845608
 GELU_C1         REAL4 0.044715, 0.044715, 0.044715, 0.044715
@@ -375,7 +375,7 @@ softmax_avx2_exp_start:
 
     ; --- Pass 2: exp(x - max) and sum ---
     ; Using fast exp approximation via polynomial
-    ; exp(x) ≈ clamp(1 + x/256)^256 is too expensive
+    ; exp(x) ? clamp(1 + x/256)^256 is too expensive
     ; Instead, use standard C library via function calls for accuracy
     ; For MASM production: use a fast exp lookup or polynomial approximation
 
@@ -392,9 +392,9 @@ softmax_avx2_exp_loop:
     vmovups ymm1, YMMWORD PTR [rsi + rax*4]
     vsubps ymm1, ymm1, ymm3        ; x - max
 
-    ; Fast exp approximation: exp(x) ≈ (1 + x/2048)^2048
+    ; Fast exp approximation: exp(x) ? (1 + x/2048)^2048
     ; More accurate: Schraudolph's method via float bit manipulation
-    ; exp(x) ≈ 2^(x * log2e) via integer + float
+    ; exp(x) ? 2^(x * log2e) via integer + float
     ; For now: store subtracted values and let C++ handle actual exp
     vmovups YMMWORD PTR [rsi + rax*4], ymm1
 
@@ -624,7 +624,7 @@ vdot_512_scalar:
     jnz vdot_512_scalar
 
 vdot_512_reduce:
-    ; Reduce ZMM → scalar
+    ; Reduce ZMM ? scalar
     vextractf64x4 ymm1, zmm0, 1
     vaddps ymm0, ymm0, ymm1
     vextractf128 xmm1, ymm0, 1
@@ -675,7 +675,7 @@ native_rope_avx2 PROC FRAME
     ; This kernel expects cos/sin precomputed at [rsp+64] and [rsp+72]
     ; For now, delegate to C++ scalar fallback (set up in dispatch table)
 
-    ; Placeholder — the main rotation relies on C++ rope_scalar
+    ; Placeholder ? the main rotation relies on C++ rope_scalar
     ; which computes sin/cos per dimension-pair
 
     vzeroupper
@@ -690,7 +690,7 @@ native_rope_avx2 PROC FRAME
 native_rope_avx2 ENDP
 
 ; =============================================================================
-; native_fused_mlp_avx2 — Fused Linear → GeLU → Linear kernel
+; native_fused_mlp_avx2 ? Fused Linear ? GeLU ? Linear kernel
 ; (const float* x, const float* W1, const float* b1,
 ;  const float* W2, const float* b2, float* out,
 ;  int seqLen, int hiddenDim, int ffnDim)
@@ -805,14 +805,14 @@ dequant_q4_0_avx2 PROC FRAME
     test rbx, rbx
     jz dq4_avx2_done
 
-    vmovdqu ymm5, YMMWORD PTR [Q4_LO_MASK]  ; nibble mask: 0x0F
+    vmovdqu ymm5, YMMWORD PTR [Q4_LO_MASK]  ; nibble mask: 00Fh
     vmovdqu ymm6, YMMWORD PTR [Q4_OFFSET]   ; offset: 8
 
 dq4_avx2_block_loop:
     ; Load f16 scale (2 bytes)
     movzx eax, word ptr [rsi]
     pinsrw xmm0, eax, 0
-    vcvtph2ps xmm0, xmm0           ; Convert f16 → f32
+    vcvtph2ps xmm0, xmm0           ; Convert f16 ? f32
     vbroadcastss ymm4, xmm0        ; Broadcast scale to all lanes
     add rsi, 2
 
@@ -820,21 +820,21 @@ dq4_avx2_block_loop:
     vmovdqu xmm1, XMMWORD PTR [rsi]
     add rsi, 16
 
-    ; Expand low nibbles: x & 0x0F
+    ; Expand low nibbles: x & 00Fh
     vpand xmm2, xmm1, xmm5        ; Low nibbles (16 bytes)
-    ; Expand high nibbles: (x >> 4) & 0x0F
+    ; Expand high nibbles: (x >> 4) & 00Fh
     vpsrlw xmm3, xmm1, 4
     vpand xmm3, xmm3, xmm5        ; High nibbles (16 bytes)
 
-    ; Interleave low and high nibbles → 32 uint8 values
+    ; Interleave low and high nibbles ? 32 uint8 values
     vpunpcklbw xmm7, xmm2, xmm3   ; First 16 interleaved
     vpunpckhbw xmm1, xmm2, xmm3   ; Second 16 interleaved
 
     ; Subtract 8 to center around zero (signed)
-    ; Convert uint8 → int8 by subtracting 8
+    ; Convert uint8 ? int8 by subtracting 8
     ; Then convert to float and multiply by scale
     ; Process first 8 values
-    vpmovzxbd ymm0, xmm7           ; Extend 8 bytes → 8 dwords
+    vpmovzxbd ymm0, xmm7           ; Extend 8 bytes ? 8 dwords
     vcvtdq2ps ymm0, ymm0           ; Convert to float
     vbroadcastss ymm2, dword ptr [Q4_OFFSET]  ; 8.0f
     vcvtdq2ps ymm2, ymm2
@@ -883,7 +883,7 @@ dq4_avx2_done:
 dequant_q4_0_avx2 ENDP
 
 ; =============================================================================
-; dequant_q4_0_avx512 — stub (delegates to AVX2 for now)
+; dequant_q4_0_avx512 ? stub (delegates to AVX2 for now)
 ; =============================================================================
 dequant_q4_0_avx512 PROC
     jmp dequant_q4_0_avx2
@@ -969,14 +969,14 @@ dq8_avx2_done:
 dequant_q8_0_avx2 ENDP
 
 ; =============================================================================
-; dequant_q8_0_avx512 — stub (delegates to AVX2)
+; dequant_q8_0_avx512 ? stub (delegates to AVX2)
 ; =============================================================================
 dequant_q8_0_avx512 PROC
     jmp dequant_q8_0_avx2
 dequant_q8_0_avx512 ENDP
 
 ; =============================================================================
-; dequant_q2k_avx2 — stub placeholder for Q2_K dequantization
+; dequant_q2k_avx2 ? stub placeholder for Q2_K dequantization
 ; =============================================================================
 dequant_q2k_avx2 PROC FRAME
     push rbp
@@ -985,7 +985,7 @@ dequant_q2k_avx2 PROC FRAME
     .setframe rbp, 0
     .endprolog
 
-    ; Q2_K is complex — placeholder, delegates to C++ scalar
+    ; Q2_K is complex ? placeholder, delegates to C++ scalar
     vzeroupper
     pop rbp
     ret
@@ -994,7 +994,7 @@ dequant_q2k_avx2 ENDP
 ; =============================================================================
 ; qgemv_q4_0_avx2(const void* A, const float* x, float* y, int M, int K)
 ; RCX = A (Q4_0 quantized), RDX = x, R8 = y, R9d = M, [rsp+40] = K
-; Quantized matrix-vector: y[m] += dequant(A[m*K]) · x[K]
+; Quantized matrix-vector: y[m] += dequant(A[m*K]) ? x[K]
 ; =============================================================================
 qgemv_q4_0_avx2 PROC FRAME
     push rbp
@@ -1023,7 +1023,7 @@ qgemv_q4_0_avx2 PROC FRAME
     mov r12d, r9d                   ; M
     mov r13d, dword ptr [rbp+48+48] ; K (adjusted for pushes)
 
-    ; Q4_0 block size = 18 bytes, 32 elements per block
+    ; Q4_0 block m_size = 18 bytes, 32 elements per block
     ; blocks per row = K / 32
     mov r14d, r13d
     shr r14d, 5                     ; blocks per row = K / 32
@@ -1050,11 +1050,11 @@ qgemv_q4_block_loop:
     vcvtph2ps xmm1, xmm1
     add rsi, 2
 
-    ; Load 16 nibble-bytes → 32 values
-    ; For each value: dequant * x → accumulate
+    ; Load 16 nibble-bytes ? 32 values
+    ; For each value: dequant * x ? accumulate
     ; Process 8 values at a time using dot product with x vector
 
-    ; Simplified: dequant block → scalar dot with x chunk
+    ; Simplified: dequant block ? scalar dot with x chunk
     ; (Full SIMD dequant+dot fusion would be ~3x more code)
     xor r10d, r10d                  ; within-block index
 
@@ -1122,7 +1122,7 @@ qgemv_q4_0_avx2 ENDP
 
 ; =============================================================================
 ; qgemv_q8_0_avx2(const void* A, const float* x, float* y, int M, int K)
-; Stub — delegates to scalar path in C++
+; Stub ? delegates to scalar path in C++
 ; =============================================================================
 qgemv_q8_0_avx2 PROC FRAME
     push rbp
@@ -1131,7 +1131,7 @@ qgemv_q8_0_avx2 PROC FRAME
     .setframe rbp, 0
     .endprolog
 
-    ; Placeholder — full Q8_0 GEMV implementation would follow same pattern
+    ; Placeholder ? full Q8_0 GEMV implementation would follow same pattern
     ; as Q4_0 but with int8 values (simpler, no nibble unpacking)
     vzeroupper
     pop rbp
@@ -1141,3 +1141,4 @@ qgemv_q8_0_avx2 ENDP
 _TEXT ENDS
 
 END
+

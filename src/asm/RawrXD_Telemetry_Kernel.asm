@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_Telemetry_Kernel.asm — Pure x64 MASM Implementation
+; RawrXD_Telemetry_Kernel.asm ? Pure x64 MASM Implementation
 ; High-performance, Lock-free Metrics & Logging
 ; =============================================================================
 ;
@@ -10,16 +10,16 @@
 ;   - Sub-microsecond timestamps via GetSystemTimePreciseAsFileTime
 ;
 ; Exports:
-;   UTC_IncrementCounter     — Thread-safe atomic increment of any counter
-;   UTC_DecrementCounter     — Thread-safe atomic decrement
-;   UTC_ReadCounter          — Acquire-fence read of a counter
-;   UTC_ResetCounter         — Atomic exchange to zero
-;   UTC_LogEvent             — Wait-free write to ring buffer
-;   UTC_FlushToDisk          — Drain ring buffer to log file
-;   UTC_InitTelemetry        — Open log file handle
-;   UTC_ShutdownTelemetry    — Flush + close handle
-;   UTC_GetMetricTableBase   — Returns pointer to METRIC_TABLE_START
-;   UTC_GetEventBufferStats  — Returns head/tail indices
+;   UTC_IncrementCounter     ? Thread-safe atomic increment of any counter
+;   UTC_DecrementCounter     ? Thread-safe atomic decrement
+;   UTC_ReadCounter          ? Acquire-fence read of a counter
+;   UTC_ResetCounter         ? Atomic exchange to zero
+;   UTC_LogEvent             ? Wait-free write to ring buffer
+;   UTC_FlushToDisk          ? Drain ring buffer to log file
+;   UTC_InitTelemetry        ? Open log file handle
+;   UTC_ShutdownTelemetry    ? Flush + close handle
+;   UTC_GetMetricTableBase   ? Returns pointer to METRIC_TABLE_START
+;   UTC_GetEventBufferStats  ? Returns head/tail indices
 ;
 ; Pattern: PatchResult (RAX=0 success, RAX=error code on failure)
 ; Rule:    NO CRT, NO Qt, NO std::, NO exceptions
@@ -45,7 +45,7 @@ EXTERNDEF FlushFileBuffers:PROC
 ; =============================================================================
 
 ; Telemetry counters (g_MetricTableStart..g_MetricTableEnd, g_Counter_*)
-; are now defined in rawr_globals.asm — accessed via EXTERNDEF (rawr_globals.inc)
+; are now defined in rawr_globals.asm ? accessed via EXTERNDEF (rawr_globals.inc)
 INCLUDE rawr_globals.inc
 
 ; Ring buffer and other data (standard .data alignment)
@@ -85,7 +85,7 @@ INCLUDE rawr_globals.inc
 .code
 
 ; =============================================================================
-; UTC_InitTelemetry — Opens the log file and marks subsystem as ready
+; UTC_InitTelemetry ? Opens the log file and marks subsystem as ready
 ; RCX = Pointer to log file path (null-terminated), or NULL for default
 ; Returns: RAX = 0 on success, GetLastError on failure
 ; =============================================================================
@@ -157,7 +157,7 @@ UTC_InitTelemetry PROC FRAME
 UTC_InitTelemetry ENDP
 
 ; =============================================================================
-; UTC_ShutdownTelemetry — Flush remaining events, close handle
+; UTC_ShutdownTelemetry ? Flush remaining events, close handle
 ; Returns: RAX = 0 on success
 ; =============================================================================
 UTC_ShutdownTelemetry PROC FRAME
@@ -190,7 +190,7 @@ UTC_ShutdownTelemetry PROC FRAME
 UTC_ShutdownTelemetry ENDP
 
 ; =============================================================================
-; UTC_IncrementCounter — Thread-safe atomic increment
+; UTC_IncrementCounter ? Thread-safe atomic increment
 ; RCX = Pointer to the counter (e.g., offset g_Counter_Inference)
 ; Returns: RAX = new value after increment
 ; =============================================================================
@@ -202,7 +202,7 @@ UTC_IncrementCounter PROC
 UTC_IncrementCounter ENDP
 
 ; =============================================================================
-; UTC_DecrementCounter — Thread-safe atomic decrement
+; UTC_DecrementCounter ? Thread-safe atomic decrement
 ; RCX = Pointer to the counter
 ; Returns: RAX = new value after decrement
 ; =============================================================================
@@ -214,7 +214,7 @@ UTC_DecrementCounter PROC
 UTC_DecrementCounter ENDP
 
 ; =============================================================================
-; UTC_ReadCounter — Acquire-fence read of a 64-bit counter
+; UTC_ReadCounter ? Acquire-fence read of a 64-bit counter
 ; RCX = Pointer to the counter
 ; Returns: RAX = current value
 ; =============================================================================
@@ -226,7 +226,7 @@ UTC_ReadCounter PROC
 UTC_ReadCounter ENDP
 
 ; =============================================================================
-; UTC_ResetCounter — Atomically zero a counter and return old value
+; UTC_ResetCounter ? Atomically zero a counter and return old value
 ; RCX = Pointer to the counter
 ; Returns: RAX = previous value
 ; =============================================================================
@@ -237,7 +237,7 @@ UTC_ResetCounter PROC
 UTC_ResetCounter ENDP
 
 ; =============================================================================
-; UTC_LogEvent — Wait-free write to the ring buffer
+; UTC_LogEvent ? Wait-free write to the ring buffer
 ; RCX = Pointer to null-terminated message string
 ; Returns: RAX = slot index used
 ; =============================================================================
@@ -319,7 +319,7 @@ UTC_LogEvent PROC FRAME
 UTC_LogEvent ENDP
 
 ; =============================================================================
-; UTC_FlushToDisk — Drains the ring buffer to the log file
+; UTC_FlushToDisk ? Drains the ring buffer to the log file
 ; Single-consumer model: only one thread should call this.
 ; Returns: RAX = number of events flushed
 ; =============================================================================
@@ -422,7 +422,7 @@ UTC_FlushToDisk PROC FRAME
 UTC_FlushToDisk ENDP
 
 ; =============================================================================
-; UTC_GetMetricTableBase — Returns pointer to the metric table start
+; UTC_GetMetricTableBase ? Returns pointer to the metric table start
 ; Returns: RAX = address of g_MetricTableStart
 ; =============================================================================
 UTC_GetMetricTableBase PROC
@@ -431,7 +431,7 @@ UTC_GetMetricTableBase PROC
 UTC_GetMetricTableBase ENDP
 
 ; =============================================================================
-; UTC_GetEventBufferStats — Returns head and tail indices
+; UTC_GetEventBufferStats ? Returns head and tail indices
 ; Returns: RAX = Head index, RDX = Tail index
 ; =============================================================================
 UTC_GetEventBufferStats PROC
@@ -442,7 +442,7 @@ UTC_GetEventBufferStats PROC
 UTC_GetEventBufferStats ENDP
 
 ; =============================================================================
-; UTC_Internal_GetTimestamp — High-resolution timestamp formatter
+; UTC_Internal_GetTimestamp ? High-resolution timestamp formatter
 ; RCX = Destination buffer pointer
 ; Returns: RAX = updated pointer past the timestamp
 ;
@@ -523,7 +523,7 @@ UTC_Internal_GetTimestamp PROC FRAME
 UTC_Internal_GetTimestamp ENDP
 
 ; =============================================================================
-; UTC_Internal_U16ToAscii2 — Convert 0-99 value to 2 zero-padded ASCII digits
+; UTC_Internal_U16ToAscii2 ? Convert 0-99 value to 2 zero-padded ASCII digits
 ; EAX = value (0-99), RDI = destination (advances RDI by 2)
 ; =============================================================================
 UTC_Internal_U16ToAscii2 PROC
@@ -543,7 +543,7 @@ UTC_Internal_U16ToAscii2 PROC
 UTC_Internal_U16ToAscii2 ENDP
 
 ; =============================================================================
-; UTC_Internal_U16ToAscii3 — Convert 0-999 value to 3 zero-padded ASCII digits
+; UTC_Internal_U16ToAscii3 ? Convert 0-999 value to 3 zero-padded ASCII digits
 ; EAX = value (0-999), RDI = destination (advances RDI by 3)
 ; =============================================================================
 UTC_Internal_U16ToAscii3 PROC
@@ -572,3 +572,4 @@ UTC_Internal_U16ToAscii3 PROC
 UTC_Internal_U16ToAscii3 ENDP
 
 END
+

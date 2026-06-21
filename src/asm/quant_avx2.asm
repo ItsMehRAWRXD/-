@@ -1,42 +1,42 @@
 ; =============================================================================
-; quant_avx2.asm — Q4_0 / Q8_0 Dequantization & Fused Dot-Product (AVX2/FMA3)
+; quant_avx2.asm ? Q4_0 / Q8_0 Dequantization & Fused Dot-Product (AVX2/FMA3)
 ; =============================================================================
 ;
 ; Legacy quantization format kernels for GGUF models using Q4_0 and Q8_0.
 ; These are the two most common base quantization types in llama.cpp-compatible
 ; GGUF files. This module provides:
 ;
-;   1. Dequantization:  Q4_0 → fp32,  Q8_0 → fp32
-;   2. Fused vec_dot:   dot(Q4_0, Q8_0) → fp32  (avoids materializing fp32)
-;   3. Fused vec_dot:   dot(Q8_0, fp32) → fp32
+;   1. Dequantization:  Q4_0 ? fp32,  Q8_0 ? fp32
+;   2. Fused vec_dot:   dot(Q4_0, Q8_0) ? fp32  (avoids materializing fp32)
+;   3. Fused vec_dot:   dot(Q8_0, fp32) ? fp32
 ;
 ; The fused vec_dot kernels are critical for inference performance because
 ; they eliminate the intermediate fp32 buffer and reduce memory bandwidth
-; by ~8× for Q4_0 and ~4× for Q8_0.
+; by ~8? for Q4_0 and ~4? for Q8_0.
 ;
-; ╔═══════════════════════════════════════════════════════════════════════╗
-; ║  GGML QUANTIZATION BLOCK FORMATS                                    ║
-; ║                                                                     ║
-; ║  Q4_0 block (20 bytes per 32 elements):                             ║
-; ║    +0:  fp16 d         (scale factor, 2 bytes)                      ║
-; ║    +2:  uint8 qs[16]   (32 × 4-bit quants packed, 16 bytes)        ║
-; ║    Total: 18 bytes per 32 elements = 4.5 bits/element               ║
-; ║                                                                     ║
-; ║  Q8_0 block (34 bytes per 32 elements):                             ║
-; ║    +0:  fp16 d         (scale factor, 2 bytes)                      ║
-; ║    +2:  int8 qs[32]    (32 × 8-bit signed quants, 32 bytes)        ║
-; ║    Total: 34 bytes per 32 elements = 8.5 bits/element               ║
-; ║                                                                     ║
-; ║  Dequant formula:                                                   ║
-; ║    Q4_0: output[i] = d * (nibble[i] - 8)     (unsigned→signed)     ║
-; ║    Q8_0: output[i] = d * qs[i]                (already signed)      ║
-; ╚═══════════════════════════════════════════════════════════════════════╝
+; ?????????????????????????????????????????????????????????????????????????
+; ?  GGML QUANTIZATION BLOCK FORMATS                                    ?
+; ?                                                                     ?
+; ?  Q4_0 block (20 bytes per 32 elements):                             ?
+; ?    +0:  fp16 d         (scale factor, 2 bytes)                      ?
+; ?    +2:  uint8 qs[16]   (32 ? 4-bit quants packed, 16 bytes)        ?
+; ?    Total: 18 bytes per 32 elements = 4.5 bits/element               ?
+; ?                                                                     ?
+; ?  Q8_0 block (34 bytes per 32 elements):                             ?
+; ?    +0:  fp16 d         (scale factor, 2 bytes)                      ?
+; ?    +2:  int8 qs[32]    (32 ? 8-bit signed quants, 32 bytes)        ?
+; ?    Total: 34 bytes per 32 elements = 8.5 bits/element               ?
+; ?                                                                     ?
+; ?  Dequant formula:                                                   ?
+; ?    Q4_0: output[i] = d * (nibble[i] - 8)     (unsigned?signed)     ?
+; ?    Q8_0: output[i] = d * qs[i]                (already signed)      ?
+; ?????????????????????????????????????????????????????????????????????????
 ;
-; ╔═══════════════════════════════════════════════════════════════════════╗
-; ║  WINDOWS x64 REGISTER PRESERVATION CONTRACT                        ║
-; ║  Non-volatile (MUST save/restore):                                  ║
-; ║    RBX, RBP, RSI, RDI, R12-R15, XMM6-XMM15                       ║
-; ╚═══════════════════════════════════════════════════════════════════════╝
+; ?????????????????????????????????????????????????????????????????????????
+; ?  WINDOWS x64 REGISTER PRESERVATION CONTRACT                        ?
+; ?  Non-volatile (MUST save/restore):                                  ?
+; ?    RBX, RBP, RSI, RDI, R12-R15, XMM6-XMM15                       ?
+; ?????????????????????????????????????????????????????????????????????????
 ;
 ; Build: ml64.exe /c /Zi /Zd quant_avx2.asm
 ; Link:  Statically linked into RawrEngine / RawrXD-Win32IDE
@@ -63,14 +63,14 @@ Q4_OFFSET               EQU 8
 ; =============================================================================
 _DATA64 SEGMENT ALIGN(64) 'DATA'
 
-; Nibble isolation mask: 0x0F repeated (for vpand)
+; Nibble isolation mask: 00Fh repeated (for vpand)
 q4_nibble_mask:
     DB 32 DUP(0Fh)
 
 ; Signed offset for Q4_0: subtract 8 from each int32 element
 ; (after zero-extension from byte to dword, we need to subtract 8)
 q4_offset_8:
-    DD 8, 8, 8, 8, 8, 8, 8, 8          ; 8 × int32 = 1 YMM
+    DD 8, 8, 8, 8, 8, 8, 8, 8          ; 8 ? int32 = 1 YMM
 
 ; Performance counters
 g_Q4DequantCalls        DQ 0
@@ -96,7 +96,7 @@ PUBLIC Quant_GetStats
 
 ; =============================================================================
 ; Quant_GetStats
-; RCX = pointer to output buffer (4 × uint64_t)
+; RCX = pointer to output buffer (4 ? uint64_t)
 ; Returns: EAX = 1
 ; =============================================================================
 Quant_GetStats PROC
@@ -125,8 +125,8 @@ Quant_GetStats ENDP
 ; Algorithm per block (32 elements):
 ;   d = fp16_to_fp32(src[0:2])
 ;   for i in 0..15:
-;     lo = qs[i] & 0xF       → output[2*i]   = d * (lo - 8)
-;     hi = qs[i] >> 4        → output[2*i+1] = d * (hi - 8)
+;     lo = qs[i] & 0Fh       ? output[2*i]   = d * (lo - 8)
+;     hi = qs[i] >> 4        ? output[2*i+1] = d * (hi - 8)
 ;
 ; AVX2 approach:
 ;   Load 16 bytes of qs into xmm
@@ -176,21 +176,21 @@ Quant_DequantQ4_0 PROC FRAME
     ; --- Load 16 bytes of packed quants from [rsi+2] ---
     vmovdqu xmm1, xmmword ptr [rsi + 2]
 
-    ; --- Extract low nibbles (elements 0,2,4,...30 → first 16 of 32) ---
+    ; --- Extract low nibbles (elements 0,2,4,...30 ? first 16 of 32) ---
     vpand   xmm2, xmm1, xmm6          ; low nibbles (16 bytes)
 
-    ; --- Extract high nibbles (elements 1,3,5,...31 → second 16 of 32) ---
+    ; --- Extract high nibbles (elements 1,3,5,...31 ? second 16 of 32) ---
     vpsrlw  xmm3, xmm1, 4
     vpand   xmm3, xmm3, xmm6          ; high nibbles (16 bytes)
 
-    ; --- Process low nibbles: bytes 0-7 → 8 int32 → 8 fp32 ---
-    vpmovzxbd ymm0, xmm2               ; bytes[0:7] → 8 × int32
-    vpsubd  ymm0, ymm0, ymm7           ; subtract 8 → signed
-    vcvtdq2ps ymm0, ymm0               ; → fp32
-    vmulps  ymm0, ymm0, ymm8           ; × d
+    ; --- Process low nibbles: bytes 0-7 ? 8 int32 ? 8 fp32 ---
+    vpmovzxbd ymm0, xmm2               ; bytes[0:7] ? 8 ? int32
+    vpsubd  ymm0, ymm0, ymm7           ; subtract 8 ? signed
+    vcvtdq2ps ymm0, ymm0               ; ? fp32
+    vmulps  ymm0, ymm0, ymm8           ; ? d
     vmovups ymmword ptr [rdi], ymm0     ; Store 8 floats (elements 0,2,4,6,8,10,12,14)
 
-    ; --- Process low nibbles: bytes 8-15 → 8 int32 → 8 fp32 ---
+    ; --- Process low nibbles: bytes 8-15 ? 8 int32 ? 8 fp32 ---
     vpsrldq xmm4, xmm2, 8             ; shift right 8 bytes
     vpmovzxbd ymm0, xmm4
     vpsubd  ymm0, ymm0, ymm7
@@ -198,14 +198,14 @@ Quant_DequantQ4_0 PROC FRAME
     vmulps  ymm0, ymm0, ymm8
     vmovups ymmword ptr [rdi + 32], ymm0  ; Elements 16,18,20,22,24,26,28,30
 
-    ; --- Process high nibbles: bytes 0-7 → 8 int32 → 8 fp32 ---
+    ; --- Process high nibbles: bytes 0-7 ? 8 int32 ? 8 fp32 ---
     vpmovzxbd ymm0, xmm3
     vpsubd  ymm0, ymm0, ymm7
     vcvtdq2ps ymm0, ymm0
     vmulps  ymm0, ymm0, ymm8
     vmovups ymmword ptr [rdi + 64], ymm0  ; Elements 1,3,5,7,9,11,13,15
 
-    ; --- Process high nibbles: bytes 8-15 → 8 int32 → 8 fp32 ---
+    ; --- Process high nibbles: bytes 8-15 ? 8 int32 ? 8 fp32 ---
     vpsrldq xmm4, xmm3, 8
     vpmovzxbd ymm0, xmm4
     vpsubd  ymm0, ymm0, ymm7
@@ -239,7 +239,7 @@ Quant_DequantQ4_0 PROC FRAME
 
     ; Now expand xmm4 (first 16 elements) to fp32 in 2 batches of 8
     ; Batch 0: bytes 0-7 of xmm4
-    vpmovzxbd ymm0, xmm4               ; 8 × uint8 → 8 × int32
+    vpmovzxbd ymm0, xmm4               ; 8 ? uint8 ? 8 ? int32
     vpsubd  ymm0, ymm0, ymm7           ; - 8
     vcvtdq2ps ymm0, ymm0
     vmulps  ymm0, ymm0, ymm8
@@ -270,7 +270,7 @@ Quant_DequantQ4_0 PROC FRAME
 
     ; Advance pointers
     add     rsi, BLOCK_Q4_0_SIZE        ; Next Q4_0 block (18 bytes)
-    add     rdi, 128                    ; 32 floats × 4 bytes
+    add     rdi, 128                    ; 32 floats ? 4 bytes
     add     ebx, QK_0
     jmp     @@q4_block
 
@@ -303,7 +303,7 @@ Quant_DequantQ4_0 ENDP
 ;   d = fp16_to_fp32(src[0:2])
 ;   for i in 0..31: output[i] = d * qs[i]   (qs is signed int8)
 ;
-; AVX2: vpmovsxbd (sign-extend int8→int32), vcvtdq2ps, vmulps
+; AVX2: vpmovsxbd (sign-extend int8?int32), vcvtdq2ps, vmulps
 ; =============================================================================
 Quant_DequantQ8_0 PROC FRAME
     push    rbx
@@ -366,7 +366,7 @@ Quant_DequantQ8_0 PROC FRAME
 
     ; Advance
     add     rsi, BLOCK_Q8_0_SIZE        ; 34 bytes
-    add     rdi, 128                    ; 32 × 4 bytes
+    add     rdi, 128                    ; 32 ? 4 bytes
     add     ebx, QK_0
     jmp     @@q8_block
 
@@ -385,7 +385,7 @@ Quant_DequantQ8_0 ENDP
 
 ; =============================================================================
 ; Quant_VecDotQ4_0_Q8_0
-; Fused dot product: dot(Q4_0_vec, Q8_0_vec) → scalar fp32
+; Fused dot product: dot(Q4_0_vec, Q8_0_vec) ? scalar fp32
 ;
 ; This is THE hot inner loop for quantized inference. It computes the
 ; dot product of a Q4_0 weight vector against a Q8_0 activation vector
@@ -409,7 +409,7 @@ Quant_DequantQ8_0 ENDP
 ;   result += d4 * d8 * sum
 ;
 ; AVX2 optimization:
-;   Use vpmaddubsw (unsigned×signed → int16 with saturation) on raw bytes,
+;   Use vpmaddubsw (unsigned?signed ? int16 with saturation) on raw bytes,
 ;   then vpmaddwd to accumulate int16 pairs into int32.
 ;   This processes 32 elements per iteration with just 4 instructions.
 ; =============================================================================
@@ -446,10 +446,10 @@ Quant_VecDotQ4_0_Q8_0 PROC FRAME
     vmovdqa ymm9, ymmword ptr [q4_nibble_mask]
 
     ; Constant: 8 as uint8 (for subtracting from unsigned nibbles)
-    ; We'll create this: 0x08 repeated 32 times
+    ; We'll create this: 008h repeated 32 times
     mov     eax, 08080808h
     vmovd   xmm6, eax
-    vpbroadcastd ymm6, xmm6            ; ymm6 = 0x08 × 32
+    vpbroadcastd ymm6, xmm6            ; ymm6 = 008h ? 32
 
 @@vd_q4q8_block:
     lea     rax, [rbx + QK_0]
@@ -497,19 +497,19 @@ Quant_VecDotQ4_0_Q8_0 PROC FRAME
     ; So we compute the correction term separately.
 
     ; --- Load Q8_0 quants (32 signed bytes at [rdi+2]) ---
-    vmovdqu ymm1, ymmword ptr [rdi + 2]    ; 32 × int8
+    vmovdqu ymm1, ymmword ptr [rdi + 2]    ; 32 ? int8
 
     ; === Method: vpmaddubsw(Q4_unsigned, Q8_signed) + correction ===
-    ; vpmaddubsw: for each pair of bytes, computes u8*s8→s16 and adds adjacent pairs
-    ; Result: 16 × int16 values
-    vpmaddubsw ymm2, ymm0, ymm1        ; 16 × int16 = sum of adjacent u8*s8 products
+    ; vpmaddubsw: for each pair of bytes, computes u8*s8?s16 and adds adjacent pairs
+    ; Result: 16 ? int16 values
+    vpmaddubsw ymm2, ymm0, ymm1        ; 16 ? int16 = sum of adjacent u8*s8 products
 
     ; Sum int16 pairs to int32: vpmaddwd with all-ones
     ; vpmaddwd(a, 1) sums adjacent int16 pairs into int32
     mov     eax, 00010001h
     vmovd   xmm3, eax
     vpbroadcastd ymm3, xmm3            ; ymm3 = [1, 1, 1, 1, ...] as int16 pairs
-    vpmaddwd ymm2, ymm2, ymm3          ; 8 × int32
+    vpmaddwd ymm2, ymm2, ymm3          ; 8 ? int32
 
     ; Now compute correction: -8 * sum(q8)
     ; Sum all Q8 bytes: use vpsadbw against zero to get absolute byte sums,
@@ -522,15 +522,15 @@ Quant_VecDotQ4_0_Q8_0 PROC FRAME
     ; So we need to compute sum(q8_signed) per int16 pair, then per int32.
 
     ; Correction: 8 * sum_of_q8_pairs as int16
-    ; Use vpmaddubsw(0x08_repeated, q8_signed) → 8*q8[2i] + 8*q8[2i+1] = 8*(q8[2i]+q8[2i+1])
-    vpmaddubsw ymm4, ymm6, ymm1        ; 16 × int16: 8*(q8[2i]+q8[2i+1])
-    vpmaddwd ymm4, ymm4, ymm3          ; 8 × int32: 8*sum_of_4_q8_values
+    ; Use vpmaddubsw(008h_repeated, q8_signed) ? 8*q8[2i] + 8*q8[2i+1] = 8*(q8[2i]+q8[2i+1])
+    vpmaddubsw ymm4, ymm6, ymm1        ; 16 ? int16: 8*(q8[2i]+q8[2i+1])
+    vpmaddwd ymm4, ymm4, ymm3          ; 8 ? int32: 8*sum_of_4_q8_values
 
     ; Subtract correction: true_dot_int32 = vpmaddubsw_result - correction
-    vpsubd  ymm2, ymm2, ymm4           ; 8 × int32: corrected dot products
+    vpsubd  ymm2, ymm2, ymm4           ; 8 ? int32: corrected dot products
 
     ; Convert to float and multiply by combined scale
-    vcvtdq2ps ymm2, ymm2               ; 8 × fp32
+    vcvtdq2ps ymm2, ymm2               ; 8 ? fp32
     vbroadcastss ymm7, xmm7            ; broadcast d4*d8
     vfmadd231ps ymm8, ymm2, ymm7       ; accumulator += d4*d8 * int_dots
 
@@ -541,10 +541,10 @@ Quant_VecDotQ4_0_Q8_0 PROC FRAME
     jmp     @@vd_q4q8_block
 
 @@vd_q4q8_done:
-    ; Horizontal sum of ymm8 → scalar in xmm0
+    ; Horizontal sum of ymm8 ? scalar in xmm0
     vextractf128 xmm0, ymm8, 1
     vaddps  xmm0, xmm0, xmm8           ; (low xmm8 already in xmm0 position)
-    ; Wait — xmm8 is low half of ymm8. Need to add properly:
+    ; Wait ? xmm8 is low half of ymm8. Need to add properly:
     ; Actually vextractf128 xmm0, ymm8, 1 extracts HIGH 128 bits into xmm0
     ; and ymm8's low 128 bits are still accessible as xmm8.
     ; But after vextractf128, xmm0 = ymm8[255:128]
@@ -571,7 +571,7 @@ Quant_VecDotQ4_0_Q8_0 ENDP
 
 ; =============================================================================
 ; Quant_VecDotQ8_0_F32
-; Fused dot product: dot(Q8_0_vec, fp32_vec) → scalar fp32
+; Fused dot product: dot(Q8_0_vec, fp32_vec) ? scalar fp32
 ;
 ; RCX = src_q8 (block_q8_0*), quantized vector
 ; RDX = src_f32 (float*), fp32 vector
@@ -622,12 +622,12 @@ Quant_VecDotQ8_0_F32 PROC FRAME
     vbroadcastss ymm7, xmm0            ; ymm7 = d broadcast
 
     ; Process 32 elements in 4 batches of 8
-    ; Each batch: sign-extend 8 int8 → int32 → fp32, multiply by d, FMA with f32
+    ; Each batch: sign-extend 8 int8 ? int32 ? fp32, multiply by d, FMA with f32
 
     ; Batch 0
-    vpmovsxbd ymm0, qword ptr [rsi + 2]    ; 8 × int8 → int32
-    vcvtdq2ps ymm0, ymm0                    ; → fp32
-    vmulps  ymm0, ymm0, ymm7                ; × d
+    vpmovsxbd ymm0, qword ptr [rsi + 2]    ; 8 ? int8 ? int32
+    vcvtdq2ps ymm0, ymm0                    ; ? fp32
+    vmulps  ymm0, ymm0, ymm7                ; ? d
     vfmadd231ps ymm6, ymm0, ymmword ptr [rdi]  ; acc += dequant * f32
 
     ; Batch 1
@@ -650,7 +650,7 @@ Quant_VecDotQ8_0_F32 PROC FRAME
 
     ; Advance
     add     rsi, BLOCK_Q8_0_SIZE        ; 34 bytes
-    add     rdi, 128                    ; 32 × 4 bytes
+    add     rdi, 128                    ; 32 ? 4 bytes
     add     ebx, QK_0
     jmp     @@vd_q8f32_block
 
@@ -676,3 +676,4 @@ Quant_VecDotQ8_0_F32 ENDP
 
 ; =============================================================================
 END
+

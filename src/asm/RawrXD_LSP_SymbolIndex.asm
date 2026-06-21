@@ -1,11 +1,11 @@
 ; =============================================================================
-; RawrXD_LSP_SymbolIndex.asm — MASM64 Accelerated Symbol Index Kernels
+; RawrXD_LSP_SymbolIndex.asm ? MASM64 Accelerated Symbol Index Kernels
 ; =============================================================================
 ; Three exported routines for the HotpatchSymbolProvider:
 ;
-;   asm_symbol_hash_lookup  — Binary search for a hash in a sorted uint64 array
-;   asm_batch_fnv1a         — Batch FNV-1a hash computation for string arrays
-;   asm_symbol_prefix_scan  — Linear prefix-match scan over C-string pointers
+;   asm_symbol_hash_lookup  ? Binary search for a hash in a sorted uint64 array
+;   asm_batch_fnv1a         ? Batch FNV-1a hash computation for string arrays
+;   asm_symbol_prefix_scan  ? Linear prefix-match scan over C-string pointers
 ;
 ; Calling convention: Microsoft x64 (__fastcall)
 ;   RCX = arg1, RDX = arg2, R8 = arg3, R9 = arg4
@@ -13,7 +13,7 @@
 ;   Callee-save: RBX, RBP, RSI, RDI, R12-R15, XMM6-XMM15
 ;
 ; Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
-; Copyright (c) 2025-2026 RawrXD Project — All rights reserved.
+; Copyright (c) 2025-2026 RawrXD Project ? All rights reserved.
 ; =============================================================================
 
 .code
@@ -25,9 +25,9 @@
 ;
 ; Prototype:
 ;   int64_t asm_symbol_hash_lookup(
-;       const uint64_t* hashArray,  ; RCX — pointer to sorted hash array
-;       int64_t         count,      ; RDX — number of elements
-;       uint64_t        targetHash  ; R8  — hash to search for
+;       const uint64_t* hashArray,  ; RCX ? pointer to sorted hash array
+;       int64_t         count,      ; RDX ? number of elements
+;       uint64_t        targetHash  ; R8  ? hash to search for
 ;   );
 ;
 ; Returns: index (0-based) of the found element, or -1 if not found.
@@ -56,7 +56,7 @@ asm_symbol_hash_lookup PROC
     jle     @@not_found
 
 @@bsearch_loop:
-    ; Check if lo > hi → not found
+    ; Check if lo > hi ? not found
     cmp     rax, rbx
     jg      @@not_found
 
@@ -73,12 +73,12 @@ asm_symbol_hash_lookup PROC
     je      @@found
     jb      @@go_right
 
-    ; hashArray[mid] > target → hi = mid - 1
+    ; hashArray[mid] > target ? hi = mid - 1
     lea     rbx, [rcx - 1]
     jmp     @@bsearch_loop
 
 @@go_right:
-    ; hashArray[mid] < target → lo = mid + 1
+    ; hashArray[mid] < target ? lo = mid + 1
     lea     rax, [rcx + 1]
     jmp     @@bsearch_loop
 
@@ -106,16 +106,16 @@ asm_symbol_hash_lookup ENDP
 ;
 ; Prototype:
 ;   int64_t asm_batch_fnv1a(
-;       const char* const* strings,  ; RCX — array of string pointers
-;       int64_t             count,   ; RDX — number of strings
-;       uint64_t*           outHash  ; R8  — output hash array
+;       const char* const* strings,  ; RCX ? array of string pointers
+;       int64_t             count,   ; RDX ? number of strings
+;       uint64_t*           outHash  ; R8  ? output hash array
 ;   );
 ;
 ; Returns: number of hashes computed (should equal count unless null ptrs).
 ;
 ; FNV-1a constants:
-;   Offset basis = 14695981039346656037 (0xCBF29CE484222325)
-;   Prime        = 1099511628211        (0x00000100000001B3)
+;   Offset basis = 14695981039346656037 (0CBF29CE484222325h)
+;   Prime        = 1099511628211        (000000100000001B3h)
 ; =============================================================================
 
 FNV_OFFSET_BASIS    EQU     0CBF29CE484222325h
@@ -203,10 +203,10 @@ asm_batch_fnv1a ENDP
 ;
 ; Prototype:
 ;   int64_t asm_symbol_prefix_scan(
-;       const char* const* names,    ; RCX — array of string pointers
-;       int64_t             count,   ; RDX — number of strings
-;       const char*         prefix,  ; R8  — prefix to match
-;       int64_t             prefLen  ; R9  — length of prefix (bytes)
+;       const char* const* names,    ; RCX ? array of string pointers
+;       int64_t             count,   ; RDX ? number of strings
+;       const char*         prefix,  ; R8  ? prefix to match
+;       int64_t             prefLen  ; R9  ? length of prefix (bytes)
 ;   );
 ;
 ; Returns: index (0-based) of first match, or -1 if none found.
@@ -256,7 +256,7 @@ asm_symbol_prefix_scan PROC
     ; Byte-by-byte prefix comparison
 @@cmp_loop:
     test    rcx, rcx
-    jz      @@scan_found        ; all bytes matched → hit
+    jz      @@scan_found        ; all bytes matched ? hit
 
     movzx   eax, byte ptr [rsi]
     movzx   edx, byte ptr [rdi]
@@ -296,3 +296,4 @@ asm_symbol_prefix_scan PROC
 asm_symbol_prefix_scan ENDP
 
 END
+

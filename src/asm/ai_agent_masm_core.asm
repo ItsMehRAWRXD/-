@@ -381,7 +381,7 @@ masm_memory_scan_pattern_avx512 PROC FRAME
 
     mov r10, qword ptr [r8+18h]    ; mask pointer
     mov r12, rcx                   ; buffer base
-    mov r13, rdx                   ; buffer size
+    mov r13, rdx                   ; buffer m_size
     sub r13, r11
     inc r13                        ; scan limit count
     xor r14, r14                   ; match count

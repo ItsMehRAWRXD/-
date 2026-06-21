@@ -37,6 +37,7 @@ TransformerBlockForward PROC FRAME
     
     sub     rsp, 128
     .allocstack 128
+    .endprolog
     
     mov     r12, rcx            ; Input
     mov     r13, rdx            ; Output
@@ -219,7 +220,7 @@ RMSNormForward PROC
     
     ; Calculate RMS for this row
     vxorps  xmm0, xmm0, xmm0    ; Sum accumulator
-    mov     rcx, r9d            ; Hidden dim
+    movsxd    rcx, r9d            ; Hidden dim (sign-extend to 64-bit)
     shr     rcx, 4              ; Process 16 floats at a time
     
 @@sum_loop:
@@ -287,7 +288,7 @@ MatMulF16 PROC
     mov     r14, r8             ; C
     mov     r15d, r9d           ; M
     
-    ; Tile size
+    ; Tile blockSize
     mov     ebx, 32
     
 @@m_loop:
@@ -479,3 +480,4 @@ epsilon     REAL4   1.0e-6
 neg_one     REAL4   -1.0
 
 END
+

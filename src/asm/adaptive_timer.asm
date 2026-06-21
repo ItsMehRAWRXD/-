@@ -1,5 +1,5 @@
 ; ============================================================================
-; adaptive_timer.asm — 10kHz Sentinel Scaling & Predictive Scrub (Batch 20)
+; adaptive_timer.asm ? 10kHz Sentinel Scaling & Predictive Scrub (Batch 20)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -66,10 +66,11 @@ Shield_PreemptiveVramScrub PROC FRAME
     ; It zeros out the first few layers of the model weights on the 
     ; healthy node to ensure that an attacker cannot extract partial logic.
     
-    ; [Vulkan Compute Dispatch for Wipe Shader at 0xDEAD priority]
+    ; [Vulkan Compute Dispatch for Wipe Shader at 0DEADh priority]
 
     pop     rbp
     ret
 Shield_PreemptiveVramScrub ENDP
 
 END
+

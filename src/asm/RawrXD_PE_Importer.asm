@@ -63,7 +63,7 @@ next_thunk:
     ; Offset 2: Name (STRING)
     lea rdi, [r12 + rax + 2]      ; rdi = VA of Function Name string
 
-    ; Invoke Callback(dllName, funcName, context)
+    ; call Callback(dllName, funcName, context)
     ; RCX=rbx, RDX=rdi, R8=r15
     mov rcx, rbx
     mov rdx, rdi
@@ -94,3 +94,4 @@ done_imports:
 RawrXD_WalkImports ENDP
 
 END
+

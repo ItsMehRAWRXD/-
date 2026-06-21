@@ -39,10 +39,10 @@ RawrXD_Swarm_CompareLogitsAVX2 proc
     
     ; Manual Absolute Value (masking sign bit)
     vpcmpeqd ymm4, ymm4, ymm4       ; Set all bits to 1
-    vpsrld   ymm4, ymm4, 1          ; ymm4 = 0x7FFFFFFF... (sign bit mask)
+    vpsrld   ymm4, ymm4, 1          ; ymm4 = 07FFFFFFFh... (sign bit mask)
     vpand    ymm3, ymm3, ymm4       ; Clean absolute value
 
-    vcmpps ymm5, ymm3, ymm2, 0eh    ; CMP_GT (ymm5 = 0xFFFFFFFF if |diff| > epsilon)
+    vcmpps ymm5, ymm3, ymm2, 0eh    ; CMP_GT (ymm5 = 0FFFFFFFFh if |diff| > epsilon)
     vmovmskps r11d, ymm5            ; Extract bitmask
     
     popcnt r11d, r11d               ; Count bits (divergent elements in this batch)
@@ -86,3 +86,4 @@ RawrXD_Swarm_CompareLogitsAVX2 proc
 RawrXD_Swarm_CompareLogitsAVX2 endp
 
 end
+

@@ -1,5 +1,5 @@
 ; ============================================================================
-; RawrXD 10x Dual Engine System — Pure x64 MASM Implementation
+; RawrXD 10x Dual Engine System - Pure x64 MASM Implementation
 ; SCAFFOLD_136: inference_core.asm
 ; SCAFFOLD_137: feature_dispatch_bridge.asm
 ; ============================================================================
@@ -7,29 +7,6 @@
 ; 10 coupled engines with 20 CLI features, fused via Beaconism
 ; Zero external dependencies on standard x64 ISA
 ; ============================================================================
-
-; .686p
-; .xmm
-; .model flat, stdcall
-; .option casemap:none
-; .option frame:auto
-; .option win64:3
-
-; ============================================================================
-; EXTERNAL IMPORTS
-; ============================================================================
-EXTERN strcmp : PROC
-EXTERN strlen : PROC
-
-; ============================================================================
-; PUBLIC EXPORTS
-; ============================================================================
-PUBLIC DualEngine_InitAll
-PUBLIC DualEngine_ShutdownAll
-PUBLIC DualEngine_ExecuteOnAll
-PUBLIC DualEngine_AllHealthy
-PUBLIC DualEngine_SelfDiagnoseAll
-PUBLIC DualEngine_DispatchCLI
 
 ; ============================================================================
 ; CONSTANTS
@@ -78,13 +55,13 @@ szFeature_Storage2     DB "--storage-cache", 0
 szFeature_Network1     DB "--net-optimize", 0
 szFeature_Network2     DB "--net-compress", 0
 szFeature_Power1       DB "--power-govern", 0
-szFeature_Power2       DB "--power-profile", 0
+szFeature_Power2        DB "--power-profile", 0
 szFeature_Latency1     DB "--latency-reduce", 0
-szFeature_Latency2     DB "--latency-predict", 0
+szFeature_Latency2      DB "--latency-predict", 0
 szFeature_Throughput1  DB "--throughput-max", 0
-szFeature_Throughput2  DB "--throughput-sched", 0
+szFeature_Throughput2   DB "--throughput-sched", 0
 szFeature_Quantum1     DB "--quantum-fuse", 0
-szFeature_Quantum2     DB "--quantum-entangle", 0
+szFeature_Quantum2      DB "--quantum-entangle", 0
 
 ; ============================================================================
 ; TEXT SECTION
@@ -94,37 +71,48 @@ szFeature_Quantum2     DB "--quantum-entangle", 0
 ; ============================================================================
 ; DualEngine_InitAll() -> __int64
 ; ============================================================================
-DualEngine_InitAll PROC
+DualEngine_InitAll PROC FRAME
     ; Initialize all 10 engines
-    mov rax, RESULT_SUCCESS
-    mov g_InitializedFlag, 1
-    mov g_AllEnginesReady, 1
+    ; x64 ABI: RCX = first param (none here), return in RAX
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
+    mov dword ptr g_InitializedFlag, 1
+    mov dword ptr g_AllEnginesReady, 1
     
     xor r8, r8
-    xor r9, r9
 
 @INIT_LOOP:
     cmp r8, ENGINE_COUNT
     jge @INIT_DONE
     
     ; Set each engine to ready state
-    mov rax, 1h
-    mov g_EngineStates[r8 * 8], rax
+    mov qword ptr g_EngineStates[r8 * 8], 1
     
     inc r8
     jmp @INIT_LOOP
 
 @INIT_DONE:
     mov rax, RESULT_SUCCESS
+    pop rbp
     ret
 DualEngine_InitAll ENDP
 
 ; ============================================================================
 ; DualEngine_ShutdownAll() -> __int64
 ; ============================================================================
-DualEngine_ShutdownAll PROC
-    mov g_InitializedFlag, 0
-    mov g_AllEnginesReady, 0
+DualEngine_ShutdownAll PROC FRAME
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
+    mov dword ptr g_InitializedFlag, 0
+    mov dword ptr g_AllEnginesReady, 0
     
     xor r8, r8
 
@@ -133,24 +121,30 @@ DualEngine_ShutdownAll PROC
     jge @SHUTDOWN_DONE
     
     ; Clear each engine state
-    mov rax, 0
-    mov g_EngineStates[r8 * 8], rax
+    mov qword ptr g_EngineStates[r8 * 8], 0
     
     inc r8
     jmp @SHUTDOWN_LOOP
 
 @SHUTDOWN_DONE:
     mov rax, RESULT_SUCCESS
+    pop rbp
     ret
 DualEngine_ShutdownAll ENDP
 
 ; ============================================================================
 ; DualEngine_ExecuteOnAll(uint32_t featureA, const char* args) -> __int64
 ; ============================================================================
-DualEngine_ExecuteOnAll PROC
-    ; RCX = featureA ID, RDX = args ptr
+DualEngine_ExecuteOnAll PROC FRAME
+    ; x64 ABI: RCX = featureA ID, RDX = args ptr
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
     ; Execute feature on ALL 10 engines
-    cmp g_InitializedFlag, 1
+    cmp dword ptr g_InitializedFlag, 1
     jne @EXEC_NOT_READY
     
     ; Increment execution counter
@@ -159,27 +153,44 @@ DualEngine_ExecuteOnAll PROC
     mov g_ExecutionCounter, r8
     
     mov rax, RESULT_SUCCESS
+    pop rbp
     ret
 
 @EXEC_NOT_READY:
     mov rax, RESULT_NOT_READY
+    pop rbp
     ret
 DualEngine_ExecuteOnAll ENDP
 
 ; ============================================================================
 ; DualEngine_AllHealthy() -> __int64
 ; ============================================================================
-DualEngine_AllHealthy PROC
-    mov rax, g_AllEnginesReady
+DualEngine_AllHealthy PROC FRAME
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
+    mov eax, g_AllEnginesReady
+    ; Zero-extend to 64-bit return
+    cdqe
+    pop rbp
     ret
 DualEngine_AllHealthy ENDP
 
 ; ============================================================================
 ; DualEngine_SelfDiagnoseAll() -> __int64
 ; ============================================================================
-DualEngine_SelfDiagnoseAll PROC
+DualEngine_SelfDiagnoseAll PROC FRAME
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
     ; Run self-diagnostics on all engines
-    cmp g_InitializedFlag, 1
+    cmp dword ptr g_InitializedFlag, 1
     jne @DIAG_FAIL
     
     xor r8, r8
@@ -190,8 +201,7 @@ DualEngine_SelfDiagnoseAll PROC
     jge @DIAG_CHECK
     
     ; Check engine health (stub: assume all healthy)
-    mov rax, 1
-    mov g_EngineHealthy[r8 * 8], rax
+    mov qword ptr g_EngineHealthy[r8 * 8], 1
     
     inc r8
     jmp @DIAG_LOOP
@@ -202,22 +212,30 @@ DualEngine_SelfDiagnoseAll PROC
 
 @DIAG_FAIL:
     mov rax, RESULT_ERROR
+    pop rbp
     ret
 
 @DIAG_SUCCESS:
     mov rax, RESULT_SUCCESS
+    pop rbp
     ret
 DualEngine_SelfDiagnoseAll ENDP
 
 ; ============================================================================
 ; DualEngine_DispatchCLI(const char* flag, const char* args) -> __int64
 ; ============================================================================
-DualEngine_DispatchCLI PROC
-    ; RCX = flag ptr, RDX = args ptr
+DualEngine_DispatchCLI PROC FRAME
+    ; x64 ABI: RCX = flag ptr, RDX = args ptr
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
     ; Dispatch CLI command to appropriate engine
     cmp rcx, 0
     je @CLI_INVALID
-    cmp g_InitializedFlag, 1
+    cmp dword ptr g_InitializedFlag, 1
     jne @CLI_NOT_READY
     
     ; Simple dispatch: match flag string (production uses jump table)
@@ -227,20 +245,35 @@ DualEngine_DispatchCLI PROC
     je @CLI_INFER_OPTIMIZE
     
     mov rax, RESULT_SUCCESS
+    pop rbp
     ret
 
 @CLI_INFER_OPTIMIZE:
     ; Execute inference-optimize on InferenceOptimizer engine
     mov rax, RESULT_SUCCESS
+    pop rbp
     ret
 
 @CLI_INVALID:
     mov rax, RESULT_ERROR
+    pop rbp
     ret
 
 @CLI_NOT_READY:
     mov rax, RESULT_NOT_READY
+    pop rbp
     ret
 DualEngine_DispatchCLI ENDP
 
+; ============================================================================
+; PUBLIC EXPORTS
+; ============================================================================
+PUBLIC DualEngine_InitAll
+PUBLIC DualEngine_ShutdownAll
+PUBLIC DualEngine_ExecuteOnAll
+PUBLIC DualEngine_AllHealthy
+PUBLIC DualEngine_SelfDiagnoseAll
+PUBLIC DualEngine_DispatchCLI
+
 END
+

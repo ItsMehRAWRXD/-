@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_VulkanBridge.asm — MASM64 Bridge to VulkanCompute C++ Engine
+; RawrXD_VulkanBridge.asm ? MASM64 Bridge to VulkanCompute C++ Engine
 ; Provides assembly-callable wrappers for VulkanKernel C exports.
 ; Allows inference_core.asm and other ASM kernels to dispatch GPU work.
 ;
@@ -28,12 +28,12 @@ EXTERNDEF VulkanKernel_GetStats:PROC
 EXTERNDEF VulkanKernel_Cleanup:PROC
 
 ; =============================================================================
-; .data — Constants and string literals
+; .data ? Constants and string literals
 ; =============================================================================
 .data
     szVkInit         db "[VulkanBridge] Initializing GPU compute...",13,10,0
     szVkInitOk       db "[VulkanBridge] GPU ready.",13,10,0
-    szVkInitFail     db "[VulkanBridge] GPU init failed — CPU fallback.",13,10,0
+    szVkInitFail     db "[VulkanBridge] GPU init failed ? CPU fallback.",13,10,0
     szVkCleanup      db "[VulkanBridge] GPU resources released.",13,10,0
 
     ; Shader paths (relative to binary directory)
@@ -54,7 +54,7 @@ EXTERNDEF VulkanKernel_Cleanup:PROC
 .code
 
 ; =============================================================================
-; VkBridge_Init — Initialize Vulkan compute subsystem
+; VkBridge_Init ? Initialize Vulkan compute subsystem
 ; Returns: RAX = 1 success, 0 failure
 ; Clobbers: all volatile regs
 ; =============================================================================
@@ -82,7 +82,7 @@ vbi_exit:
 VkBridge_Init ENDP
 
 ; =============================================================================
-; VkBridge_IsReady — Check if Vulkan is initialized
+; VkBridge_IsReady ? Check if Vulkan is initialized
 ; Returns: RAX = 1 ready, 0 not ready
 ; =============================================================================
 PUBLIC VkBridge_IsReady
@@ -92,7 +92,7 @@ VkBridge_IsReady PROC
 VkBridge_IsReady ENDP
 
 ; =============================================================================
-; VkBridge_LoadMatMulShader — Load the default MatMul SPIR-V shader
+; VkBridge_LoadMatMulShader ? Load the default MatMul SPIR-V shader
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
 PUBLIC VkBridge_LoadMatMulShader
@@ -127,7 +127,7 @@ vlm_exit:
 VkBridge_LoadMatMulShader ENDP
 
 ; =============================================================================
-; VkBridge_DispatchMatMul — GPU matrix multiply
+; VkBridge_DispatchMatMul ? GPU matrix multiply
 ; RCX = buffer index A
 ; RDX = buffer index B
 ; R8  = buffer index Output
@@ -139,11 +139,11 @@ VkBridge_LoadMatMulShader ENDP
 PUBLIC VkBridge_DispatchMatMul
 VkBridge_DispatchMatMul PROC
     ; Stack layout: shadow space (32) + 2 extra args at [rsp+40] and [rsp+48]
-    ; Forward directly to C export — same calling convention
+    ; Forward directly to C export ? same calling convention
     cmp  qword ptr [g_VkReady], 0
     je   vdm_fail
 
-    jmp  VulkanKernel_DispatchMatMul  ; Tail call — same ABI
+    jmp  VulkanKernel_DispatchMatMul  ; Tail call ? same ABI
 
 vdm_fail:
     xor  eax, eax
@@ -151,8 +151,8 @@ vdm_fail:
 VkBridge_DispatchMatMul ENDP
 
 ; =============================================================================
-; VkBridge_AllocBuffer — Allocate a GPU buffer
-; RCX = size in bytes (QWORD)
+; VkBridge_AllocBuffer ? Allocate a GPU buffer
+; RCX = m_size in bytes (QWORD)
 ; RDX = ptr to DWORD receiving buffer index
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -169,10 +169,10 @@ vab_fail:
 VkBridge_AllocBuffer ENDP
 
 ; =============================================================================
-; VkBridge_CopyToDevice — Upload host data to GPU buffer
+; VkBridge_CopyToDevice ? Upload host data to GPU buffer
 ; RCX = buffer index (DWORD)
 ; RDX = ptr to host data
-; R8  = size in bytes (QWORD)
+; R8  = m_size in bytes (QWORD)
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
 PUBLIC VkBridge_CopyToDevice
@@ -188,10 +188,10 @@ vcd_fail:
 VkBridge_CopyToDevice ENDP
 
 ; =============================================================================
-; VkBridge_CopyToHost — Download GPU buffer to host memory
+; VkBridge_CopyToHost ? Download GPU buffer to host memory
 ; RCX = buffer index (DWORD)
 ; RDX = ptr to host buffer
-; R8  = size in bytes (QWORD)
+; R8  = m_size in bytes (QWORD)
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
 PUBLIC VkBridge_CopyToHost
@@ -207,7 +207,7 @@ vch_fail:
 VkBridge_CopyToHost ENDP
 
 ; =============================================================================
-; VkBridge_DispatchFlashAttn — GPU Flash Attention v2
+; VkBridge_DispatchFlashAttn ? GPU Flash Attention v2
 ; RCX = Q buffer index
 ; RDX = K buffer index
 ; R8  = V buffer index
@@ -230,10 +230,10 @@ vfa_fail:
 VkBridge_DispatchFlashAttn ENDP
 
 ; =============================================================================
-; VkBridge_HotswapShader — Live-replace a GPU shader
+; VkBridge_HotswapShader ? Live-replace a GPU shader
 ; RCX = shader name (ptr to null-terminated string)
 ; RDX = ptr to SPIR-V uint32_t array
-; R8  = size in bytes of SPIR-V data
+; R8  = m_size in bytes of SPIR-V data
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
 PUBLIC VkBridge_HotswapShader
@@ -249,7 +249,7 @@ vhs_fail:
 VkBridge_HotswapShader ENDP
 
 ; =============================================================================
-; VkBridge_GetStats — Retrieve GPU performance counters
+; VkBridge_GetStats ? Retrieve GPU performance counters
 ; RCX = ptr to QWORD receiving dispatch count
 ; RDX = ptr to QWORD receiving matmul count
 ; R8  = ptr to QWORD receiving attention count
@@ -284,7 +284,7 @@ vgs_done:
 VkBridge_GetStats ENDP
 
 ; =============================================================================
-; VkBridge_Cleanup — Shutdown Vulkan and release all GPU resources
+; VkBridge_Cleanup ? Shutdown Vulkan and release all GPU resources
 ; =============================================================================
 PUBLIC VkBridge_Cleanup
 VkBridge_Cleanup PROC
@@ -302,3 +302,4 @@ vcl_done:
 VkBridge_Cleanup ENDP
 
 END
+

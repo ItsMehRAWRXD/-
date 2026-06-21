@@ -1,7 +1,7 @@
-; ════════════════════════════════════════════════════════════════════════════════
-; GGUF-DUMP v1.1.x — RawrXD Sovereign Tool
+; ????????????????????????????????????????????????????????????????????????????????
+; GGUF-DUMP v1.1.x ? RawrXD Sovereign Tool
 ; Zero-allocation GGUF parser for GHOST-MAP generation
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
 
 OPTION PROLOGUE:NONE
 OPTION EPILOGUE:NONE
@@ -17,7 +17,7 @@ EXTERNDEF __imp_WriteFile:QWORD
 EXTERNDEF __imp_GetStdHandle:QWORD
 
 ; GGUF Magic Constants
-GGUF_MAGIC      EQU 0x46554747      ; "GGUF" little-endian
+GGUF_MAGIC      EQU 04654747h      ; "GGUF" little-endian
 GGUF_VERSION    EQU 3
 
 ; GGUF Types
@@ -39,9 +39,9 @@ GGUF_TYPE_FLOAT64 EQU 12
     ALIGN 8
     
     szBanner        db 13,10
-                    db "╔══════════════════════════════════════════════════════════════╗",13,10
-                    db "║         RAWRXD GGUF-DUMP v1.1.x — SOVEREIGN EDITION          ║",13,10
-                    db "╚══════════════════════════════════════════════════════════════╝",13,10,0
+                    db "????????????????????????????????????????????????????????????????",13,10
+                    db "?         RAWRXD GGUF-DUMP v1.1.x ? SOVEREIGN EDITION          ?",13,10
+                    db "????????????????????????????????????????????????????????????????",13,10,0
     
     szUsage         db "Usage: gguf-dump.exe <model.gguf> [options]",13,10
                     db "Options:",13,10
@@ -60,22 +60,22 @@ GGUF_TYPE_FLOAT64 EQU 12
     szInfoTensors   db "[HEADER] Tensor count: ",0
     szInfoKV        db "[HEADER] Metadata KV pairs: ",0
     
-    szTensorHeader  db 13,10,"═══ TENSOR MAP ═══",13,10
-                    db "Idx  Name                           Offset      Size        Dims",13,10
-                    db "─────────────────────────────────────────────────────────────────",13,10,0
+    szTensorHeader  db 13,10,"??? TENSOR MAP ???",13,10
+                    db "Idx  Name                           Offset      m_size        Dims",13,10
+                    db "?????????????????????????????????????????????????????????????????",13,10,0
     
     szTensorEntry   db "%4d %-30s %12llu %12llu  %dD [",0
     szDimSep        db "%d",0
-    szDimComma      db "×",0
+    szDimComma      db "?",0
     szDimClose      db "]",13,10,0
     
-    szGhostHeader   db 13,10,"═══ GHOST-MAP FORMAT ═══",13,10
-                    db "# RawrXD v1.1.x GHOST-MAP — Auto-generated from GGUF",13,10
-                    db "# Format: tensor_id|name_hash|offset|size|priority|stripe_hint",13,10,13,10,0
+    szGhostHeader   db 13,10,"??? GHOST-MAP FORMAT ???",13,10
+                    db "# RawrXD v1.1.x GHOST-MAP ? Auto-generated from GGUF",13,10
+                    db "# Format: tensor_id|name_hash|offset|m_size|priority|stripe_hint",13,10,13,10,0
     
     szGhostEntry    db "%d|%08X|%llu|%llu|%d|%d",13,10,0
     
-    szMetadataHeader db 13,10,"═══ METADATA ═══",13,10,0
+    szMetadataHeader db 13,10,"??? METADATA ???",13,10,0
     szKVString      db "  %s = %s",13,10,0
     szKVNumeric     db "  %s = %lld",13,10,0
     
@@ -99,10 +99,10 @@ GGUF_TYPE_FLOAT64 EQU 12
 
 .code
 
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
 ; Entry Point
-; ════════════════════════════════════════════════════════════════════════════════
-main PROC
+; ????????????????????????????????????????????????????????????????????????????????
+gguf_dump_Main PROC
     push rbp
     mov rbp, rsp
     sub rsp, 256
@@ -114,7 +114,7 @@ main PROC
     
     ; Check args
     cmp rcx, 2
-    jb .show_usage
+    jb @@show_usage
 
     ; Preserve argc/argv across helper calls.
     mov g_argc, rcx
@@ -131,7 +131,7 @@ main PROC
     mov rcx, rsi
     call MapGGUFFile
     test rax, rax
-    jz .exit_error
+    jz @@exit_error
     
     ; Parse header
     call ParseGGUFHeader
@@ -139,7 +139,7 @@ main PROC
     ; Parse based on flags
     mov rax, g_argc
     cmp rax, 3
-    jb .default_dump
+    jb @@default_dump
     
     ; Check for --ghost flag
     mov rax, g_argv
@@ -147,33 +147,33 @@ main PROC
     lea rsi, szFlagGhost
     call StrCompare
     test rax, rax
-    jnz .ghost_output
+    jz @@ghost_output
     
     ; Check for --tensors
     lea rsi, szFlagTensors
     call StrCompare
     test rax, rax
-    jnz .tensors_only
+    jz @@tensors_only
     
     ; Default: full dump
-.default_dump:
+@@default_dump:
     call DumpMetadata
     call DumpTensors
-    jmp .cleanup
+    jmp @@cleanup
 
-.tensors_only:
+@@tensors_only:
     call DumpTensors
-    jmp .cleanup
+    jmp @@cleanup
 
-.ghost_output:
+@@ghost_output:
     call OutputGhostMap
-    jmp .cleanup
+    jmp @@cleanup
 
-.show_usage:
+@@show_usage:
     lea rcx, szUsage
     call PrintString
 
-.cleanup:
+@@cleanup:
     call UnmapFile
     
     lea rcx, szFooter
@@ -186,26 +186,29 @@ main PROC
     call PrintString
     
     xor rax, rax
-    jmp .exit
+    jmp @@exit
 
-.exit_error:
+@@exit_error:
     mov rax, 1
 
-.exit:
+@@exit:
     leave
     ret
+gguf_dump_Main ENDP
 
-; ════════════════════════════════════════════════════════════════════════════════
-; MapGGUFFile — Memory-map file for zero-copy parsing
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
+; MapGGUFFile ? Memory-map file for zero-copy parsing
+; ????????????????????????????????????????????????????????????????????????????????
 MapGGUFFile PROC
-    push rbx rsi rdi
+    push rbx
+push rsi
+push rdi
     
     mov rbx, rcx                    ; Save filename
     
     ; CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL)
     mov rcx, rbx
-    xor edx, edx                    ; GENERIC_READ = 0x80000000, but 0 works for read
+    xor edx, edx                    ; GENERIC_READ = 080000000h, but 0 works for read
     or edx, 80000000h
     xor r8d, r8d                    ; FILE_SHARE_READ
     inc r8d
@@ -219,7 +222,7 @@ MapGGUFFile PROC
     add rsp, 48
     
     cmp rax, -1
-    je .fail
+    je @@fail
     mov g_file_handle, rax
     
     ; GetFileSizeEx
@@ -234,14 +237,14 @@ MapGGUFFile PROC
     xor r8d, r8d                    ; PAGE_READONLY
     or r8d, 02h
     xor r9d, r9d                    ; dwMaximumSizeHigh
-    push 0                          ; dwMaximumSizeLow (use file size)
+    push 0                          ; dwMaximumSizeLow (use file m_size)
     push r8                         ; lpName
     sub rsp, 32
     call __imp_CreateFileMappingA
     add rsp, 40
     
     test rax, rax
-    jz .fail_close
+    jz @@fail_close
     mov g_map_handle, rax
     
     ; MapViewOfFile
@@ -256,22 +259,22 @@ MapGGUFFile PROC
     add rsp, 40
     
     test rax, rax
-    jz .fail_unmap
+    jz @@fail_unmap
     mov g_view_base, rax
     mov g_cursor, rax
     
     mov rax, 1                      ; Success
-    jmp .done
+    jmp @@done
 
-.fail_unmap:
+@@fail_unmap:
     mov rcx, g_map_handle
     call __imp_CloseHandle
 
-.fail_close:
+@@fail_close:
     mov rcx, g_file_handle
     call __imp_CloseHandle
 
-.fail:
+@@fail:
     lea rcx, szErrOpen
     call PrintString
     mov rcx, rbx
@@ -279,14 +282,16 @@ MapGGUFFile PROC
     call PrintNewline
     xor rax, rax
 
-.done:
-    pop rdi rsi rbx
+@@done:
+    pop rbx
+pop rsi
+pop rdi
     ret
 MapGGUFFile ENDP
 
-; ════════════════════════════════════════════════════════════════════════════════
-; ParseGGUFHeader — Validate and extract header info
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
+; ParseGGUFHeader ? Validate and extract header info
+; ????????????????????????????????????????????????????????????????????????????????
 ParseGGUFHeader PROC
     push rbx
     
@@ -295,25 +300,25 @@ ParseGGUFHeader PROC
     ; Check magic: 4 bytes "GGUF"
     mov eax, [rbx]
     cmp eax, GGUF_MAGIC
-    je .magic_ok
+    je @@magic_ok
     
     lea rcx, szErrMagic
     call PrintString
-    jmp .fail
+    jmp @@fail
 
-.magic_ok:
+@@magic_ok:
     add rbx, 4
     
     ; Version: uint32
     mov eax, [rbx]
     cmp eax, GGUF_VERSION
-    jbe .version_ok
+    jbe @@version_ok
     
     lea rcx, szErrVersion
     call PrintString
-    jmp .fail
+    jmp @@fail
 
-.version_ok:
+@@version_ok:
     add rbx, 4
     
     ; tensor_count: uint64
@@ -349,21 +354,25 @@ ParseGGUFHeader PROC
     call PrintNewline
     
     mov rax, r12                    ; Return tensor count
-    jmp .done
+    jmp @@done
 
-.fail:
+@@fail:
     xor rax, rax
 
-.done:
+@@done:
     pop rbx
     ret
 ParseGGUFHeader ENDP
 
-; ════════════════════════════════════════════════════════════════════════════════
-; DumpTensors — List all tensors with offsets and dimensions
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
+; DumpTensors ? List all tensors with offsets and dimensions
+; ????????????????????????????????????????????????????????????????????????????????
 DumpTensors PROC
-    push rbx r12 r13 r14 r15
+    push rbx
+push r12
+push r13
+push r14
+push r15
     
     mov rbx, g_cursor
     
@@ -374,9 +383,9 @@ DumpTensors PROC
     mov r15, g_tensor_count
     xor r12, r12                    ; Tensor index
     
-.tensor_loop:
+@@tensor_loop:
     cmp r12, r15                    ; r15 = total tensor count (set elsewhere)
-    jae .done
+    jae @@done
     
     ; Tensor name: string (length prefix)
     mov ecx, [rbx]                  ; name_len
@@ -412,7 +421,7 @@ DumpTensors PROC
     mov edx, r12d                   ; index
     mov r8, r13                     ; name pointer
     mov r9, r9                      ; offset
-    push r10                        ; size (would calculate from type*dims)
+    push r10                        ; m_size (would calculate from m_type*dims)
     push r8                         ; n_dimensions
     sub rsp, 32
     ; Call printf equivalent or manual print
@@ -422,32 +431,40 @@ DumpTensors PROC
     pop rbx
     
     inc r12
-    jmp .tensor_loop
+    jmp @@tensor_loop
 
-.done:
-    pop r15 r14 r13 r12 rbx
+@@done:
+    pop rbx
+pop r12
+pop r13
+pop r14
+pop r15
     ret
 DumpTensors ENDP
 
-; ════════════════════════════════════════════════════════════════════════════════
-; OutputGhostMap — Generate GHOST-MAP format for RawrXD ingestion
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
+; OutputGhostMap ? Generate GHOST-MAP format for RawrXD ingestion
+; ????????????????????????????????????????????????????????????????????????????????
 OutputGhostMap PROC
-    push rbx r12 r13 r14 r15
+    push rbx
+push r12
+push r13
+push r14
+push r15
     
     lea rcx, szGhostHeader
     call PrintString
     
     ; Similar to DumpTensors but formatted for GHOST-MAP
-    ; tensor_id|name_hash|offset|size|priority|stripe_hint
+    ; tensor_id|name_hash|offset|m_size|priority|stripe_hint
     
     mov rbx, g_cursor
     mov r15, g_tensor_count
     xor r12, r12                    ; tensor_id
 
-.ghost_loop:
+@@ghost_loop:
     cmp r12, r15
-    jae .done
+    jae @@done
     
     ; Parse tensor (simplified)
     mov ecx, [rbx]                  ; name_len
@@ -467,49 +484,49 @@ OutputGhostMap PROC
     ; Compute element count from dimensions.
     mov r10, 1
     test r11d, r11d
-    jz .dims_done
-.dims_loop:
+    jz @@dims_done
+@@dims_loop:
     mov rax, [rbx]
     test rax, rax
-    jnz .dim_mul
+    jz @@dim_mul
     mov rax, 1
-.dim_mul:
+@@dim_mul:
     imul r10, rax
     add rbx, 8
     dec r11d
-    jnz .dims_loop
-.dims_done:
+    jz @@dims_loop
+@@dims_done:
 
-    ; Scale by element size derived from GGUF tensor type.
-    mov eax, [rbx]                  ; type
+    ; Scale by element m_size derived from GGUF tensor m_type.
+    mov eax, [rbx]                  ; m_type
     mov ecx, 1                      ; default bytes/element
     cmp eax, GGUF_TYPE_UINT16
-    jb .type_done
+    jb @@type_done
     cmp eax, GGUF_TYPE_INT16
-    ja .type_u32_check
+    ja @@type_u32_check
     mov ecx, 2
-    jmp .type_done
-.type_u32_check:
+    jmp @@type_done
+@@type_u32_check:
     cmp eax, GGUF_TYPE_UINT32
-    jb .type_done
+    jb @@type_done
     cmp eax, GGUF_TYPE_FLOAT32
-    ja .type_u64_check
+    ja @@type_u64_check
     mov ecx, 4
-    jmp .type_done
-.type_u64_check:
+    jmp @@type_done
+@@type_u64_check:
     cmp eax, GGUF_TYPE_UINT64
-    jb .type_done
+    jb @@type_done
     cmp eax, GGUF_TYPE_FLOAT64
-    ja .type_done
+    ja @@type_done
     mov ecx, 8
-.type_done:
+@@type_done:
     imul r10, rcx
     add rbx, 4
     
     mov r14, [rbx]                  ; offset
     add rbx, 8
     
-    ; Size now computed from dimensions and type in r15.
+    ; m_size now computed from dimensions and m_type in r15.
     
     ; Determine priority based on tensor name patterns
     mov ecx, r12d
@@ -517,20 +534,20 @@ OutputGhostMap PROC
     
     movzx r8d, al
     
-    ; Determine stripe hint based on size
+    ; Determine stripe hint based on m_size
     cmp r10, 134217728              ; 128MB
-    ja .multi_stripe
+    ja @@multi_stripe
     mov r9d, 0                      ; Single drive
-    jmp .print_entry
-.multi_stripe:
+    jmp @@print_entry
+@@multi_stripe:
     mov r9d, 7                      ; Striped across 3 fast drives
 
-.print_entry:
+@@print_entry:
     lea rcx, szGhostEntry
     mov edx, r12d                   ; tensor_id
     mov r8d, r13d                   ; name_hash
     mov r9, r14                     ; offset
-    push r10                        ; size
+    push r10                        ; m_size
     push r8                         ; priority
     push r9                         ; stripe_hint
     sub rsp, 32
@@ -538,41 +555,45 @@ OutputGhostMap PROC
     add rsp, 56
     
     inc r12
-    jmp .ghost_loop
+    jmp @@ghost_loop
 
-.done:
-    pop r15 r14 r13 r12 rbx
+@@done:
+    pop rbx
+pop r12
+pop r13
+pop r14
+pop r15
     ret
 OutputGhostMap ENDP
 
-; ════════════════════════════════════════════════════════════════════════════════
-; HashFNV1a — 32-bit FNV-1a hash for tensor names
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
+; HashFNV1a ? 32-bit FNV-1a hash for tensor names
+; ????????????????????????????????????????????????????????????????????????????????
 HashFNV1a PROC
     push rbx
     
-    mov eax, 0x811c9dc5             ; FNV offset basis
+    mov eax, 0811c9dc5h             ; FNV offset basis
     
-.hash_loop:
+@@hash_loop:
     test rdi, rdi
-    jz .done
+    jz @@done
     
     movzx ebx, byte ptr [rsi]
     xor eax, ebx
-    imul eax, eax, 0x01000193       ; FNV prime
+    imul eax, eax, 001000193h       ; FNV prime
     
     inc rsi
     dec rdi
-    jmp .hash_loop
+    jmp @@hash_loop
 
-.done:
+@@done:
     pop rbx
     ret
 HashFNV1a ENDP
 
-; ════════════════════════════════════════════════════════════════════════════════
-; ComputeTensorPriority — Heuristic for tensor caching priority
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
+; ComputeTensorPriority ? Heuristic for tensor caching priority
+; ????????????????????????????????????????????????????????????????????????????????
 ComputeTensorPriority PROC
     ; Check tensor name patterns (would need actual name string)
     ; "token_embd" = critical (0)
@@ -582,36 +603,90 @@ ComputeTensorPriority PROC
     
     ; Simplified: layer 0-3 = hot, rest = warm
     cmp ecx, 100                    ; First ~100 tensors typically embeddings+early layers
-    jb .hot
+    jb @@hot
     cmp ecx, 200
-    jb .warm
+    jb @@warm
     mov al, 0                       ; cold
     ret
-.hot:
+@@hot:
     mov al, 2
     ret
-.warm:
+@@warm:
     mov al, 1
     ret
 ComputeTensorPriority ENDP
 
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
+; DumpMetadata ? Print metadata key-value pairs
+; ????????????????????????????????????????????????????????????????????????????????
+DumpMetadata PROC
+    push rbx
+    push r12
+    push r13
+    
+    lea rcx, szMetadataHeader
+    call PrintString
+    
+    ; Parse KV pairs (simplified)
+    mov rbx, g_cursor
+    mov r12, g_kv_count
+    
+@@kv_loop:
+    test r12, r12
+    jz @@done
+    
+    ; Skip key string
+    mov ecx, [rbx]
+    add rbx, 4
+    add rbx, rcx
+    
+    ; Skip value (m_type + data)
+    mov eax, [rbx]
+    add rbx, 4
+    
+    ; Handle different types
+    cmp eax, GGUF_TYPE_STRING
+    jne @@skip_value
+    
+    ; String value
+    mov ecx, [rbx]
+    add rbx, 4
+    add rbx, rcx
+    jmp @@next_kv
+    
+@@skip_value:
+    ; Skip 8 bytes for numeric types
+    add rbx, 8
+    
+@@next_kv:
+    dec r12
+    jmp @@kv_loop
+    
+@@done:
+    pop r13
+    pop r12
+    pop rbx
+    ret
+DumpMetadata ENDP
+
+; ????????????????????????????????????????????????????????????????????????????????
 ; Utility Functions
-; ════════════════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????????????????
 PrintString PROC
     ; rcx = string
-    push rbx rsi
+    push rbx
+    push rsi
     
     mov rsi, rcx
     xor ebx, ebx
     
-.len_loop:
+@@len_loop:
     cmp byte ptr [rsi + rbx], 0
-    je .print
+    je @@print
     inc rbx
-    jmp .len_loop
+    jmp @@len_loop
 
-.print:
+@@print:
     mov rcx, g_stdout
     mov rdx, rsi
     mov r8, rbx
@@ -621,7 +696,8 @@ PrintString PROC
     call __imp_WriteFile
     add rsp, 40
     
-    pop rsi rbx
+    pop rsi
+    pop rbx
     ret
 PrintString ENDP
 
@@ -659,23 +735,23 @@ StrCompare PROC
     ; returns rax=1 if equal
     push rbx
 
-.loop:
+@@loop:
     mov al, byte ptr [rsi]
     mov bl, byte ptr [rdi]
     cmp al, bl
-    jne .not_equal
+    jne @@not_equal
     test al, al
-    jz .equal
+    jz @@equal
     inc rsi
     inc rdi
-    jmp .loop
+    jmp @@loop
 
-.not_equal:
+@@not_equal:
     xor eax, eax
     pop rbx
     ret
 
-.equal:
+@@equal:
     mov eax, 1
     pop rbx
     ret
@@ -684,22 +760,22 @@ StrCompare ENDP
 UnmapFile PROC
     mov rcx, g_view_base
     test rcx, rcx
-    jz .skip_unmap
+    jz @@skip_unmap
     call __imp_UnmapViewOfFile
     
-.skip_unmap:
+@@skip_unmap:
     mov rcx, g_map_handle
     test rcx, rcx
-    jz .skip_close
+    jz @@skip_close
     call __imp_CloseHandle
     
-.skip_close:
+@@skip_close:
     mov rcx, g_file_handle
     test rcx, rcx
-    jz .done
+    jz @@done
     call __imp_CloseHandle
     
-.done:
+@@done:
     ret
 UnmapFile ENDP
 
@@ -711,3 +787,6 @@ UnmapFile ENDP
     szFlagVerify    db "--verify",0
 
 END
+
+
+

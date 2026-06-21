@@ -1,12 +1,12 @@
 ; =============================================================================
-; request_patch.asm — Server Layer ASM Kernel
+; request_patch.asm ? Server Layer ASM Kernel
 ; =============================================================================
 ; Request/response interception hooks for Layer 3 server hotpatching.
 ; Called by gguf_server_hotpatch.cpp for high-performance buffer inspection.
 ;
 ; Exports:
-;   asm_intercept_request   — Inspect/modify request buffer
-;   asm_intercept_response  — Inspect/modify response buffer
+;   asm_intercept_request   ? Inspect/modify request buffer
+;   asm_intercept_response  ? Inspect/modify response buffer
 ;
 ; Architecture: x64 MASM | Windows ABI | No exceptions | No CRT
 ; Build: ml64.exe /c /Zi /Zd /Fo request_patch.obj request_patch.asm
@@ -116,3 +116,4 @@ asm_intercept_response PROC FRAME
 asm_intercept_response ENDP
 
 END
+

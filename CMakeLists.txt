@@ -29,8 +29,10 @@ if(WIN32 AND NOT DEFINED ENV{VSCMD_ARG_TGT_ARCH})
         set(_SDK_UCRT_VER "${_SDK_UM_VER}")
     endif()
 
-    # Auto-detect MSVC toolchain: try D: first, fall back to C:
-    if(EXISTS "D:/VS2022Enterprise/VC/Tools/MSVC")
+    # Auto-detect MSVC toolchain: try new VS18 first, then D:, then C:
+    if(EXISTS "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC")
+        file(GLOB _MSVC_VERS "C:/Program Files/Microsoft Visual Studio/18/Enterprise/VC/Tools/MSVC/*")
+    elseif(EXISTS "D:/VS2022Enterprise/VC/Tools/MSVC")
         file(GLOB _MSVC_VERS "D:/VS2022Enterprise/VC/Tools/MSVC/*")
     elseif(EXISTS "C:/VS2022Enterprise/VC/Tools/MSVC")
         file(GLOB _MSVC_VERS "C:/VS2022Enterprise/VC/Tools/MSVC/*")
@@ -688,6 +690,7 @@ set(SOURCES
     src/agent_policy.cpp
     src/agent_explainability.cpp
     src/streaming_gguf_loader.cpp
+    src/streaming_gguf_loader_enhanced.cpp
     src/utils/Diagnostics.cpp
     src/gguf_loader.cpp
     src/gguf_vocab_resolver.cpp
@@ -733,10 +736,7 @@ set(SOURCES
     src/core/local_ai_core.cpp
     src/core/native_inference_pipeline.cpp
     src/core/speculative_inference_engine.cpp
-    
-    # Layer Offload Manager — RAM streaming for 74B+ models on 16GB VRAM
-    src/core/layer_offload_manager.cpp
-
+        src/dynamic_model_loader.cpp
     # Sovereign FP8 Quantizer — Hardware-independent quantization for RX 7800 XT
     src/kernels/sovereign_fp8_quantizer.cpp
 
@@ -1616,6 +1616,8 @@ set(RAWR_ENGINE_SOURCES
     src/win32app/bulk_fix_orchestrator_laneb_stub.cpp
     src/agentic/StreamingResultChannel.cpp
     src/agentic/observability/Logger.cpp
+    src/stubs/subagent_manager_stub.cpp
+    src/stubs/agentic_profiler_stub.cpp
 )
 message(STATUS "[RawrEngine LaneB] Using curated headless core sources")
 
@@ -2920,6 +2922,7 @@ set(INFERENCE_ENGINE_SOURCES
     src/rawrxd_sampler.cpp
     src/gguf_vocab_resolver.cpp
     src/streaming_gguf_loader.cpp
+    src/streaming_gguf_loader_enhanced.cpp
     src/compression_interface.cpp
     src/brutal_implementation.cpp
     src/memory_core.cpp
@@ -3853,6 +3856,7 @@ if(WIN32)
         src/memory_core.cpp
         src/hot_patcher.cpp
         src/streaming_gguf_loader.cpp
+        src/streaming_gguf_loader_enhanced.cpp
         src/utils/Diagnostics.cpp
         src/diagnostics/self_diagnose.cpp
         src/gguf_loader.cpp
@@ -4067,6 +4071,15 @@ if(WIN32)
         src/core/voice_automation.cpp
         src/win32app/Win32IDE_VoiceChat.cpp
         src/win32app/Win32IDE_VoiceAutomation.cpp
+
+        # Phase 34: Voice Assistant with RAG Integration
+        src/core/voice_assistant_manager.cpp
+        src/win32app/VoiceAssistantWorker.cpp
+        src/win32app/Win32IDE_VoiceAssistantPanel.cpp
+        src/win32app/Win32IDE_ReferenceGraph.cpp
+        src/win32app/Win32IDE_Stubs.cpp
+        src/core/symbol_index_impl.cpp
+        src/dynamic_model_loader.cpp
 
         # Phase 33: Quick-Win Ports
         src/core/shortcut_manager.cpp
@@ -5076,6 +5089,7 @@ if(WIN32)
         src/InferenceProfiler.cpp
         src/BackendOrchestrator.cpp
         src/streaming_gguf_loader.cpp
+        src/streaming_gguf_loader_enhanced.cpp
         src/core/thread_lifecycle_registry.cpp
         src/win32app/TitanIPC.cpp
         src/native_inference_backend.cpp
@@ -5332,6 +5346,7 @@ if(WIN32)
         src/ggml-cpu
         src/bridge
         src/serve
+        include/utils
     )
 
     # GPU sovereign ASM link state (UI/runtime detection)
@@ -5665,6 +5680,26 @@ if(WIN32)
         message(STATUS "[Win32IDE] Monolithic ASM obj pack disabled (RAWRXD_LINK_WIN32IDE_MONOLITHIC_OBJS=OFF)")
     endif()
 
+    # =========================================================================
+    # Phase 17: Semantic Index Module (Advanced Intelligence)
+    # =========================================================================
+    message(STATUS "[Phase 17] Configuring Semantic Index module...")
+    
+    # Include the semantic_index subdirectory which has its own CMakeLists.txt
+    add_subdirectory(src/semantic_index)
+    
+    # Include the ast_parser subdirectory for Phase 17 Workstream 2
+    add_subdirectory(src/ast_parser)
+    
+    # Include the autocomplete_integration subdirectory for Phase 17 Integration
+    add_subdirectory(src/autocomplete_integration)
+    
+    # Link Phase 17 modules to Win32IDE
+    target_link_libraries(RawrXD-Win32IDE PRIVATE semantic_index ast_parser autocomplete_integration)
+    
+    # =========================================================================
+    # Win32IDE Link Libraries
+    # =========================================================================
     target_link_libraries(RawrXD-Win32IDE PRIVATE
         Threads::Threads
         comctl32 comdlg32 shell32 ole32 oleaut32 uuid

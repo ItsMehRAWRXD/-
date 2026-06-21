@@ -254,6 +254,9 @@ class AgenticPlanningOrchestrator
     ExecutionPlan* getPlan(const std::string& plan_id);
     std::vector<ExecutionPlan*> getActivePlans() const;
 
+    // Persistence
+    void flushPersistenceSnapshotNow() {}
+
     // JSON export for UI/monitoring
     nlohmann::json getPlanJson(const ExecutionPlan* plan) const;
     nlohmann::json getApprovalQueueJson() const;

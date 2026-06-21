@@ -1,5 +1,5 @@
 ; =============================================================================
-; win32ide_main.asm — RawrXD Win32 IDE Entry Point (MASM64)
+; win32ide_main.asm ? RawrXD Win32 IDE Entry Point (MASM64)
 ; =============================================================================
 ;
 ; Pure MASM64 WinMain entry for the Win32 IDE shell.
@@ -55,7 +55,7 @@ CMD_FILE_SAVE           EQU     1002h
 CMD_FILE_NEW            EQU     1003h
 CMD_EDIT_UNDO           EQU     2001h
 CMD_EDIT_REDO           EQU     2002h
-CMD_AGENT_INVOKE        EQU     3001h
+CMD_AGENT_call EQU     3001h
 
 ; =============================================================================
 ;                         STRUCTURES
@@ -136,7 +136,7 @@ szWindowTitle   DB "RawrXD Win32 IDE v14.2.0", 0
 szUser32        DB "user32.dll", 0
 szSetDpiCtx     DB "SetProcessDpiAwarenessContext", 0
 
-g_hInstance     DQ 0
+EXTERNDEF g_hInstance : QWORD
 g_hWndMain      DQ 0
 g_hExtHost      DQ 0        ; ExtensionHost pipe/window handle
 
@@ -149,17 +149,13 @@ ALIGN 16
 .code
 
 ; -----------------------------------------------------------------------------
-; WndProc — Main window message handler
+; WndProc ? Main window message handler
 ; RCX = hwnd, RDX = uMsg, R8 = wParam, R9 = lParam
 ; -----------------------------------------------------------------------------
-Win32IDE_WndProc PROC FRAME
+Win32IDE_WndProc PROC
     push    rbp
-    .pushreg rbp
     mov     rbp, rsp
-    .setframe rbp, 0
     sub     rsp, 40h
-    .allocstack 40h
-    .endprolog
 
     cmp     edx, WM_CREATE
     je      @@on_create
@@ -206,17 +202,13 @@ Win32IDE_WndProc PROC FRAME
 Win32IDE_WndProc ENDP
 
 ; -----------------------------------------------------------------------------
-; EnsureDpiAwareness — SetProcessDpiAwarenessContext(PerMonitorV2)
+; EnsureDpiAwareness ? SetProcessDpiAwarenessContext(PerMonitorV2)
 ; Win10 1703+, graceful no-op on older systems
 ; -----------------------------------------------------------------------------
-EnsureDpiAwareness PROC FRAME
+EnsureDpiAwareness PROC
     push    rbp
-    .pushreg rbp
     mov     rbp, rsp
-    .setframe rbp, 0
     sub     rsp, 30h
-    .allocstack 30h
-    .endprolog
 
     lea     rcx, [szUser32]
     call    GetModuleHandleA
@@ -239,17 +231,13 @@ EnsureDpiAwareness PROC FRAME
 EnsureDpiAwareness ENDP
 
 ; -----------------------------------------------------------------------------
-; WinMain — IDE entry point
+; WinMain ? IDE entry point
 ; RCX = hInstance, RDX = hPrevInstance, R8 = lpCmdLine, R9 = nCmdShow
 ; -----------------------------------------------------------------------------
-WinMain PROC FRAME
+WinMain PROC
     push    rbp
-    .pushreg rbp
     mov     rbp, rsp
-    .setframe rbp, 0
     sub     rsp, 200h
-    .allocstack 200h
-    .endprolog
 
     mov     [g_hInstance], rcx
     mov     r12, r9                             ; save nCmdShow
@@ -364,21 +352,17 @@ WinMain ENDP
 ;                         EXPORTED UTILITY
 ; =============================================================================
 
-; Win32IDE_GetHwnd — Returns main window HWND
+; Win32IDE_GetHwnd ? Returns main window HWND
 Win32IDE_GetHwnd PROC
     mov     rax, [g_hWndMain]
     ret
 Win32IDE_GetHwnd ENDP
 
-; Win32IDE_SendCommand — Post command to IDE (RCX = cmdId)
-Win32IDE_SendCommand PROC FRAME
+; Win32IDE_SendCommand ? Post command to IDE (RCX = cmdId)
+Win32IDE_SendCommand PROC
     push    rbp
-    .pushreg rbp
     mov     rbp, rsp
-    .setframe rbp, 0
     sub     rsp, 30h
-    .allocstack 30h
-    .endprolog
 
     mov     r8, rcx                             ; wParam = cmdId
     mov     rcx, [g_hWndMain]
@@ -400,3 +384,5 @@ public Win32IDE_GetHwnd
 public Win32IDE_SendCommand
 
 END
+
+

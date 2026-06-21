@@ -1,5 +1,5 @@
 ; ============================================================================
-; live_hotpatcher.asm — Atomic Memory Patching & Trial Inference (Batch 22)
+; live_hotpatcher.asm ? Atomic Memory Patching & Trial Inference (Batch 22)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -15,7 +15,7 @@
 ; Shield_ApplyLivePatch
 ; RCX: Target Address (in RWX segment)
 ; RDX: Patch Data Pointer
-; R8:  Patch Size
+; R8:  Patch m_size
 PUBLIC Shield_ApplyLivePatch
 Shield_ApplyLivePatch PROC FRAME
     push    rbp
@@ -34,7 +34,7 @@ Shield_ApplyLivePatch PROC FRAME
     
     mov     rdi, rcx            ; Destination
     mov     rsi, rdx            ; Source
-    mov     rcx, r8             ; Size
+    mov     rcx, r8             ; m_size
     
     ; 1. Ensure GPU Queue is Quiescent (Simulated)
     ; [Logic to check GPU Fence/Semaphores]
@@ -78,3 +78,4 @@ Shield_RunSandboxedTrial PROC FRAME
 Shield_RunSandboxedTrial ENDP
 
 END
+

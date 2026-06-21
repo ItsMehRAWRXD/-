@@ -10,9 +10,15 @@ namespace AST {
 enum class NodeType {
     Unknown,
     Function,
+    FunctionDecl,
     Variable,
+    VariableDecl,
     Type,
-    Module
+    ClassDecl,
+    StructDecl,
+    EnumDecl,
+    Module,
+    NamespaceDecl
 };
 } // namespace AST
 

@@ -14,6 +14,9 @@ OPTION CASEMAP:NONE
 ; =============================================================================
 INCLUDE rawrxd_win64.inc
 
+; External C runtime functions
+EXTERN _aligned_malloc : PROC
+
 ; =============================================================================
 ; Constants
 ; =============================================================================
@@ -261,7 +264,7 @@ SovereignDoubleBufferInit PROC FRAME
     .allocstack 40
     .endprolog
 
-    mov     rbx, rcx                    ; Save size
+    mov     rbx, rcx                    ; Save blockSize
 
     ; Allocate with 64-byte alignment
     mov     rcx, rbx
@@ -278,13 +281,13 @@ SovereignDoubleBufferInit PROC FRAME
     mov     qword ptr [rsi], 0          ; buf_a offset (will be +64)
     mov     qword ptr [rsi+8], 0        ; buf_b offset
     mov     qword ptr [rsi+16], 0       ; active_flag
-    mov     qword ptr [rsi+24], rbx     ; size
+    mov     qword ptr [rsi+24], rbx     ; blockSize
 
     ; Calculate aligned buffer addresses
     lea     rax, [rsi + 64]
     mov     [rsi], rax                  ; buf_a = base + 64
     add     rax, rbx
-    mov     [rsi+8], rax                ; buf_b = buf_a + size
+    mov     [rsi+8], rax                ; buf_b = buf_a + blockSize
 
     mov     rax, rsi                    ; Return base
     jmp     .done
@@ -303,7 +306,7 @@ SovereignDoubleBufferInit ENDP
 ; =============================================================================
 ; aligned_alloc_wrapper
 ; Simple wrapper to allocate aligned memory
-; Input: RCX = size, RDX = alignment
+; Input: RCX = blockSize, RDX = alignment
 ; Output: RAX = pointer or NULL
 ; =============================================================================
 aligned_alloc_wrapper PROC
@@ -313,7 +316,7 @@ aligned_alloc_wrapper PROC
 
     ; Use _aligned_malloc
     mov     r8, rdx                     ; Alignment
-    mov     rdx, rcx                    ; Size
+    mov     rdx, rcx                    ; blockSize
     xor     ecx, ecx                    ; Not used
     call    _aligned_malloc
 
@@ -429,12 +432,12 @@ E5M2_EXP_TABLE      DB 256 DUP(0)
 E5M2_MAN_TABLE      DB 256 DUP(0)
 
 ; Stochastic rounding seeds (thread-local via TLS)
-SR_SEED             DD 0x12345678
+SR_SEED             DD 012345678h
 
 ; Constants for bit manipulation
-F32_SIGN_MASK       DD 0x80000000
-F32_EXP_MASK        DD 0x7F800000
-F32_MAN_MASK        DD 0x007FFFFF
+F32_SIGN_MASK       DD 080000000h
+F32_EXP_MASK        DD 07F800000h
+F32_MAN_MASK        DD 0007FFFFFh
 F32_EXP_BIAS        DD 127
 
 ; =============================================================================
@@ -511,7 +514,7 @@ SovereignQuantizeE4M3 PROC FRAME
     ; Pack 8x32-bit to 8x8-bit
     vpackusdw ymm2, ymm2, ymm2
     vpackuswb ymm2, ymm2, ymm2
-    vpermq  ymm2, ymm2, 0x08            ; Pack to low 64 bits
+    vpermq  ymm2, ymm2, 008h            ; Pack to low 64 bits
 
     ; Store result
     vmovq   [rdi], xmm2
@@ -590,7 +593,7 @@ SovereignQuantizeE5M2 PROC FRAME
     ; Pack and store
     vpackusdw ymm2, ymm2, ymm2
     vpackuswb ymm2, ymm2, ymm2
-    vpermq  ymm2, ymm2, 0x08
+    vpermq  ymm2, ymm2, 008h
     vmovq   [rdi], xmm2
 
     add     rsi, 32
@@ -653,9 +656,9 @@ SovereignDoubleBufferInit PROC FRAME
     .endprolog
 
     ; Allocate aligned memory for double buffer
-    ; Structure: [buf_a_ptr][buf_b_ptr][active_flag][size]
-    mov     rbx, rcx                    ; Save size
-    add     rcx, 64 + 32                ; Size + alignment padding + header
+    ; Structure: [buf_a_ptr][buf_b_ptr][active_flag][blockSize]
+    mov     rbx, rcx                    ; Save blockSize
+    add     rcx, 64 + 32                ; blockSize + alignment padding + header
 
     ; Allocate with VirtualAlloc for page alignment
     mov     r8d, PAGE_READWRITE
@@ -673,9 +676,9 @@ SovereignDoubleBufferInit PROC FRAME
     add     qword ptr [rax], 32
     mov     rdx, [rax]
     add     rdx, rbx
-    mov     [rax+8], rdx                ; buf_b = buf_a + size
+    mov     [rax+8], rdx                ; buf_b = buf_a + blockSize
     mov     qword ptr [rax+16], 0       ; active_flag = 0 (A active)
-    mov     [rax+24], rbx               ; size
+    mov     [rax+24], rbx               ; blockSize
 
 .alloc_failed:
     add     rsp, 40
@@ -731,7 +734,7 @@ SovereignGPUFlush ENDP
 .DATA
 ALIGN 32
 
-STOCH_MASK          DD 8 DUP(0x00000007)    ; 3 bits for E4M3 rounding
+STOCH_MASK          DD 8 DUP(000000007h)    ; 3 bits for E4M3 rounding
 
 ; Exponent bias constants (broadcasted)
 F32_EXP_BIAS        DD 8 DUP(127)
@@ -743,9 +746,9 @@ E5M2_MAX_EXP        DD 8 DUP(16)
 E5M2_MIN_EXP        DD 8 DUP(-15)
 
 ; Sign mask broadcasted
-F32_SIGN_MASK       DD 8 DUP(0x80000000)
-F32_EXP_MASK        DD 8 DUP(0x7F800000)
-F32_MAN_MASK        DD 8 DUP(0x007FFFFF)
+F32_SIGN_MASK       DD 8 DUP(080000000h)
+F32_EXP_MASK        DD 8 DUP(07F800000h)
+F32_MAN_MASK        DD 8 DUP(0007FFFFFh)
 
 ; =============================================================================
 ; Exports
@@ -758,3 +761,4 @@ PUBLIC SovereignDoubleBufferSwap
 PUBLIC SovereignGPUFlush
 
 END
+

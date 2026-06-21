@@ -13,8 +13,8 @@ EXTERN CloseHandle:PROC
 EXTERN wsprintfA:PROC
 
 ; Win32IDE member offsets (must match C++ class layout)
-W32IDE_HWND_MAIN        equ 0x08
-W32IDE_BEACON_INIT      equ 0xC0   ; Adjust to actual offset
+W32IDE_HWND_MAIN        EQU 8
+W32IDE_BEACON_INIT      EQU 0C0h   ; Adjust to actual offset
 
 .data
 align 8
@@ -37,8 +37,8 @@ PUBLIC Win32IDE_IsBeaconInitialized
 Win32IDE_InitializeBeaconIntegration PROC FRAME
     push rbx
     .pushreg rbx
-    sub rsp, 0x20
-    .allocstack 0x20
+    sub rsp, 20h
+    .allocstack 20h
     .endprolog
 
     mov rbx, rcx           ; Save this pointer
@@ -50,7 +50,7 @@ Win32IDE_InitializeBeaconIntegration PROC FRAME
     lea rcx, msg_init
     call OutputDebugStringA
 
-    add rsp, 0x20
+    add rsp, 20h
     pop rbx
     ret
 Win32IDE_InitializeBeaconIntegration ENDP
@@ -59,8 +59,8 @@ Win32IDE_InitializeBeaconIntegration ENDP
 Win32IDE_ShutdownBeaconIntegration PROC FRAME
     push rbx
     .pushreg rbx
-    sub rsp, 0x20
-    .allocstack 0x20
+    sub rsp, 20h
+    .allocstack 20h
     .endprolog
 
     mov rbx, rcx
@@ -77,7 +77,7 @@ Win32IDE_ShutdownBeaconIntegration PROC FRAME
     call OutputDebugStringA
 
 done:
-    add rsp, 0x20
+    add rsp, 20h
     pop rbx
     ret
 Win32IDE_ShutdownBeaconIntegration ENDP
@@ -218,8 +218,10 @@ Win32IDE_BroadcastBeaconMessage ENDP
 
 ; bool Win32IDE_IsBeaconInitialized(void* this)
 Win32IDE_IsBeaconInitialized PROC FRAME
+    .ENDPROLOG
     mov al, [rcx+W32IDE_BEACON_INIT]
     ret
 Win32IDE_IsBeaconInitialized ENDP
 
 END
+

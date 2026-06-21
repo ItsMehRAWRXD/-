@@ -4,9 +4,9 @@
 ; =============================================================================
 
 OPTION CASemap:NONE
-OPTION WIN64:3
+OPTION CASEMAP:NONE
 
-INCLUDE \masm64\include64\win64.inc
+include masm64_compat.inc
 
 .DATA
     RISK_THRESHOLD_MODERATE EQU 40
@@ -32,10 +32,15 @@ INCLUDE \masm64\include64\win64.inc
 ; RCX = Command string pointer
 ; Returns: RAX = Risk Score (0-100)
 RawrXD_PredictRiskScore PROC FRAME
-    xor rax, rax ; Initial score
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
     push rdi
+    .pushreg rdi
+    .endprolog
+    
+    xor rax, rax ; Initial score
     
     ; 1. Fast Regex-like scan for known destructive patterns
     ; [Logic to scan RCX for PAT_RM_RF, PAT_RESET_HARD]
@@ -74,3 +79,4 @@ StringContains PROC
 StringContains ENDP
 
 END
+

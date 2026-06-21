@@ -3,6 +3,7 @@
 
 #include "Win32IDE.h"
 #include "Win32IDE_Commands.h"
+#include "resource.h"
 
 #ifndef IDM_FILE_NEW
 #define IDM_FILE_NEW 2001
@@ -34,6 +35,9 @@
 #define IDM_BUILD_RUN 2804
 #define IDM_BUILD_STOP 2805
 #define IDM_BUILD_ASM_CURRENT 2808
+#endif
+#ifndef IDM_VOICE_ASSISTANT_PANEL
+#define IDM_VOICE_ASSISTANT_PANEL 12100
 #endif
 
 void Win32IDE::createAcceleratorTable()
@@ -102,6 +106,7 @@ void Win32IDE::createAcceleratorTable()
         {FCONTROL | FALT | FVIRTKEY, 'T', 4011},
         {FCONTROL | FALT | FVIRTKEY, 'A', 4012},
         {FCONTROL | FSHIFT | FVIRTKEY, 'Y', IDM_AGENT_TOGGLE_FILE_CONTEXT},
+        {FCONTROL | FSHIFT | FVIRTKEY, 'V', IDM_VOICE_ASSISTANT_PANEL},
     };
     m_hAccel = CreateAcceleratorTableA(accelTable, static_cast<int>(sizeof(accelTable) / sizeof(accelTable[0])));
 }

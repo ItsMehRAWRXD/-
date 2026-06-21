@@ -15,12 +15,12 @@
 ;   - Control flow graph (CFG) construction with edge linking
 ;   - Cross-reference (XREF) builder
 ;   - Function boundary recovery (prologue scan + CALL harvest)
-;   - SSA lifting (register→SSA variable renaming with PHI nodes)
+;   - SSA lifting (register?SSA variable renaming with PHI nodes)
 ;   - Recursive descent disassembler (CFG-guided, avoids inline data)
-;   - Type recovery via data flow analysis (Phase 17)
+;   - m_type recovery via data flow analysis (Phase 17)
 ;   - Def-use chain construction
 ;   - Control flow structuring (dominator tree, edge classification, Phase 18)
-;   - Semantic pseudocode emission (C-like output with type annotations, Phase 18)
+;   - Semantic pseudocode emission (C-like output with m_type annotations, Phase 18)
 ;
 ; Build: ml64 /c /Fo RawrCodex.obj RawrCodex.asm
 ;        link RawrCodex.obj /SUBSYSTEM:CONSOLE kernel32.lib
@@ -90,7 +90,7 @@ IMAGE_SCN_MEM_WRITE         EQU 80000000h
 IMAGE_SCN_CNT_CODE          EQU 00000020h
 
 ; ELF Signatures
-ELF_MAGIC                   EQU 464C457Fh   ; 0x7F 'ELF'
+ELF_MAGIC                   EQU 464C457Fh   ; 07Fh 'ELF'
 ELFCLASS32                  EQU 1
 ELFCLASS64                  EQU 2
 ELFDATA2LSB                 EQU 1
@@ -165,8 +165,8 @@ SSA_VAR_FLAGS               EQU 4       ; CPU flags pseudo-register
 ; Recursive descent visited-set constants
 RECDESC_VISITED_BITMAP_SIZE EQU 8192    ; 8K bytes = 64K bit addresses
 
-; Type recovery constants (Phase 17)
-TYPE_UNKNOWN                EQU 0       ; Unresolved type
+; m_type recovery constants (Phase 17)
+TYPE_UNKNOWN                EQU 0       ; Unresolved m_type
 TYPE_INT8                   EQU 1       ; Byte / char
 TYPE_INT16                  EQU 2       ; Short / WORD
 TYPE_INT32                  EQU 3       ; Int / DWORD
@@ -183,33 +183,33 @@ TYPE_DATA_PTR               EQU 13      ; Data pointer (loaded/stored through)
 TYPE_STRUCT_PTR             EQU 14      ; Pointer to struct (multiple field accesses)
 TYPE_ARRAY_PTR              EQU 15      ; Pointer to array (LEA with scale factor)
 TYPE_BOOL                   EQU 16      ; Boolean (0/1 test patterns)
-TYPE_FLAGS                  EQU 17      ; CPU flags (not a real type, internal)
+TYPE_FLAGS                  EQU 17      ; CPU flags (not a real m_type, internal)
 TYPE_STRING_PTR             EQU 18      ; Pointer to string (heuristic)
 TYPE_VOID                   EQU 19      ; void return / no value
 
-; Type width constants (bytes)
+; m_type width constants (bytes)
 TYPE_WIDTH_8                EQU 1
 TYPE_WIDTH_16               EQU 2
 TYPE_WIDTH_32               EQU 4
 TYPE_WIDTH_64               EQU 8
 
-; Type inference confidence levels (0-100 scale)
+; m_type inference confidence levels (0-100 scale)
 CONFIDENCE_NONE             EQU 0       ; No evidence
 CONFIDENCE_LOW              EQU 25      ; Width inference only
 CONFIDENCE_MEDIUM           EQU 50      ; Width + usage pattern
 CONFIDENCE_HIGH             EQU 75      ; API signature match or strong pattern
-CONFIDENCE_CERTAIN          EQU 100     ; Direct evidence (e.g., known function return type)
+CONFIDENCE_CERTAIN          EQU 100     ; Direct evidence (e.g., known function return m_type)
 
 ; Data flow analysis constants
 MAX_DEF_USE_CHAINS          EQU 32      ; Max use sites per SSA variable
 MAX_STRUCT_FIELDS           EQU 64      ; Max fields detected in a recovered struct
-MAX_RECOVERED_TYPES         EQU 1024    ; Max type entries in type table
+MAX_RECOVERED_TYPES         EQU 1024    ; Max m_type entries in m_type table
 
 ; Control flow structuring constants (Phase 18)
 ; CFG edge classification (Tarjan interval-based)
 EDGE_TREE                   EQU 0       ; Tree edge (DFS spanning tree)
-EDGE_FORWARD                EQU 1       ; Forward edge (ancestor → descendant, non-tree)
-EDGE_BACK                   EQU 2       ; Back edge (descendant → ancestor, indicates loop)
+EDGE_FORWARD                EQU 1       ; Forward edge (ancestor ? descendant, non-tree)
+EDGE_BACK                   EQU 2       ; Back edge (descendant ? ancestor, indicates loop)
 EDGE_CROSS                  EQU 3       ; Cross edge (between unrelated subtrees)
 
 ; Structured region types (produced by structuring algorithm)
@@ -223,7 +223,7 @@ REGION_CONTINUE             EQU 6       ; continue to loop header
 REGION_RETURN               EQU 7       ; return statement
 REGION_SWITCH               EQU 8       ; switch/case (jump table)
 REGION_INFINITE_LOOP        EQU 9       ; while(1) { body } (no exit edge)
-REGION_GOTO                 EQU 10      ; Irreducible — emit goto
+REGION_GOTO                 EQU 10      ; Irreducible ? emit goto
 
 ; AST node types (expression trees for pseudocode rendering)
 AST_LITERAL                 EQU 0       ; Constant value (immediate)
@@ -233,7 +233,7 @@ AST_UNOP                    EQU 3       ; Unary operation (OP operand)
 AST_DEREF                   EQU 4       ; Pointer dereference (*ptr or ptr->field)
 AST_ADDROF                  EQU 5       ; Address-of (&var)
 AST_CALL                    EQU 6       ; Function call (target(args))
-AST_CAST                    EQU 7       ; Type cast ((type)expr)
+AST_CAST                    EQU 7       ; m_type cast ((m_type)expr)
 AST_FIELD                   EQU 8       ; Struct field access (base.field)
 AST_INDEX                   EQU 9       ; Array index (base[index])
 AST_TERNARY                 EQU 10      ; Ternary (cond ? a : b)
@@ -274,7 +274,7 @@ FEATURE_RECURSIVE_DISASM    EQU 16      ; Bit 16: Recursive descent (Enterprise)
 FEATURE_SSA_LIFTING         EQU 17      ; Bit 17: SSA IR generation (Enterprise)
 FEATURE_PHI_NODES           EQU 18      ; Bit 18: PHI insertion (Enterprise)
 FEATURE_SEMANTIC_ANALYSIS   EQU 19      ; Bit 19: Full semantic decompilation (Enterprise)
-FEATURE_TYPE_RECOVERY       EQU 20      ; Bit 20: Type recovery (Government)
+FEATURE_TYPE_RECOVERY       EQU 20      ; Bit 20: m_type recovery (Government)
 FEATURE_DATA_FLOW           EQU 21      ; Bit 21: Data flow analysis (Government)
 FEATURE_PSEUDOCODE          EQU 22      ; Bit 22: Pseudocode emission (Government)
 FEATURE_STRUCTURING         EQU 23      ; Bit 23: Control flow structuring (Government)
@@ -292,7 +292,7 @@ DYNARRAY STRUCT
     pData           QWORD ?         ; Pointer to element storage
     count           DWORD ?         ; Current element count
     capacity        DWORD ?         ; Allocated capacity
-    elemSize        DWORD ?         ; Size of each element in bytes
+    elemSize        DWORD ?         ; m_size of each element in bytes
     _pad            DWORD ?         ; Alignment padding
 DYNARRAY ENDS
 
@@ -300,9 +300,9 @@ DYNARRAY ENDS
 RAWRSECTION STRUCT
     szName          BYTE 16 DUP(?)  ; Section name (null-terminated)
     virtualAddress  QWORD ?         ; RVA of section
-    virtualSize     QWORD ?         ; Virtual size
+    virtualSize     QWORD ?         ; Virtual m_size
     fileOffset      QWORD ?         ; Raw file offset
-    rawSize         QWORD ?         ; Raw data size on disk
+    rawSize         QWORD ?         ; Raw data m_size on disk
     characteristics DWORD ?         ; Section flags
     isExecutable    DWORD ?         ; 1 if executable
     isWritable      DWORD ?         ; 1 if writable
@@ -314,7 +314,7 @@ RAWRSYMBOL STRUCT
     szName          BYTE 128 DUP(?) ; Symbol name
     szDemangled     BYTE 128 DUP(?) ; Demangled name (if applicable)
     address         QWORD ?         ; Symbol address / RVA
-    symSize         QWORD ?         ; Symbol size (0 if unknown)
+    symSize         QWORD ?         ; Symbol m_size (0 if unknown)
     sectionIndex    DWORD ?         ; Section index
     isFunction      DWORD ?         ; 1 if function symbol
     isExport        DWORD ?         ; 1 if exported
@@ -390,7 +390,7 @@ RAWRXREF STRUCT
     instrIndex      DWORD ?         ; Index into instructions array
 RAWRXREF ENDS
 
-; XREF type constants
+; XREF m_type constants
 XREF_CODE_CALL          EQU 0
 XREF_CODE_JUMP          EQU 1
 XREF_CODE_COND_BRANCH   EQU 2
@@ -416,7 +416,7 @@ RAWRSSAVAR ENDS
 RAWRSSAINSTR STRUCT
     origAddress     QWORD ?         ; Original machine instruction VA
     origInstrIdx    DWORD ?         ; Index into instructions DYNARRAY
-    ssaOp           DWORD ?         ; SSA_OP_* operation type
+    ssaOp           DWORD ?         ; SSA_OP_* operation m_type
     dstVarId        DWORD ?         ; Destination SSA variable ID (-1 if none)
     src1VarId       DWORD ?         ; First source SSA variable ID (-1 if none)
     src2VarId       DWORD ?         ; Second source SSA variable ID (-1 if none)
@@ -438,33 +438,33 @@ RAWRPHINODE STRUCT
     operandBBs      DWORD MAX_PHI_OPERANDS DUP(?) ; Basic block indices of each predecessor
 RAWRPHINODE ENDS
 
-; --- Recovered type descriptor (Phase 17: Type Recovery) ---
+; --- Recovered m_type descriptor (Phase 17: m_type Recovery) ---
 RAWRTYPEINFO STRUCT
-    typeId          DWORD ?         ; Unique type ID (index into type table)
+    typeId          DWORD ?         ; Unique m_type ID (index into m_type table)
     baseType        DWORD ?         ; TYPE_* base classification
     typeWidth       DWORD ?         ; Width in bytes (1, 2, 4, 8)
-    isPointer       DWORD ?         ; 1 if this is a pointer type
-    pointsToType    DWORD ?         ; Type ID of pointee (if isPointer)
-    isSigned        DWORD ?         ; 1 if signed integer type
+    isPointer       DWORD ?         ; 1 if this is a pointer m_type
+    pointsToType    DWORD ?         ; m_type ID of pointee (if isPointer)
+    isSigned        DWORD ?         ; 1 if signed integer m_type
     confidence      DWORD ?         ; Confidence level (0-100)
-    ssaVarId        DWORD ?         ; SSA variable this type was inferred from
+    ssaVarId        DWORD ?         ; SSA variable this m_type was inferred from
     arrayStride     DWORD ?         ; Stride in bytes (if TYPE_ARRAY_PTR, from LEA scale)
     arrayCount      DWORD ?         ; Estimated array element count (0 = unknown)
-    structSize      DWORD ?         ; Total struct size (if TYPE_STRUCT_PTR)
+    structSize      DWORD ?         ; Total struct m_size (if TYPE_STRUCT_PTR)
     fieldCount      DWORD ?         ; Number of detected fields
-    szTypeName      BYTE 64 DUP(?)  ; Human-readable type name (e.g. "int32_t*")
+    szTypeName      BYTE 64 DUP(?)  ; Human-readable m_type name (e.g. "int32_t*")
 RAWRTYPEINFO ENDS
 
 ; --- Struct field descriptor (recovered from access patterns) ---
 RAWRSTRUCTFIELD STRUCT
-    parentTypeId    DWORD ?         ; Type ID of the containing struct
+    parentTypeId    DWORD ?         ; m_type ID of the containing struct
     fieldOffset     DWORD ?         ; Offset from struct base (from displacement)
     fieldWidth      DWORD ?         ; Width of this field in bytes
     fieldType       DWORD ?         ; TYPE_* of this field
     accessCount     DWORD ?         ; How many times this field is accessed
     isRead          DWORD ?         ; 1 if field is read
     isWritten       DWORD ?         ; 1 if field is written
-    szFieldName     BYTE 32 DUP(?)  ; Generated name (e.g. "field_0x10")
+    szFieldName     BYTE 32 DUP(?)  ; Generated name (e.g. "field_010h")
     _pad            DWORD ?         ; Alignment
 RAWRSTRUCTFIELD ENDS
 
@@ -490,7 +490,7 @@ RAWRCFGEDGE ENDS
 
 ; --- Structured region (high-level control flow construct) ---
 RAWRSTRUCTREGION STRUCT
-    regionType      DWORD ?         ; REGION_* type classification
+    regionType      DWORD ?         ; REGION_* m_type classification
     headBB          DWORD ?         ; Header basic block index
     exitBB          DWORD ?         ; Exit/merge basic block index (-1 if none)
     condVarId       DWORD ?         ; SSA variable ID for condition (-1 if none)
@@ -506,10 +506,10 @@ RAWRSTRUCTREGION ENDS
 
 ; --- AST expression node (for rendering C expressions) ---
 RAWRASTNODE STRUCT
-    nodeType        DWORD ?         ; AST_* node type
+    nodeType        DWORD ?         ; AST_* node m_type
     ssaOp           DWORD ?         ; SSA_OP_* for BINOP/UNOP nodes
     ssaVarId        DWORD ?         ; SSA variable ID (for AST_VARIABLE)
-    typeId          DWORD ?         ; RAWRTYPEINFO type ID (from Phase 17)
+    typeId          DWORD ?         ; RAWRTYPEINFO m_type ID (from Phase 17)
     immValue        QWORD ?         ; Immediate value (for AST_LITERAL)
     leftChild       DWORD ?         ; Left child AST node index (-1 if leaf)
     rightChild      DWORD ?         ; Right child AST node index (-1 if leaf)
@@ -576,13 +576,13 @@ RAWRCODEX_CTX STRUCT
     hFile           QWORD ?         ; File handle
     hMapping        QWORD ?         ; File mapping handle
     pFileBase       QWORD ?         ; Mapped view base address
-    fileSize        QWORD ?         ; Total file size
+    fileSize        QWORD ?         ; Total file m_size
 
-    ; Binary type detection
+    ; Binary m_type detection
     isPE            DWORD ?         ; 1 if PE format
     isELF           DWORD ?         ; 1 if ELF format
     is64Bit         DWORD ?         ; 1 if 64-bit binary
-    machine         DWORD ?         ; Machine type (IMAGE_FILE_MACHINE_*)
+    machine         DWORD ?         ; Machine m_type (IMAGE_FILE_MACHINE_*)
 
     ; PE header offsets (cached for quick access)
     peNtHeaders     QWORD ?         ; Offset to NT headers
@@ -594,9 +594,9 @@ RAWRCODEX_CTX STRUCT
 
     ; PE data directory offsets
     peImportDirRVA  DWORD ?         ; Import directory RVA
-    peImportDirSize DWORD ?         ; Import directory size
+    peImportDirSize DWORD ?         ; Import directory m_size
     peExportDirRVA  DWORD ?         ; Export directory RVA
-    peExportDirSize DWORD ?         ; Export directory size
+    peExportDirSize DWORD ?         ; Export directory m_size
 
     ; ELF header offsets (cached)
     elfSectionHdrOff QWORD ?        ; Section header table offset
@@ -625,14 +625,14 @@ RAWRCODEX_CTX STRUCT
     ssaNextVarId    DWORD ?         ; Next available SSA variable ID
     ssaLifted       DWORD ?         ; 1 if SSA lifting has been performed
 
-    ; Type recovery / Data flow arrays (Phase 17)
+    ; m_type recovery / Data flow arrays (Phase 17)
     typeInfos       DYNARRAY <>     ; Array of RAWRTYPEINFO
     structFields    DYNARRAY <>     ; Array of RAWRSTRUCTFIELD
     defUseChains    DYNARRAY <>     ; Array of RAWRDEFUSE
 
-    ; Type recovery state
-    typeNextId      DWORD ?         ; Next available type ID
-    typesRecovered  DWORD ?         ; 1 if type recovery has been performed
+    ; m_type recovery state
+    typeNextId      DWORD ?         ; Next available m_type ID
+    typesRecovered  DWORD ?         ; 1 if m_type recovery has been performed
 
     ; Control flow structuring arrays (Phase 18)
     cfgEdges        DYNARRAY <>     ; Array of RAWRCFGEDGE
@@ -666,7 +666,7 @@ fmtHex16        BYTE "%016llX", 0
 fmtHexByte      BYTE "%02X ", 0
 fmtDecimal      BYTE "%d", 0
 fmtString       BYTE "%s", 0
-fmtSectionFmt   BYTE "  %-16s  VA: %08X  Size: %08X  Raw: %08X", 0
+fmtSectionFmt   BYTE "  %-16s  VA: %08X  m_size: %08X  Raw: %08X", 0
 fmtSymbolFmt    BYTE "  %08X  %s", 0
 fmtImportFmt    BYTE "  %s!%s  (ordinal %d)", 0
 fmtExportFmt    BYTE "  [%d] %08X  %s", 0
@@ -677,7 +677,7 @@ fmtFuncFmt      BYTE "  %08X - %08X  %s", 0
 fmtSSAVarReg    BYTE "%s_%d", 0            ; e.g. "rax_3"
 fmtSSAVarTemp   BYTE "t%d", 0             ; e.g. "t17"
 fmtSSAVarMem    BYTE "mem_%d", 0          ; e.g. "mem_5"
-fmtSSAVarImm    BYTE "0x%X", 0            ; e.g. "0x1234"
+fmtSSAVarImm    BYTE "0x%X", 0            ; e.g. "01234h"
 fmtSSAVarFlags  BYTE "flags_%d", 0        ; e.g. "flags_2"
 fmtSSAInstr     BYTE "  v%d = %s v%d, v%d", 0   ; "v3 = add v1, v2"
 fmtSSAAssign    BYTE "  v%d = v%d", 0     ; "v3 = v1"
@@ -689,7 +689,7 @@ fmtSSAPhi       BYTE "  v%d = phi(", 0    ; "v3 = phi("
 fmtSSAPhiOp     BYTE "v%d:BB%d", 0        ; "v1:BB0"
 fmtSSABBHdr     BYTE "BB%d [%08X]:", 0    ; "BB0 [00401000]:"
 
-; SSA opcode name table — 24 entries, 8 bytes each (null-padded)
+; SSA opcode name table ? 24 entries, 8 bytes each (null-padded)
 ssaOpNames      BYTE "assign", 0, 0       ; 0  SSA_OP_ASSIGN
                 BYTE "add", 0,0,0,0,0     ; 1  SSA_OP_ADD
                 BYTE "sub", 0,0,0,0,0     ; 2  SSA_OP_SUB
@@ -715,9 +715,9 @@ ssaOpNames      BYTE "assign", 0, 0       ; 0  SSA_OP_ASSIGN
                 BYTE "lea", 0,0,0,0,0     ; 22 SSA_OP_LEA
                 BYTE "unknown", 0         ; 23 SSA_OP_UNKNOWN
 
-; Type recovery format strings (Phase 17)
+; m_type recovery format strings (Phase 17)
 fmtTypeName     BYTE "  v%d : %s (confidence=%d%%)", 0       ; "v3 : int32_t* (confidence=75%)"
-fmtStructHdr    BYTE "struct_%d { // size=0x%X, %d fields", 0
+fmtStructHdr    BYTE "struct_%d { // m_size=0x%X, %d fields", 0
 fmtStructField  BYTE "  +0x%02X: %s %s;  // %d accesses", 0
 fmtDefUse       BYTE "  v%d: def@BB%d:%d  uses=%d  live=%s", 0
 fmtLicenseTier  BYTE "License: %s (features=0x%08X)", 0
@@ -750,11 +750,11 @@ fmtPseudoComment  BYTE "// %s", 0             ; "// original: mov rax, rcx"
 fmtPseudoAddr     BYTE "/* %08X */ ", 0       ; "/* 00401000 */ "
 fmtPseudoCast     BYTE "(%s)", 0              ; "(int32_t*)"
 fmtPseudoDeref    BYTE "*((%s*)v%d)", 0       ; "*((int32_t*)v3)"
-fmtPseudoFieldAcc BYTE "v%d->field_0x%02X", 0 ; "v3->field_0x10"
+fmtPseudoFieldAcc BYTE "v%d->field_0x%02X", 0 ; "v3->field_010h"
 fmtPseudoArrayIdx BYTE "v%d[%d]", 0           ; "v3[4]"
 fmtPseudoInline   BYTE "%s", 0                ; Generic inline string
 
-; C operator string table — indexed by SSA_OP_*, 4 bytes each
+; C operator string table ? indexed by SSA_OP_*, 4 bytes each
 ssaOpToC        BYTE " = ", 0                  ; 0  SSA_OP_ASSIGN
                 BYTE " + ", 0                  ; 1  SSA_OP_ADD
                 BYTE " - ", 0                  ; 2  SSA_OP_SUB
@@ -769,7 +769,7 @@ ssaOpToC        BYTE " = ", 0                  ; 0  SSA_OP_ASSIGN
                 BYTE " ~ ", 0                  ; 11 SSA_OP_NOT
                 BYTE " - ", 0                  ; 12 SSA_OP_NEG (unary minus)
 
-; Condition code to C comparison operator — 10 entries, 4 bytes each
+; Condition code to C comparison operator ? 10 entries, 4 bytes each
 ccToCOp         BYTE "==", 0, 0               ; 0 CC_EQ
                 BYTE "!=", 0, 0               ; 1 CC_NE
                 BYTE "< ", 0, 0               ; 2 CC_LT
@@ -782,31 +782,31 @@ ccToCOp         BYTE "==", 0, 0               ; 0 CC_EQ
                 BYTE "> ", 0, 0               ; 9 CC_GTU
 
 ; x86 Jcc condition code to CC_* mapping table
-; Indexed by lower nibble of Jcc opcode (0x70-0x7F / 0F 80-8F)
-jccToCC         DWORD 0FFFFFFFFh              ; 0  jo   — no direct CC mapping
-                DWORD 0FFFFFFFFh              ; 1  jno  — no direct CC mapping
-                DWORD CC_LTU                  ; 2  jb   — unsigned <
-                DWORD CC_GEU                  ; 3  jae  — unsigned >=
-                DWORD CC_EQ                   ; 4  je   — ==
-                DWORD CC_NE                   ; 5  jne  — !=
-                DWORD CC_LEU                  ; 6  jbe  — unsigned <=
-                DWORD CC_GTU                  ; 7  ja   — unsigned >
-                DWORD 0FFFFFFFFh              ; 8  js   — no direct mapping
-                DWORD 0FFFFFFFFh              ; 9  jns  — no direct mapping
-                DWORD 0FFFFFFFFh              ; A  jp   — no direct mapping
-                DWORD 0FFFFFFFFh              ; B  jnp  — no direct mapping
-                DWORD CC_LT                   ; C  jl   — signed <
-                DWORD CC_GE                   ; D  jge  — signed >=
-                DWORD CC_LE                   ; E  jle  — signed <=
-                DWORD CC_GT                   ; F  jg   — signed >
+; Indexed by lower nibble of Jcc opcode (070h-07Fh / 0F 80-8F)
+jccToCC         DWORD 0FFFFFFFFh              ; 0  jo   ? no direct CC mapping
+                DWORD 0FFFFFFFFh              ; 1  jno  ? no direct CC mapping
+                DWORD CC_LTU                  ; 2  jb   ? unsigned <
+                DWORD CC_GEU                  ; 3  jae  ? unsigned >=
+                DWORD CC_EQ                   ; 4  je   ? ==
+                DWORD CC_NE                   ; 5  jne  ? !=
+                DWORD CC_LEU                  ; 6  jbe  ? unsigned <=
+                DWORD CC_GTU                  ; 7  ja   ? unsigned >
+                DWORD 0FFFFFFFFh              ; 8  js   ? no direct mapping
+                DWORD 0FFFFFFFFh              ; 9  jns  ? no direct mapping
+                DWORD 0FFFFFFFFh              ; A  jp   ? no direct mapping
+                DWORD 0FFFFFFFFh              ; B  jnp  ? no direct mapping
+                DWORD CC_LT                   ; C  jl   ? signed <
+                DWORD CC_GE                   ; D  jge  ? signed >=
+                DWORD CC_LE                   ; E  jle  ? signed <=
+                DWORD CC_GT                   ; F  jg   ? signed >
 
-; Edge type name table — 4 entries, 8 bytes each
+; Edge m_type name table ? 4 entries, 8 bytes each
 edgeTypeNames   BYTE "tree", 0, 0, 0, 0       ; 0 EDGE_TREE
                 BYTE "forward", 0             ; 1 EDGE_FORWARD
                 BYTE "back", 0, 0, 0, 0       ; 2 EDGE_BACK
                 BYTE "cross", 0, 0, 0         ; 3 EDGE_CROSS
 
-; Region type name table — 11 entries, 16 bytes each
+; Region m_type name table ? 11 entries, 16 bytes each
 regionTypeNames BYTE "sequence", 0,0,0,0,0,0,0,0       ; 0 REGION_SEQUENCE
                 BYTE "if-then", 0,0,0,0,0,0,0,0,0      ; 1 REGION_IF_THEN
                 BYTE "if-then-else", 0,0,0,0            ; 2 REGION_IF_THEN_ELSE
@@ -822,7 +822,7 @@ regionTypeNames BYTE "sequence", 0,0,0,0,0,0,0,0       ; 0 REGION_SEQUENCE
 ; Indentation string (4 spaces per level, pre-computed for fast emission)
 indentSpaces    BYTE "                                                                                                                                ", 0
 
-; Type name table — 20 entries, 16 bytes each (null-padded)
+; m_type name table ? 20 entries, 16 bytes each (null-padded)
 typeNames       BYTE "unknown", 0,0,0,0,0,0,0,0,0      ; 0  TYPE_UNKNOWN
                 BYTE "int8_t", 0,0,0,0,0,0,0,0,0,0      ; 1  TYPE_INT8
                 BYTE "int16_t", 0,0,0,0,0,0,0,0,0       ; 2  TYPE_INT16
@@ -844,7 +844,7 @@ typeNames       BYTE "unknown", 0,0,0,0,0,0,0,0,0      ; 0  TYPE_UNKNOWN
                 BYTE "char*", 0,0,0,0,0,0,0,0,0,0,0     ; 18 TYPE_STRING_PTR
                 BYTE "void", 0,0,0,0,0,0,0,0,0,0,0,0    ; 19 TYPE_VOID
 
-; License tier name table — 4 entries, 16 bytes each
+; License tier name table ? 4 entries, 16 bytes each
 tierNames       BYTE "Community", 0,0,0,0,0,0,0   ; 0
                 BYTE "Pro", 0,0,0,0,0,0,0,0,0,0,0,0,0  ; 1
                 BYTE "Enterprise", 0,0,0,0,0,0    ; 2
@@ -979,8 +979,8 @@ regNames8       BYTE "al", 0, 0, 0, 0, 0, 0
                 BYTE "dh", 0, 0, 0, 0, 0, 0
                 BYTE "bh", 0, 0, 0, 0, 0, 0
 
-; Condition code mnemonic table — 16 entries, 4 bytes each (null-padded)
-; Indexed by lower nibble of opcode (0x70-0x7F, 0F 80-8F, 0F 40-4F, 0F 90-9F)
+; Condition code mnemonic table ? 16 entries, 4 bytes each (null-padded)
+; Indexed by lower nibble of opcode (070h-07Fh, 0F 80-8F, 0F 40-4F, 0F 90-9F)
 ccMnemonics     BYTE "jo", 0, 0             ; 0
                 BYTE "jno", 0               ; 1
                 BYTE "jb", 0, 0             ; 2
@@ -998,7 +998,7 @@ ccMnemonics     BYTE "jo", 0, 0             ; 0
                 BYTE "jle", 0               ; E
                 BYTE "jg", 0, 0             ; F
 
-; CMOVcc mnemonic prefixes — 16 entries, 8 bytes each
+; CMOVcc mnemonic prefixes ? 16 entries, 8 bytes each
 cmovMnemonics   BYTE "cmovo", 0, 0, 0      ; 0
                 BYTE "cmovno", 0, 0         ; 1
                 BYTE "cmovb", 0, 0, 0       ; 2
@@ -1016,7 +1016,7 @@ cmovMnemonics   BYTE "cmovo", 0, 0, 0      ; 0
                 BYTE "cmovle", 0, 0         ; E
                 BYTE "cmovg", 0, 0, 0       ; F
 
-; SETcc mnemonic prefixes — 16 entries, 8 bytes each
+; SETcc mnemonic prefixes ? 16 entries, 8 bytes each
 setMnemonics    BYTE "seto", 0, 0, 0, 0    ; 0
                 BYTE "setno", 0, 0, 0       ; 1
                 BYTE "setb", 0, 0, 0, 0     ; 2
@@ -1085,7 +1085,7 @@ recDescVisited  BYTE RECDESC_VISITED_BITMAP_SIZE DUP(?)  ; Bit-per-address visit
 recDescStack    QWORD MAX_RECURSIVE_DEPTH DUP(?)         ; Worklist stack for addresses to visit
 recDescStackTop DWORD ?             ; Current stack pointer into recDescStack
 
-; Type recovery scratch state (Phase 17)
+; m_type recovery scratch state (Phase 17)
 typeVarWidths   DWORD MAX_RECOVERED_TYPES DUP(?)   ; Inferred width per SSA var (indexed by varId)
 typeVarClasses  DWORD MAX_RECOVERED_TYPES DUP(?)   ; Inferred TYPE_* per SSA var
 typeConfidence  DWORD MAX_RECOVERED_TYPES DUP(?)   ; Confidence per SSA var
@@ -1131,7 +1131,7 @@ pseudoExprBuf   BYTE 512 DUP(?)                   ; Expression rendering buffer
 ; =============================================================================
 ; DynArray_Init - Initialize a dynamic array
 ;   RCX = pointer to DYNARRAY structure
-;   EDX = element size in bytes
+;   EDX = element m_size in bytes
 ; =============================================================================
 DynArray_Init PROC
     push rbx
@@ -1368,7 +1368,7 @@ RawrCodex_Create PROC
     mov [rbx].RAWRCODEX_CTX.ssaNextVarId, 0
     mov [rbx].RAWRCODEX_CTX.ssaLifted, 0
 
-    ; Type recovery / Data flow arrays (Phase 17)
+    ; m_type recovery / Data flow arrays (Phase 17)
     lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
     mov edx, SIZEOF RAWRTYPEINFO
     call DynArray_Init
@@ -1469,7 +1469,7 @@ RawrCodex_Destroy PROC
     lea rcx, [rbx].RAWRCODEX_CTX.phiNodes
     call DynArray_Destroy
 
-    ; Destroy Type recovery / Data flow arrays (Phase 17)
+    ; Destroy m_type recovery / Data flow arrays (Phase 17)
     lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
     call DynArray_Destroy
     lea rcx, [rbx].RAWRCODEX_CTX.structFields
@@ -1519,7 +1519,7 @@ RawrCodex_LoadBinary PROC
     je @@fail
     mov [rbx].RAWRCODEX_CTX.hFile, rax
 
-    ; Get file size
+    ; Get file m_size
     mov rcx, rax                    ; hFile
     xor edx, edx                    ; lpFileSizeHigh = NULL
     call GetFileSize
@@ -1558,7 +1558,7 @@ RawrCodex_LoadBinary PROC
     cmp ax, IMAGE_DOS_SIGNATURE
     jne @@check_elf
 
-    ; PE detected - read e_lfanew at offset 0x3C
+    ; PE detected - read e_lfanew at offset 03Ch
     mov eax, DWORD PTR [rdi + 3Ch]
     add rax, rdi                    ; NT headers pointer
     mov [rbx].RAWRCODEX_CTX.peNtHeaders, rax
@@ -1570,7 +1570,7 @@ RawrCodex_LoadBinary PROC
     mov [rbx].RAWRCODEX_CTX.isPE, 1
     mov [rbx].RAWRCODEX_CTX.isELF, 0
 
-    ; Read machine type from File Header (offset +4 from NT headers)
+    ; Read machine m_type from File Header (offset +4 from NT headers)
     movzx ecx, WORD PTR [rax + 4]
     mov [rbx].RAWRCODEX_CTX.machine, ecx
 
@@ -1649,7 +1649,7 @@ RawrCodex_LoadBinary PROC
     jmp @@format_done
 
 @@check_elf:
-    ; Check ELF: 0x7F 'ELF' at offset 0
+    ; Check ELF: 07Fh 'ELF' at offset 0
     mov eax, DWORD PTR [rdi]
     cmp eax, ELF_MAGIC
     jne @@unknown_format
@@ -1665,19 +1665,19 @@ RawrCodex_LoadBinary PROC
     ; ELF64
     mov [rbx].RAWRCODEX_CTX.is64Bit, 1
 
-    ; e_entry at offset 0x18 (8 bytes)
+    ; e_entry at offset 018h (8 bytes)
     mov rax, QWORD PTR [rdi + 18h]
     mov [rbx].RAWRCODEX_CTX.elfEntryPoint, rax
 
-    ; e_shoff at offset 0x28 (8 bytes)
+    ; e_shoff at offset 028h (8 bytes)
     mov rax, QWORD PTR [rdi + 28h]
     mov [rbx].RAWRCODEX_CTX.elfSectionHdrOff, rax
 
-    ; e_shnum at offset 0x3C (2 bytes)
+    ; e_shnum at offset 03Ch (2 bytes)
     movzx eax, WORD PTR [rdi + 3Ch]
     mov [rbx].RAWRCODEX_CTX.elfNumSections, eax
 
-    ; e_shstrndx at offset 0x3E (2 bytes)
+    ; e_shstrndx at offset 03Eh (2 bytes)
     movzx eax, WORD PTR [rdi + 3Eh]
     mov [rbx].RAWRCODEX_CTX.elfStrTabIndex, eax
     jmp @@format_done
@@ -1685,21 +1685,21 @@ RawrCodex_LoadBinary PROC
 @@elf32:
     mov [rbx].RAWRCODEX_CTX.is64Bit, 0
 
-    ; e_entry at offset 0x18 (4 bytes for ELF32)
+    ; e_entry at offset 018h (4 bytes for ELF32)
     mov eax, DWORD PTR [rdi + 18h]
     movsxd rax, eax
     mov [rbx].RAWRCODEX_CTX.elfEntryPoint, rax
 
-    ; e_shoff at offset 0x20 (4 bytes)
+    ; e_shoff at offset 020h (4 bytes)
     mov eax, DWORD PTR [rdi + 20h]
     movsxd rax, eax
     mov [rbx].RAWRCODEX_CTX.elfSectionHdrOff, rax
 
-    ; e_shnum at offset 0x30 (2 bytes for ELF32)
+    ; e_shnum at offset 030h (2 bytes for ELF32)
     movzx eax, WORD PTR [rdi + 30h]
     mov [rbx].RAWRCODEX_CTX.elfNumSections, eax
 
-    ; e_shstrndx at offset 0x32
+    ; e_shstrndx at offset 032h
     movzx eax, WORD PTR [rdi + 32h]
     mov [rbx].RAWRCODEX_CTX.elfStrTabIndex, eax
     jmp @@format_done
@@ -2300,7 +2300,7 @@ RawrCodex_ParseELF PROC
     cmp [rbx].RAWRCODEX_CTX.is64Bit, 1
     jne @@elf32_strtab
 
-    ; ELF64: section header entry size = 64 bytes
+    ; ELF64: section header entry m_size = 64 bytes
     imul eax, 40h
     movsxd rax, eax
     add rax, r12                    ; rax = shstrtab header
@@ -2310,7 +2310,7 @@ RawrCodex_ParseELF PROC
     jmp @@parse_elf_sections
 
 @@elf32_strtab:
-    ; ELF32: section header entry size = 40 bytes
+    ; ELF32: section header entry m_size = 40 bytes
     imul eax, 28h
     movsxd rax, eax
     add rax, r12
@@ -2410,7 +2410,7 @@ RawrCodex_ParseELF PROC
     jmp @@elf_push_section
 
 @@elf32_fields:
-    ; ELF32: +4: type, +8: flags, +12: addr, +16: offset, +20: size
+    ; ELF32: +4: m_type, +8: flags, +12: addr, +16: offset, +20: m_size
     mov eax, DWORD PTR [r8 + 0Ch]
     movsxd rax, eax
     mov [rdi].RAWRSECTION.virtualAddress, rax
@@ -2508,7 +2508,7 @@ RawrCodex_DecodeInstruction PROC
     xor r15d, r15d                  ; Current offset into byte stream
     xor ebx, ebx                    ; REX prefix (0 if none)
 
-    ; Check for REX prefix (0x40-0x4F)
+    ; Check for REX prefix (040h-04Fh)
     movzx eax, BYTE PTR [rsi]
     cmp al, 40h
     jb @@no_rex
@@ -2524,7 +2524,7 @@ RawrCodex_DecodeInstruction PROC
 
     ; ---- Single-byte opcode decode ----
 
-    ; NOP (0x90)
+    ; NOP (090h)
     cmp al, 90h
     jne @@check_ret
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2533,7 +2533,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_ret:
-    ; RET (0xC3)
+    ; RET (0C3h)
     cmp al, 0C3h
     jne @@check_retf
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2543,7 +2543,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_retf:
-    ; RETF (0xCB)
+    ; RETF (0CBh)
     cmp al, 0CBh
     jne @@check_int3
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2553,7 +2553,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_int3:
-    ; INT3 (0xCC)
+    ; INT3 (0CCh)
     cmp al, 0CCh
     jne @@check_hlt
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2562,7 +2562,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_hlt:
-    ; HLT (0xF4)
+    ; HLT (0F4h)
     cmp al, 0F4h
     jne @@check_push_reg
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2571,7 +2571,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_push_reg:
-    ; PUSH reg (0x50-0x57)
+    ; PUSH reg (050h-057h)
     cmp al, 50h
     jb @@check_pop_reg
     cmp al, 57h
@@ -2596,7 +2596,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_pop_reg:
-    ; POP reg (0x58-0x5F)
+    ; POP reg (058h-05Fh)
     cmp al, 58h
     jb @@check_call_rel32
     cmp al, 5Fh
@@ -2618,7 +2618,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_call_rel32:
-    ; CALL rel32 (0xE8)
+    ; CALL rel32 (0E8h)
     cmp al, 0E8h
     jne @@check_jmp_rel32
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2642,7 +2642,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_jmp_rel32:
-    ; JMP rel32 (0xE9)
+    ; JMP rel32 (0E9h)
     cmp al, 0E9h
     jne @@check_jmp_rel8
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2663,7 +2663,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_jmp_rel8:
-    ; JMP rel8 (0xEB)
+    ; JMP rel8 (0EBh)
     cmp al, 0EBh
     jne @@check_jcc_rel8
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2685,7 +2685,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_jcc_rel8:
-    ; Jcc rel8 (0x70-0x7F)
+    ; Jcc rel8 (070h-07Fh)
     cmp al, 70h
     jb @@check_leave
     cmp al, 7Fh
@@ -2693,7 +2693,7 @@ RawrCodex_DecodeInstruction PROC
     ; Build "jCC" mnemonic with proper condition code
     mov [r13].RAWRINSTRUCTION.isJump, 1
     mov [r13].RAWRINSTRUCTION.isBranch, 1
-    ; Condition code = opcode & 0x0F, lookup in ccMnemonics (4 bytes each)
+    ; Condition code = opcode & 00Fh, lookup in ccMnemonics (4 bytes each)
     movzx edx, al
     and edx, 0Fh
     shl edx, 2                      ; * 4 bytes per entry
@@ -2717,7 +2717,7 @@ RawrCodex_DecodeInstruction PROC
 
 ; ---- Arithmetic/Logic opcodes with ModR/M ----
 @@check_mov_rm_r:
-    ; MOV r/m, r (0x89)
+    ; MOV r/m, r (089h)
     cmp al, 89h
     jne @@check_mov_r_rm
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -2743,7 +2743,7 @@ RawrCodex_DecodeInstruction PROC
     jz @@mov89_norexb
     or edx, 8
 @@mov89_norexb:
-    ; Determine register size
+    ; Determine register m_size
     test ebx, 8                     ; REX.W
     jz @@mov89_32bit
     ; 64-bit: rm_reg, src_reg
@@ -2796,7 +2796,7 @@ RawrCodex_DecodeInstruction PROC
     inc r15d
     jmp @@decode_done
 @@mov89_mem:
-    ; Memory operand — skip ModR/M + SIB + displacement
+    ; Memory operand ? skip ModR/M + SIB + displacement
     movzx eax, BYTE PTR [rsi + r15]
     inc r15d                        ; ModR/M consumed
     mov ecx, eax
@@ -2807,7 +2807,7 @@ RawrCodex_DecodeInstruction PROC
     cmp edx, 4
     jne @@mov89_nosib
     inc r15d                        ; SIB byte
-    ; With SIB, check if base == 5 and mod == 0 → disp32
+    ; With SIB, check if base == 5 and mod == 0 ? disp32
     movzx edx, BYTE PTR [rsi + r15 - 1]
     and edx, 7
     cmp ecx, 0
@@ -2839,13 +2839,13 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_mov_r_rm:
-    ; MOV r, r/m (0x8B)
+    ; MOV r, r/m (08Bh)
     cmp al, 8Bh
     jne @@check_lea
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
     lea rdx, mnMOV
     call lstrcpyA
-    ; Same ModR/M decode logic as 0x89 but operands reversed
+    ; Same ModR/M decode logic as 089h but operands reversed
     movzx eax, BYTE PTR [rsi + r15]
     shr eax, 6
     cmp eax, 3
@@ -2955,7 +2955,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_lea:
-    ; LEA r, m (0x8D)
+    ; LEA r, m (08Dh)
     cmp al, 8Dh
     jne @@check_test_rm_r
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -3002,7 +3002,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_test_rm_r:
-    ; TEST r/m, r (0x85)
+    ; TEST r/m, r (085h)
     cmp al, 85h
     jne @@check_xchg
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -3039,7 +3039,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_xchg:
-    ; XCHG r/m, r (0x87)
+    ; XCHG r/m, r (087h)
     cmp al, 87h
     jne @@check_alu_rm_r
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -3076,8 +3076,8 @@ RawrCodex_DecodeInstruction PROC
 
 @@check_alu_rm_r:
     ; ADD/OR/ADC/SBB/AND/SUB/XOR/CMP r/m, r (even opcodes: 01,09,11,19,21,29,31,39)
-    ; These are: base = op/8, direction = op & 2, size = op & 1
-    ; op & 0xC7 == 0x01 → ALU rm,r 32/64-bit
+    ; These are: base = op/8, direction = op & 2, m_size = op & 1
+    ; op & 0C7h == 001h ? ALU rm,r 32/64-bit
     mov edx, eax
     and edx, 0C7h
     cmp edx, 01h
@@ -3126,7 +3126,7 @@ RawrCodex_DecodeInstruction PROC
 
 @@check_alu_r_rm:
     ; ADD/OR/ADC/SBB/AND/SUB/XOR/CMP r, r/m (odd+2 opcodes: 03,0B,13,1B,23,2B,33,3B)
-    ; op & 0xC7 == 0x03
+    ; op & 0C7h == 003h
     mov edx, eax
     and edx, 0C7h
     cmp edx, 03h
@@ -3171,7 +3171,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_grp1_imm:
-    ; Group 1: 0x81 = ALU r/m, imm32   0x83 = ALU r/m, imm8
+    ; Group 1: 081h = ALU r/m, imm32   083h = ALU r/m, imm8
     cmp al, 81h
     je @@grp1_imm32
     cmp al, 83h
@@ -3179,7 +3179,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@check_grp2
 
 @@grp1_imm32:
-    ; 0x81 /reg: ALU r/m32/64, imm32
+    ; 081h /reg: ALU r/m32/64, imm32
     movzx eax, BYTE PTR [rsi + r15]
     mov ecx, eax
     shr ecx, 3
@@ -3225,7 +3225,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@grp1_imm8:
-    ; 0x83 /reg: ALU r/m32/64, imm8
+    ; 083h /reg: ALU r/m32/64, imm8
     movzx eax, BYTE PTR [rsi + r15]
     mov ecx, eax
     shr ecx, 3
@@ -3270,7 +3270,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_grp2:
-    ; Group 2 shift/rotate: 0xC1 = shift r/m, imm8   0xD1 = shift r/m, 1   0xD3 = shift r/m, CL
+    ; Group 2 shift/rotate: 0C1h = shift r/m, imm8   0D1h = shift r/m, 1   0D3h = shift r/m, CL
     cmp al, 0C1h
     je @@grp2_imm8
     cmp al, 0D1h
@@ -3280,7 +3280,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@check_mov_imm
 
 @@grp2_imm8:
-    ; 0xC1 /reg: shift r/m32/64, imm8
+    ; 0C1h /reg: shift r/m32/64, imm8
     movzx eax, BYTE PTR [rsi + r15]
     mov ecx, eax
     shr ecx, 3
@@ -3322,7 +3322,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@grp2_one:
-    ; 0xD1: shift r/m, 1
+    ; 0D1h: shift r/m, 1
     movzx eax, BYTE PTR [rsi + r15]
     mov ecx, eax
     shr ecx, 3
@@ -3363,7 +3363,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@grp2_cl:
-    ; 0xD3: shift r/m, CL
+    ; 0D3h: shift r/m, CL
     movzx eax, BYTE PTR [rsi + r15]
     mov ecx, eax
     shr ecx, 3
@@ -3404,7 +3404,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_mov_imm:
-    ; MOV reg, imm32/64 (0xB8-0xBF)
+    ; MOV reg, imm32/64 (0B8h-0BFh)
     cmp al, 0B8h
     jb @@check_mov_rm_imm32
     cmp al, 0BFh
@@ -3439,7 +3439,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_mov_rm_imm32:
-    ; MOV r/m, imm32 (0xC7 /0)
+    ; MOV r/m, imm32 (0C7h /0)
     cmp al, 0C7h
     jne @@check_leave
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -3479,7 +3479,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_leave:
-    ; LEAVE (0xC9)
+    ; LEAVE (0C9h)
     cmp al, 0C9h
     jne @@check_twobyte
     lea rcx, [r13].RAWRINSTRUCTION.szMnemonic
@@ -3488,7 +3488,7 @@ RawrCodex_DecodeInstruction PROC
     jmp @@decode_done
 
 @@check_twobyte:
-    ; Two-byte escape (0x0F xx)
+    ; Two-byte escape (00Fh xx)
     cmp al, 0Fh
     jne @@check_syscall
     cmp r15d, r14d
@@ -3539,7 +3539,7 @@ RawrCodex_DecodeInstruction PROC
     ja @@check_0f_cmovcc
     mov [r13].RAWRINSTRUCTION.isJump, 1
     mov [r13].RAWRINSTRUCTION.isBranch, 1
-    ; Proper condition code mnemonic: cc = opcode & 0x0F
+    ; Proper condition code mnemonic: cc = opcode & 00Fh
     push rax
     movzx edx, al
     and edx, 0Fh
@@ -3810,7 +3810,7 @@ RawrCodex_ExtractStrings PROC
     jge @@ascii_done
 
     movzx eax, BYTE PTR [rsi + rdi]
-    ; Printable ASCII range: 0x20-0x7E, plus \t \n \r
+    ; Printable ASCII range: 020h-07Eh, plus \t \n \r
     cmp al, 20h
     jb @@check_whitespace
     cmp al, 7Eh
@@ -3923,7 +3923,7 @@ RawrCodex_ExtractStrings ENDP
 ; RawrCodex_FindPattern - Search for a byte pattern with wildcard support
 ;   RCX = pointer to RAWRCODEX_CTX
 ;   RDX = pointer to pattern bytes
-;   R8  = pointer to mask bytes (0xFF = exact, 0x00 = wildcard)
+;   R8  = pointer to mask bytes (0FFh = exact, 000h = wildcard)
 ;   R9D = pattern length
 ; Returns: EAX = number of matches found (stored in ctx.matches)
 ; =============================================================================
@@ -3965,7 +3965,7 @@ RawrCodex_FindPattern PROC
     ; Check mask
     movzx eax, BYTE PTR [r13 + rcx]
     test al, al
-    jz @@match_wildcard             ; 0x00 = wildcard, always matches
+    jz @@match_wildcard             ; 000h = wildcard, always matches
 
     ; Exact match required
     lea r8, [rsi + rdi]
@@ -4013,7 +4013,7 @@ RawrCodex_FindPattern ENDP
 ; RawrCodex_ExportToIDA - Generate IDA Pro Python script
 ;   RCX = pointer to RAWRCODEX_CTX
 ;   RDX = pointer to output buffer
-;   R8D = buffer size
+;   R8D = buffer m_size
 ; Returns: EAX = bytes written to buffer
 ; =============================================================================
 RawrCodex_ExportToIDA PROC
@@ -4026,7 +4026,7 @@ RawrCodex_ExportToIDA PROC
 
     mov rbx, rcx                    ; ctx
     mov r12, rdx                    ; output buffer
-    mov r13d, r8d                   ; buffer size
+    mov r13d, r8d                   ; buffer m_size
     mov rdi, rdx                    ; write pointer
 
     ; Write script header
@@ -4539,7 +4539,7 @@ RawrCodex_BuildCFG PROC
     mov eax, r12d
     add eax, 7
     shr eax, 3                      ; Bitmap bytes needed
-    mov r14d, eax                   ; Save bitmap size
+    mov r14d, eax                   ; Save bitmap m_size
     
     call GetProcessHeap
     mov rcx, rax
@@ -4583,7 +4583,7 @@ RawrCodex_BuildCFG PROC
     and edx, 7                      ; Bit index
     mov al, 1
     shl al, cl
-    ; Wait — we need edx as shift amount, not ecx
+    ; Wait ? we need edx as shift amount, not ecx
     mov ecx, edx                    ; bit index
     mov al, 1
     shl al, cl
@@ -4616,7 +4616,7 @@ RawrCodex_BuildCFG PROC
     lea r8, [r13 + rdx]
     cmp rax, [r8].RAWRINSTRUCTION.address
     jne @@cfg_find_next
-    ; Found — mark as leader
+    ; Found ? mark as leader
     mov edx, ecx
     mov r8d, ecx
     shr r8d, 3                      ; byte index
@@ -4680,7 +4680,7 @@ RawrCodex_BuildCFG PROC
     bt eax, edx
     jnc @@cfg_skip_build
 
-    ; This is a leader — start a new basic block
+    ; This is a leader ? start a new basic block
     sub rsp, SIZEOF RAWRBASICBLOCK
     mov r8, rsp
     ; Zero the block
@@ -4890,10 +4890,10 @@ RawrCodex_BuildCFG ENDP
 ; Returns: EAX = number of XREFs created
 ;
 ; Scans all decoded instructions:
-;   - CALL rel32  → XREF_CODE_CALL
-;   - JMP rel32   → XREF_CODE_JUMP
-;   - Jcc rel8/32 → XREF_CODE_COND_BRANCH
-;   - Future: LEA/MOV with memory → data XREFs
+;   - CALL rel32  ? XREF_CODE_CALL
+;   - JMP rel32   ? XREF_CODE_JUMP
+;   - Jcc rel8/32 ? XREF_CODE_COND_BRANCH
+;   - Future: LEA/MOV with memory ? data XREFs
 ; =============================================================================
 RawrCodex_BuildXRefs PROC
     push rbx
@@ -4946,7 +4946,7 @@ RawrCodex_BuildXRefs PROC
     ; instrIndex = current index
     mov [rsp].RAWRXREF.instrIndex, edi
 
-    ; Determine XREF type
+    ; Determine XREF m_type
     cmp [r14].RAWRINSTRUCTION.isCall, 1
     jne @@xref_not_call
     mov [rsp].RAWRXREF.xrefType, XREF_CODE_CALL
@@ -5065,7 +5065,7 @@ RawrCodex_RecoverFunctions PROC
     cmp al, 'p'
     jne @@func_check_sub
 
-    ; Found "push rbp" — this is a function entry
+    ; Found "push rbp" ? this is a function entry
     sub rsp, SIZEOF RAWRFUNCTION
     mov r8, rsp
     ; Zero it
@@ -5154,7 +5154,7 @@ RawrCodex_RecoverFunctions PROC
 
 @@func_xref_phase:
     ; =====================================================================
-    ; Strategy 2: Use CALL XREFs — every CALL target is a potential function
+    ; Strategy 2: Use CALL XREFs ? every CALL target is a potential function
     ; Check if we already have that address, if not add it
     ; =====================================================================
     lea rsi, [rbx].RAWRCODEX_CTX.xrefs
@@ -5711,7 +5711,7 @@ RawrCodex_LiftToSSA PROC
     mov rax, [rsp + SIZEOF RAWRSSAINSTR + 48h]
     mov rcx, [rax].RAWRINSTRUCTION.branchTarget
     mov [rsp].RAWRSSAINSTR.callTarget, rcx
-    ; Call clobbers rax — create new SSA var for rax
+    ; Call clobbers rax ? create new SSA var for rax
     mov eax, [rbx].RAWRCODEX_CTX.ssaNextVarId
     mov [rsp].RAWRSSAINSTR.dstVarId, eax
     inc [rbx].RAWRCODEX_CTX.ssaNextVarId
@@ -5786,12 +5786,12 @@ RawrCodex_LiftToSSA PROC
     mov [rsp].RAWRSSAINSTR.ssaOp, SSA_OP_NEG
     jmp @@ssa_unary_op
 @@ssa_is_nop:
-    ; NOP — skip, don't emit SSA instruction
+    ; NOP ? skip, don't emit SSA instruction
     add rsp, SIZEOF RAWRSSAINSTR
     jmp @@ssa_instr_next
 
 @@ssa_class_p:
-    ; push/pop — model as STORE/LOAD to stack
+    ; push/pop ? model as STORE/LOAD to stack
     movzx edx, BYTE PTR [rcx + 1]
     cmp edx, 'u'                    ; push
     je @@ssa_is_push
@@ -5919,7 +5919,7 @@ RawrCodex_LiftToSSA PROC
 
 @@ssa_phi_scan:
     cmp edi, 0
-    jl @@ssa_phi_operand_default    ; Not found — use -1
+    jl @@ssa_phi_operand_default    ; Not found ? use -1
 
     push rcx
     push r12
@@ -5940,7 +5940,7 @@ RawrCodex_LiftToSSA PROC
     cmp [rax].RAWRSSAINSTR.dstVarId, -1
     je @@ssa_phi_scan_prev
 
-    ; Found a definition in the predecessor block — use its dstVarId
+    ; Found a definition in the predecessor block ? use its dstVarId
     mov edx, [rax].RAWRSSAINSTR.dstVarId
     mov [r15 + RAWRPHINODE.operandVarIds + r12*4], edx
     jmp @@ssa_phi_operand_next
@@ -5950,7 +5950,7 @@ RawrCodex_LiftToSSA PROC
     jmp @@ssa_phi_scan
 
 @@ssa_phi_operand_default:
-    ; No definition found — use initial version (varId = regIndex for version 0)
+    ; No definition found ? use initial version (varId = regIndex for version 0)
     mov edx, [r15].RAWRPHINODE.regIndex
     mov [r15 + RAWRPHINODE.operandVarIds + r12*4], edx
 
@@ -6042,7 +6042,7 @@ RawrCodex_RecursiveDisassemble PROC
     call DynArray_Clear
 
     ; -----------------------------------------------------------------------
-    ; Initialize visited bitmap — zero out RECDESC_VISITED_BITMAP_SIZE bytes
+    ; Initialize visited bitmap ? zero out RECDESC_VISITED_BITMAP_SIZE bytes
     ; -----------------------------------------------------------------------
     lea rdi, recDescVisited
     xor eax, eax
@@ -6050,7 +6050,7 @@ RawrCodex_RecursiveDisassemble PROC
     rep stosb
 
     ; -----------------------------------------------------------------------
-    ; Initialize worklist stack — push entry point
+    ; Initialize worklist stack ? push entry point
     ; -----------------------------------------------------------------------
     mov [recDescStackTop], 0
     lea rdi, recDescStack
@@ -6078,18 +6078,18 @@ RawrCodex_RecursiveDisassemble PROC
     mov rax, r14
     sub rax, r13                    ; rax = RVA (VA - imageBase)
 
-    ; Check bounds — bitmap can only track RECDESC_VISITED_BITMAP_SIZE * 8 bytes
+    ; Check bounds ? bitmap can only track RECDESC_VISITED_BITMAP_SIZE * 8 bytes
     mov rcx, rax
     shr rcx, 3                      ; byte index = RVA / 8
     cmp rcx, RECDESC_VISITED_BITMAP_SIZE
-    jae @@recdesc_loop              ; Out of bitmap range — skip
+    jae @@recdesc_loop              ; Out of bitmap range ? skip
 
     ; Check if already visited
     lea rdi, recDescVisited
     mov rdx, rax
     and edx, 7                      ; bit index = RVA & 7
     bt DWORD PTR [rdi + rcx], edx
-    jc @@recdesc_loop               ; Already visited — skip
+    jc @@recdesc_loop               ; Already visited ? skip
 
     ; Mark as visited
     bts DWORD PTR [rdi + rcx], edx
@@ -6103,7 +6103,7 @@ RawrCodex_RecursiveDisassemble PROC
     mov edx, eax                    ; edx = RVA (32-bit)
     call RvaToFileOffset            ; returns file offset in eax, or -1
     cmp eax, -1
-    je @@recdesc_loop               ; Can't map this VA — skip
+    je @@recdesc_loop               ; Can't map this VA ? skip
 
     mov r15d, eax                   ; r15d = file offset
 
@@ -6138,10 +6138,10 @@ RawrCodex_RecursiveDisassemble PROC
     call RawrCodex_DecodeInstruction
 
     ; DecodeInstruction pushes result to ctx->instructions internally?
-    ; No — it builds a local RAWRINSTRUCTION. We need to check the returned length.
+    ; No ? it builds a local RAWRINSTRUCTION. We need to check the returned length.
     ; Actually, DecodeInstruction returns instrLen in eax (or 0 on failure)
     test eax, eax
-    jz @@recdesc_loop               ; Decode failed — skip
+    jz @@recdesc_loop               ; Decode failed ? skip
 
     mov [rsp + 48h], eax            ; Save instruction length
 
@@ -6224,7 +6224,7 @@ RawrCodex_RecursiveDisassemble PROC
     cmp al, 0Fh
     jne @@recdesc_emit_linear
 
-    ; Two-byte opcode — check for 0F 80-8F (Jcc rel32)
+    ; Two-byte opcode ? check for 0F 80-8F (Jcc rel32)
     movzx eax, BYTE PTR [rsi + 1]
     cmp al, 80h
     jb @@recdesc_emit_linear
@@ -6498,16 +6498,16 @@ RawrCodex_RecursiveDisassemble PROC
 RawrCodex_RecursiveDisassemble ENDP
 
 ; =============================================================================
-; RawrCodex_RecoverTypes - Type recovery via SSA data flow analysis
+; RawrCodex_RecoverTypes - m_type recovery via SSA data flow analysis
 ;
 ; Analyzes SSA variables to infer types:
-;   1. Width inference: operand size from instruction encoding (movzx=unsigned, movsxd=signed)
+;   1. Width inference: operand m_size from instruction encoding (movzx=unsigned, movsxd=signed)
 ;   2. Pointer detection: values used in LOAD/STORE are pointers
-;   3. Array detection: LEA with scale factor → array_ptr with stride
-;   4. Struct detection: multiple different offsets from same base → struct_ptr
-;   5. Function pointer: CALL through register/memory → code_ptr
-;   6. API return types: known Win32 functions (GetProcessHeap→ptr, GetLastError→uint32)
-;   7. Boolean: TEST+Jcc pattern on 1-bit results → bool
+;   3. Array detection: LEA with scale factor ? array_ptr with stride
+;   4. Struct detection: multiple different offsets from same base ? struct_ptr
+;   5. Function pointer: CALL through register/memory ? code_ptr
+;   6. API return types: known Win32 functions (GetProcessHeap?ptr, GetLastError?uint32)
+;   7. Boolean: TEST+Jcc pattern on 1-bit results ? bool
 ;
 ; Input:  RCX = pointer to RAWRCODEX_CTX (must have SSA lifted)
 ; Output: EAX = number of types recovered (0 on error)
@@ -6532,7 +6532,7 @@ RawrCodex_RecoverTypes PROC
     cmp [rbx].RAWRCODEX_CTX.ssaLifted, 1
     jne @@type_fail
 
-    ; Clear previous type data
+    ; Clear previous m_type data
     lea rcx, [rbx].RAWRCODEX_CTX.typeInfos
     call DynArray_Clear
     lea rcx, [rbx].RAWRCODEX_CTX.structFields
@@ -6555,7 +6555,7 @@ RawrCodex_RecoverTypes PROC
 
     ; -----------------------------------------------------------------------
     ; Pass 1: Width inference from SSA instruction operand sizes
-    ; Walk SSA instructions, infer width from operation type
+    ; Walk SSA instructions, infer width from operation m_type
     ; -----------------------------------------------------------------------
     lea rax, [rbx].RAWRCODEX_CTX.ssaInstrs
     mov r12d, [rax].DYNARRAY.count  ; r12 = total SSA instructions
@@ -6575,7 +6575,7 @@ RawrCodex_RecoverTypes PROC
     jz @@type_p1_next
     mov rsi, rax                    ; rsi = ptr to RAWRSSAINSTR
 
-    ; Get the SSA op type
+    ; Get the SSA op m_type
     mov ecx, [rsi].RAWRSSAINSTR.ssaOp
     mov r14d, [rsi].RAWRSSAINSTR.dstVarId
 
@@ -6585,7 +6585,7 @@ RawrCodex_RecoverTypes PROC
     cmp r14d, MAX_RECOVERED_TYPES
     jge @@type_p1_next
 
-    ; Classify by operation type
+    ; Classify by operation m_type
     cmp ecx, SSA_OP_LOAD
     je @@type_p1_load
     cmp ecx, SSA_OP_STORE
@@ -6642,7 +6642,7 @@ RawrCodex_RecoverTypes PROC
     jmp @@type_p1_next
 
 @@type_p1_store:
-    ; Source of a STORE determines value type; dst is a pointer
+    ; Source of a STORE determines value m_type; dst is a pointer
     mov eax, [rsi].RAWRSSAINSTR.dstVarId
     cmp eax, -1
     je @@type_p1_next
@@ -6662,7 +6662,7 @@ RawrCodex_RecoverTypes PROC
     mov DWORD PTR [rdi + r14*4], TYPE_WIDTH_64
     lea rdi, typeConfidence
     mov DWORD PTR [rdi + r14*4], CONFIDENCE_LOW
-    ; Check if call target is a known API (heap/alloc → pointer)
+    ; Check if call target is a known API (heap/alloc ? pointer)
     mov rax, [rsi].RAWRSSAINSTR.callTarget
     test rax, rax
     jz @@type_p1_next
@@ -6688,14 +6688,14 @@ RawrCodex_RecoverTypes PROC
     mov eax, [rsi].RAWRSSAINSTR.src2VarId
     cmp eax, -1
     je @@type_p1_next
-    ; Has index register → array pointer
+    ; Has index register ? array pointer
     lea rdi, typeVarClasses
     mov DWORD PTR [rdi + r14*4], TYPE_ARRAY_PTR
     jmp @@type_p1_next
 
 @@type_p1_cmp:
 @@type_p1_test:
-    ; CMP/TEST produces flags; flags variable is a pseudo-type
+    ; CMP/TEST produces flags; flags variable is a pseudo-m_type
     mov eax, [rsi].RAWRSSAINSTR.flagsVarId
     cmp eax, -1
     je @@type_p1_next
@@ -6738,7 +6738,7 @@ RawrCodex_RecoverTypes PROC
     jmp @@type_p1_next
 
 @@type_p1_shift_signed:
-    ; SAR: arithmetic (signed) shift → signed type
+    ; SAR: arithmetic (signed) shift ? signed m_type
     lea rdi, typeVarClasses
     mov DWORD PTR [rdi + r14*4], TYPE_INT64
     lea rdi, typeVarWidths
@@ -6748,13 +6748,13 @@ RawrCodex_RecoverTypes PROC
     jmp @@type_p1_next
 
 @@type_p1_assign:
-    ; Assignment: propagate type from source if known
+    ; Assignment: propagate m_type from source if known
     mov eax, [rsi].RAWRSSAINSTR.src1VarId
     cmp eax, -1
     je @@type_p1_default
     cmp eax, MAX_RECOVERED_TYPES
     jge @@type_p1_default
-    ; Copy type from src1 to dst
+    ; Copy m_type from src1 to dst
     lea rdi, typeVarClasses
     mov ecx, DWORD PTR [rdi + rax*4]
     mov DWORD PTR [rdi + r14*4], ecx
@@ -6848,7 +6848,7 @@ RawrCodex_RecoverTypes PROC
 
     ; -----------------------------------------------------------------------
     ; Pass 3: Build RAWRTYPEINFO entries from the scratch arrays
-    ; Push one RAWRTYPEINFO per SSA variable that has a non-UNKNOWN type
+    ; Push one RAWRTYPEINFO per SSA variable that has a non-UNKNOWN m_type
     ; -----------------------------------------------------------------------
 @@type_pass3:
     lea rax, [rbx].RAWRCODEX_CTX.ssaVars
@@ -6873,7 +6873,7 @@ RawrCodex_RecoverTypes PROC
     cmp r14d, MAX_RECOVERED_TYPES
     jge @@type_p3_next
 
-    ; Check if this variable has a non-UNKNOWN type
+    ; Check if this variable has a non-UNKNOWN m_type
     lea rdi, typeVarClasses
     mov ecx, DWORD PTR [rdi + r14*4]
     cmp ecx, TYPE_UNKNOWN
@@ -6954,14 +6954,14 @@ RawrCodex_RecoverTypes PROC
     ; SSA var ID link
     mov [r8].RAWRTYPEINFO.ssaVarId, r14d
 
-    ; Copy type name from type name table
+    ; Copy m_type name from m_type name table
     mov eax, [r8].RAWRTYPEINFO.baseType
     cmp eax, 20             ; bounds check (0..19)
     jge @@type_p3_unknown_name
     ; Lookup: typeNames[baseType * 16]
     shl eax, 4              ; eax = baseType * 16
     lea rcx, typeNames
-    add rcx, rax            ; rcx = pointer to type name string
+    add rcx, rax            ; rcx = pointer to m_type name string
     lea rdi, [r8].RAWRTYPEINFO.szTypeName
     ; Copy up to 15 chars
     xor edx, edx
@@ -7218,25 +7218,25 @@ RawrCodex_BuildDefUseChains ENDP
 ;   Prerequisites: Phase 15 (CFG), Phase 16 (SSA), Phase 17 (Types)
 ;
 ;   Pipeline:
-;     1. RawrCodex_StructureControlFlow  — Dominator tree, edge classification,
+;     1. RawrCodex_StructureControlFlow  ? Dominator tree, edge classification,
 ;        interval-based loop/conditional detection, region building
-;     2. RawrCodex_EmitPseudocode        — Walk structured regions, emit C-like
-;        pseudocode with type annotations and expression trees
+;     2. RawrCodex_EmitPseudocode        ? Walk structured regions, emit C-like
+;        pseudocode with m_type annotations and expression trees
 ;
 ; =============================================================================
 ; =============================================================================
 
 ; =============================================================================
-; RawrCodex_StructureControlFlow — Interval-based CFG structuring algorithm
+; RawrCodex_StructureControlFlow ? Interval-based CFG structuring algorithm
 ;
 ; Transforms the flat CFG (basic blocks + edges) into a hierarchy of
 ; structured regions (while, if-then-else, do-while, sequence, goto).
 ;
 ; Algorithm (Sharir, 1980 + Tarjan dominator refinement):
-;   Phase A: Compute dominator tree via Lengauer-Tarjan O(n α(n))
+;   Phase A: Compute dominator tree via Lengauer-Tarjan O(n ?(n))
 ;   Phase B: DFS edge classification (tree/forward/back/cross)
 ;   Phase C: Identify natural loops from back edges
-;   Phase D: Build structured regions (intervals → regions)
+;   Phase D: Build structured regions (intervals ? regions)
 ;   Phase E: Handle irreducible flow with goto fallback
 ;
 ; Input:  RCX = pointer to RAWRCODEX_CTX (must have CFG + SSA + Types done)
@@ -7398,7 +7398,7 @@ RawrCodex_StructureControlFlow PROC
     cmp [rax].RAWRBASICBLOCK.startAddress, r9
     jne @@scf_succ_search_next
 
-    ; Found successor BB — push onto DFS stack if not visited
+    ; Found successor BB ? push onto DFS stack if not visited
     cmp DWORD PTR [r14 + rdx*4], 0
     jne @@scf_succ_found_skip
     lea rdi, domVertex
@@ -7476,7 +7476,7 @@ RawrCodex_StructureControlFlow PROC
 
     mov ecx, [rax].RAWRBASICBLOCK.predecessorCount
     test ecx, ecx
-    jz @@scf_dom_bb_next            ; No predecessors — unreachable
+    jz @@scf_dom_bb_next            ; No predecessors ? unreachable
 
     ; Find first processed predecessor (idom != -1)
     mov r13d, -1                    ; new_idom = undefined
@@ -7522,7 +7522,7 @@ RawrCodex_StructureControlFlow PROC
     lea r8, domIdoms
     cmp DWORD PTR [r8 + rdx*4], -1
     je @@scf_dom_pred_not_processed
-    ; This predecessor is processed — use as initial new_idom
+    ; This predecessor is processed ? use as initial new_idom
     mov r13d, edx
     pop rdi
     pop rcx
@@ -7631,13 +7631,13 @@ RawrCodex_StructureControlFlow PROC
 
 @@scf_dom_check_converge:
     test r15d, r15d
-    jnz @@scf_dom_iterate           ; Not converged — iterate again
+    jnz @@scf_dom_iterate           ; Not converged ? iterate again
 
     ; =====================================================================
     ; Phase B: DFS Edge Classification
     ;
     ; Walk all CFG edges and classify using DFS numbers + dominator tree:
-    ;   - Back edge:    target dominates source (descendant → ancestor)
+    ;   - Back edge:    target dominates source (descendant ? ancestor)
     ;   - Forward edge: source dominates target, not a tree edge
     ;   - Cross edge:   neither dominates the other
     ;   - Tree edge:    parent in DFS tree
@@ -7799,7 +7799,7 @@ RawrCodex_StructureControlFlow PROC
     ; =====================================================================
     ; Phase C: Identify Natural Loops from Back Edges
     ;
-    ; For each back edge (source → header):
+    ; For each back edge (source ? header):
     ;   The "natural loop" is the set of nodes that can reach source
     ;   without going through header. header is the loop header.
     ;
@@ -7924,7 +7924,7 @@ RawrCodex_StructureControlFlow PROC
     jmp @@scf_loop_find_branch
 
 @@scf_loop_found_branch:
-    ; Found BRANCH in header BB — extract condition variable
+    ; Found BRANCH in header BB ? extract condition variable
     mov ecx, [rax].RAWRSSAINSTR.flagsVarId
     lea r8, regionScratch
     mov DWORD PTR [r8].RAWRSTRUCTREGION.condVarId, ecx
@@ -7952,8 +7952,8 @@ RawrCodex_StructureControlFlow PROC
     ; Phase D: Build If-Then-Else Regions from Forward/Cross Edges
     ;
     ; For each BB with exactly 2 successors that is NOT a loop header:
-    ;   If both successors converge at a common post-dominator → if-then-else
-    ;   If only one path reaches a merge → if-then
+    ;   If both successors converge at a common post-dominator ? if-then-else
+    ;   If only one path reaches a merge ? if-then
     ;
     ; Also build SEQUENCE regions for linear chains.
     ; =====================================================================
@@ -7973,7 +7973,7 @@ RawrCodex_StructureControlFlow PROC
     mov r14, rax
 
     ; Check if this BB is already covered by a loop region
-    ; (skip if it's a loop header — already handled in Phase C)
+    ; (skip if it's a loop header ? already handled in Phase C)
     lea rcx, [rbx].RAWRCODEX_CTX.structRegions
     mov r13d, [rcx].DYNARRAY.count
     xor edi, edi
@@ -7991,7 +7991,7 @@ RawrCodex_StructureControlFlow PROC
     jne @@scf_check_loop_next
     mov ecx, [rsp + 50h]
     cmp [rax].RAWRSTRUCTREGION.headBB, ecx
-    je @@scf_region_next_bb         ; Already a loop header — skip
+    je @@scf_region_next_bb         ; Already a loop header ? skip
 @@scf_check_loop_next:
     inc edi
     jmp @@scf_check_loop_header
@@ -8142,8 +8142,8 @@ RawrCodex_StructureControlFlow PROC
 
     ; Determine if this is if-then or if-then-else
     ; Check if else-BB immediately dominates/follows then-BB
-    ; Simple heuristic: if then successor == else BB → if-then (no else)
-    ; If both then and else have different paths → if-then-else
+    ; Simple heuristic: if then successor == else BB ? if-then (no else)
+    ; If both then and else have different paths ? if-then-else
     mov eax, [rsp + 78h]            ; else BB index
     cmp eax, -1
     je @@scf_emit_if_then
@@ -8152,8 +8152,8 @@ RawrCodex_StructureControlFlow PROC
     cmp ecx, -1
     je @@scf_emit_if_then
 
-    ; Both branches exist — check if they merge
-    ; If then-BB's successor == else-BB → if-then (else is the merge point)
+    ; Both branches exist ? check if they merge
+    ; If then-BB's successor == else-BB ? if-then (else is the merge point)
     push rax
     lea rcx, [rbx].RAWRCODEX_CTX.basicBlocks
     mov edx, [rsp + 70h + 8]       ; then BB (adjusted for push)
@@ -8187,7 +8187,7 @@ RawrCodex_StructureControlFlow PROC
 @@scf_merge_found:
     pop rcx                         ; else BB index
     ; edx = then-BB's successor's BB index
-    ; If edx == else BB → if-then (else is the merge point)
+    ; If edx == else BB ? if-then (else is the merge point)
     cmp edx, ecx
     je @@scf_emit_if_then
     ; Otherwise it's if-then-else with merge at edx
@@ -8331,7 +8331,7 @@ RawrCodex_StructureControlFlow PROC
     cmp [rax].RAWRCFGEDGE.edgeType, EDGE_CROSS
     jne @@scf_goto_next
 
-    ; Cross edge — check if target BB is already in a structured region
+    ; Cross edge ? check if target BB is already in a structured region
     mov esi, [rax].RAWRCFGEDGE.toBB
     lea rcx, [rbx].RAWRCODEX_CTX.structRegions
     mov r15d, [rcx].DYNARRAY.count
@@ -8362,14 +8362,14 @@ RawrCodex_StructureControlFlow PROC
 
 @@scf_goto_found_in_region:
     mov r9d, 1                      ; Target is covered
-    jmp @@scf_goto_next             ; Skip — already structured
+    jmp @@scf_goto_next             ; Skip ? already structured
 
 @@scf_goto_region_next:
     inc edi
     jmp @@scf_goto_region_scan
 
 @@scf_goto_emit:
-    ; Target BB not in any region — emit GOTO
+    ; Target BB not in any region ? emit GOTO
     test r9d, r9d
     jnz @@scf_goto_next
 
@@ -8434,10 +8434,10 @@ RawrCodex_StructureControlFlow PROC
 RawrCodex_StructureControlFlow ENDP
 
 ; =============================================================================
-; RawrCodex_EmitPseudocode — Transform structured regions into C pseudocode
+; RawrCodex_EmitPseudocode ? Transform structured regions into C pseudocode
 ;
 ; Walks the structured region tree and emits human-readable C-like pseudocode.
-; Uses type information from Phase 17 for variable annotations.
+; Uses m_type information from Phase 17 for variable annotations.
 ; Builds AST expression trees for infix operator rendering.
 ;
 ; Input:  RCX = pointer to RAWRCODEX_CTX (must have structuring done)
@@ -8478,10 +8478,10 @@ RawrCodex_EmitPseudocode PROC
 
     ; =====================================================================
     ; Step 1: Emit function header
-    ; Determine return type from SSA RET instruction analysis
+    ; Determine return m_type from SSA RET instruction analysis
     ; =====================================================================
 
-    ; Build function header line: "type sub_XXXXXXXX(params) {"
+    ; Build function header line: "m_type sub_XXXXXXXX(params) {"
     lea rdi, pseudoLineBuf
     xor eax, eax
     mov ecx, MAX_PSEUDOCODE_LINE_LEN
@@ -8494,7 +8494,7 @@ RawrCodex_EmitPseudocode PROC
     ; Format: "int64_t sub_XXXXXXXX()"
     lea rcx, pseudoLineBuf
     lea rdx, fmtPseudoFuncHdr
-    ; Use "int64_t" as default return type
+    ; Use "int64_t" as default return m_type
     lea r8, typeNames + 64          ; TYPE_INT64 = index 4, 16 bytes each
     mov r9d, eax                    ; Entry point address
     sub rsp, 20h                    ; Shadow space for wsprintfA
@@ -8637,7 +8637,7 @@ RawrCodex_EmitPseudocode PROC
     jmp @@pseudo_while_emit_line
 
 @@pseudo_while_no_cond:
-    ; while (1) — infinite loop
+    ; while (1) ? infinite loop
     lea rcx, pseudoLineBuf
     mov BYTE PTR [rcx], 'w'
     mov BYTE PTR [rcx+1], 'h'
@@ -9405,7 +9405,7 @@ RawrCodex_EmitPseudocode PROC
     ;        rbx = ctx, r14d = current indent level
     ;
     ; Walks all SSA instructions in the given BB and emits a pseudocode
-    ; line for each, using the C operator table and type annotations.
+    ; line for each, using the C operator table and m_type annotations.
     ; =====================================================================
 @@pseudo_emit_bb_instrs:
     ; Get SSA instruction count
@@ -9457,7 +9457,7 @@ RawrCodex_EmitPseudocode PROC
     mov rax, [rsp + 98h]
     mov r9d, [rax].RAWRSSAINSTR.ssaOp
 
-    ; Dispatch by SSA op type
+    ; Dispatch by SSA op m_type
     cmp r9d, SSA_OP_ASSIGN
     je @@pseudo_bb_assign
     cmp r9d, SSA_OP_CALL
@@ -9563,7 +9563,7 @@ RawrCodex_EmitPseudocode PROC
     mov rax, [rsp + 98h]
     mov r9d, [rax].RAWRSSAINSTR.ssaOp
     cmp r9d, 12                     ; Ensure within range of ssaOpToC table
-    ja @@pseudo_bb_instr_next       ; Out of range — skip
+    ja @@pseudo_bb_instr_next       ; Out of range ? skip
 
     ; Format: "v%d = v%d + v%d;"
     ; Use wsprintfA with SSA instruction format
@@ -9747,3 +9747,4 @@ RawrLicense_SetTier PROC
 RawrLicense_SetTier ENDP
 
 END
+

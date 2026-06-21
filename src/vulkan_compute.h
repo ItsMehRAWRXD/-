@@ -244,6 +244,13 @@ public:
                                   uint32_t output_idx, uint32_t seq_len,
                                   uint32_t head_dim, uint32_t num_heads,
                                   float scale = 0.0f);
+    
+    // ---- Flash Attention FP8 Tiled Pipeline (Stub) ----
+    bool IsFlashAttentionFP8TiledPipelineReady() const
+    {
+        // No-op stub - FP8 tiled pipeline not available
+        return false;
+    }
 
     // ---- Titan MoE Sharding (GPU-Accelerated Top-K Experts) ----
     bool EnsureTitanMoEShardPipeline(const std::string& spirv_path);

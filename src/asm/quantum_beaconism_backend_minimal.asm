@@ -9,7 +9,9 @@ OPTION CASEMAP:NONE
 ; ============================================================
 ; EXTERNAL IMPORTS
 ; ============================================================
-EXTERNDEF VirtualAlloc : PROC`r`nEXTERNDEF VirtualFree : PROC`r`nEXTERNDEF QueryPerformanceCounter : PROC
+EXTERNDEF VirtualAlloc : PROC
+EXTERNDEF VirtualFree : PROC
+EXTERNDEF QueryPerformanceCounter : PROC
 EXTERNDEF Titan_ResetDMAStats : PROC
 EXTERN QueryPerformanceFrequency : PROC
 EXTERN RtlCopyMemory : PROC
@@ -86,7 +88,7 @@ CONFIG_FLAG_BOUNDS_CHECKS       EQU 4
 CONFIG_FLAG_PERFORMANCE_MODE    EQU 8
 CONFIG_FLAG_DEBUG_MODE          EQU 16
 
-; Stats structure offsets (all QWORD-aligned)
+; stats structure offsets (all QWORD-aligned)
 STATS_TOTAL_BYTES_COPIED        EQU 0
 STATS_TOTAL_DMA_TRANSFERS       EQU 8
 STATS_FAILED_TRANSFERS          EQU 16
@@ -392,28 +394,17 @@ _Titan_ReleaseOperationLock ENDP
 ; kernelType 6 (NOT):   NOTs [R8], stores in [R8], R9 bytes (RDX ignored)
 ; kernelType 7 (COMPARE): compares [RDX] with [R8], returns difference in RAX
 ; ============================================================
-Titan_ExecuteComputeKernel PROC FRAME
+Titan_ExecuteComputeKernel PROC
     push rbp
-    .PUSHREG rbp
     mov rbp, rsp
-    .SETFRAME rbp, 0
     push rbx
-    .PUSHREG rbx
     push rsi
-    .PUSHREG rsi
     push rdi
-    .PUSHREG rdi
     push r12
-    .PUSHREG r12
     push r13
-    .PUSHREG r13
     push r14
-    .PUSHREG r14
     push r15
-    .PUSHREG r15
     sub rsp, 48                       ; shadow + locals
-    .ALLOCSTACK 48
-    .ENDPROLOG
 
     ; Check initialization
     movzx eax, BYTE PTR [g_Initialized]
@@ -553,7 +544,7 @@ Titan_ExecuteComputeKernel PROC FRAME
     lea rcx, [g_LastTransferStart]
     call _Titan_QueryTimestamp
 
-    ; Dispatch by kernel type
+    ; Dispatch by kernel memType
     cmp r12, KERNEL_TYPE_COPY
     je @@do_copy
     cmp r12, KERNEL_TYPE_ZERO
@@ -738,6 +729,7 @@ Titan_ExecuteComputeKernel PROC FRAME
     mov rcx, r13                      ; src1
     mov rdx, r14                      ; src2
     mov r8, r15                       ; size
+
     sub rsp, 32
     call RtlCompareMemory
     add rsp, 32
@@ -862,24 +854,15 @@ Titan_ExecuteComputeKernel ENDP
 ; RCX = src, RDX = dst, R8 = size, R9 = copyType
 ; Returns RAX = bytes copied (0 on failure)
 ; ============================================================
-Titan_PerformCopy PROC FRAME
+Titan_PerformCopy PROC
     push rbp
-    .PUSHREG rbp
     mov rbp, rsp
-    .SETFRAME rbp, 0
     push rbx
-    .PUSHREG rbx
     push r12
-    .PUSHREG r12
     push r13
-    .PUSHREG r13
     push r14
-    .PUSHREG r14
     push r15
-    .PUSHREG r15
     sub rsp, 48
-    .ALLOCSTACK 48
-    .ENDPROLOG
 
     ; Check initialization
     movzx eax, BYTE PTR [g_Initialized]
@@ -955,7 +938,7 @@ Titan_PerformCopy PROC FRAME
     lea rcx, [g_LastTransferStart]
     call _Titan_QueryTimestamp
 
-    ; Perform the copy based on type
+    ; Perform the copy based on memType
     cmp r15, COPY_TYPE_STANDARD
     je @@do_standard_copy
     cmp r15, COPY_TYPE_NONTEMP
@@ -969,6 +952,7 @@ Titan_PerformCopy PROC FRAME
     mov rcx, r13                      ; dst
     mov rdx, r12                      ; src
     mov r8, r14                       ; size
+
     sub rsp, 32
     call RtlCopyMemory
     add rsp, 32
@@ -980,6 +964,7 @@ Titan_PerformCopy PROC FRAME
     mov rcx, r13                      ; dst
     mov rdx, r12                      ; src
     mov r8, r14                       ; size
+
     sub rsp, 32
     call RtlCopyMemory
     add rsp, 32
@@ -1024,6 +1009,7 @@ Titan_PerformCopy PROC FRAME
     mov rcx, r13                      ; dst
     mov rdx, r12                      ; src
     mov r8, r14                       ; size
+
     sub rsp, 32
     call RtlCopyMemory
     add rsp, 32
@@ -1102,24 +1088,15 @@ Titan_PerformCopy ENDP
 ; RCX = src, RDX = dst, R8 = size, R9 = dmaType
 ; Returns EAX = result code
 ; ============================================================
-Titan_PerformDMA PROC FRAME
+Titan_PerformDMA PROC
     push rbp
-    .PUSHREG rbp
     mov rbp, rsp
-    .SETFRAME rbp, 0
     push rbx
-    .PUSHREG rbx
     push r12
-    .PUSHREG r12
     push r13
-    .PUSHREG r13
     push r14
-    .PUSHREG r14
     push r15
-    .PUSHREG r15
     sub rsp, 48
-    .ALLOCSTACK 48
-    .ENDPROLOG
 
     ; Check initialization
     movzx eax, BYTE PTR [g_Initialized]
@@ -1155,6 +1132,7 @@ Titan_PerformDMA PROC FRAME
     mov rcx, r13                      ; dst
     mov rdx, r12                      ; src
     mov r8, r14                       ; size
+
     sub rsp, 32
     call RtlCopyMemory
     add rsp, 32
@@ -1379,16 +1357,17 @@ Titan_GetDMAStats PROC FRAME
     mov [rbx + STATS_FAILED_TRANSFERS], rax
 
     movsd xmm0, [g_PeakBandwidthGbps]
-    movsd [rbx + STATS_PEAK_BANDWIDTH_GBPS], xmm0
+    movsd qword ptr [rbx + STATS_PEAK_BANDWIDTH_GBPS], xmm0
 
-    movzx rax, BYTE PTR [g_Initialized]
-    mov [rbx + STATS_INITIALIZED], rax
+    mov al, BYTE PTR [g_Initialized]
+    movzx eax, al
+    mov dword ptr [rbx + STATS_INITIALIZED], eax
 
     mov rax, [g_TotalOperations]
     mov [rbx + STATS_TOTAL_OPERATIONS], rax
 
     movsd xmm0, [g_AverageBandwidthGbps]
-    movsd [rbx + STATS_AVERAGE_BANDWIDTH_GBPS], xmm0
+    movsd qword ptr [rbx + STATS_AVERAGE_BANDWIDTH_GBPS], xmm0
 
     mov rax, [g_MinTransferBytes]
     mov [rbx + STATS_MIN_TRANSFER_BYTES], rax
@@ -1413,10 +1392,10 @@ Titan_GetDMAStats PROC FRAME
     mov QWORD PTR [rbx + STATS_TOTAL_DMA_TRANSFERS], 0
     mov QWORD PTR [rbx + STATS_FAILED_TRANSFERS], 0
     xorpd xmm0, xmm0
-    movsd [rbx + STATS_PEAK_BANDWIDTH_GBPS], xmm0
+    movsd qword ptr [rbx + STATS_PEAK_BANDWIDTH_GBPS], xmm0
     mov QWORD PTR [rbx + STATS_INITIALIZED], 0
     mov QWORD PTR [rbx + STATS_TOTAL_OPERATIONS], 0
-    movsd [rbx + STATS_AVERAGE_BANDWIDTH_GBPS], xmm0
+    movsd qword ptr [rbx + STATS_AVERAGE_BANDWIDTH_GBPS], xmm0
     mov QWORD PTR [rbx + STATS_MIN_TRANSFER_BYTES], 0FFFFFFFFFFFFFFFFh
     mov QWORD PTR [rbx + STATS_MAX_TRANSFER_BYTES], 0
     mov QWORD PTR [rbx + STATS_TOTAL_LATENCY_TICKS], 0
@@ -1613,12 +1592,12 @@ Titan_GetPerformanceMetrics PROC FRAME
     mov rax, [g_TotalOperations]
     cvtsi2sd xmm1, rax               ; total operations
     divsd xmm0, xmm1                 ; success rate
-    movsd [rbx + METRICS_SUCCESS_RATE], xmm0
+    movsd qword ptr [rbx + METRICS_SUCCESS_RATE], xmm0
     jmp @@calc_latency
 
 @@zero_success_rate:
     xorpd xmm0, xmm0
-    movsd [rbx + METRICS_SUCCESS_RATE], xmm0
+    movsd qword ptr [rbx + METRICS_SUCCESS_RATE], xmm0
 
 @@calc_latency:
     ; Average latency = total_latency_ticks / total_operations
@@ -1638,7 +1617,7 @@ Titan_GetPerformanceMetrics PROC FRAME
 @@peak_throughput:
     ; Peak throughput = peak bandwidth
     movsd xmm0, [g_PeakBandwidthGbps]
-    movsd [rbx + METRICS_PEAK_THROUGHPUT], xmm0
+    movsd qword ptr [rbx + METRICS_PEAK_THROUGHPUT], xmm0
 
     ; Memory efficiency = average_bandwidth / peak_bandwidth (if peak > 0)
     xorpd xmm1, xmm1
@@ -1647,17 +1626,17 @@ Titan_GetPerformanceMetrics PROC FRAME
 
     movsd xmm1, [g_AverageBandwidthGbps]
     divsd xmm1, xmm0                 ; efficiency ratio
-    movsd [rbx + METRICS_MEMORY_EFFICIENCY], xmm1
+    movsd qword ptr [rbx + METRICS_MEMORY_EFFICIENCY], xmm1
     jmp @@cache_hit_rate
 
 @@zero_efficiency:
     xorpd xmm0, xmm0
-    movsd [rbx + METRICS_MEMORY_EFFICIENCY], xmm0
+    movsd qword ptr [rbx + METRICS_MEMORY_EFFICIENCY], xmm0
 
 @@cache_hit_rate:
     ; Cache hit rate = 1.0 (simplified - would need cache monitoring)
     movsd xmm0, [g_OnePointZero]
-    movsd [rbx + METRICS_CACHE_HIT_RATE], xmm0
+    movsd qword ptr [rbx + METRICS_CACHE_HIT_RATE], xmm0
 
     xor eax, eax                      ; TITAN_SUCCESS
     jmp @@metrics_exit
@@ -1671,11 +1650,11 @@ Titan_GetPerformanceMetrics PROC FRAME
     ; Zero all metrics
     mov QWORD PTR [rbx + METRICS_TOTAL_OPERATIONS], 0
     xorpd xmm0, xmm0
-    movsd [rbx + METRICS_SUCCESS_RATE], xmm0
+    movsd qword ptr [rbx + METRICS_SUCCESS_RATE], xmm0
     mov QWORD PTR [rbx + METRICS_AVERAGE_LATENCY], 0
-    movsd [rbx + METRICS_PEAK_THROUGHPUT], xmm0
-    movsd [rbx + METRICS_MEMORY_EFFICIENCY], xmm0
-    movsd [rbx + METRICS_CACHE_HIT_RATE], xmm0
+    movsd qword ptr [rbx + METRICS_PEAK_THROUGHPUT], xmm0
+    movsd qword ptr [rbx + METRICS_MEMORY_EFFICIENCY], xmm0
+    movsd qword ptr [rbx + METRICS_CACHE_HIT_RATE], xmm0
 
     mov eax, TITAN_ERROR_NOT_INITIALIZED
     jmp @@metrics_exit
@@ -1687,3 +1666,4 @@ Titan_GetPerformanceMetrics PROC FRAME
 Titan_GetPerformanceMetrics ENDP
 
 END
+

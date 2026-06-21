@@ -3,6 +3,7 @@
 
 #include "Win32IDE_KVApertureProbe.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <windows.h>

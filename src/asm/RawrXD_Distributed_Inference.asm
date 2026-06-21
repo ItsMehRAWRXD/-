@@ -61,7 +61,7 @@ InferenceShard STRUCT
     InputTokens     QWORD       ?   ; Input token buffer
     OutputTokens    QWORD       ?   ; Output token buffer
     KVCacheStart    QWORD       ?   ; KV cache start offset
-    KVCacheSize     QWORD       ?   ; KV cache size
+    KVCacheSize     QWORD       ?   ; KV cache m_size
     Status          DWORD       ?   ; Shard execution status
     Dependencies    QWORD       ?   ; Bitmask of dependent shards
     CompletionTime  QWORD       ?   ; Completion timestamp
@@ -79,7 +79,7 @@ DistributedContext STRUCT
     HiddenSize      DWORD       ?   ; Hidden dimension
     NumHeads        DWORD       ?   ; Attention heads
     HeadDim         DWORD       ?   ; Head dimension
-    VocabSize       DWORD       ?   ; Vocabulary size
+    VocabSize       DWORD       ?   ; Vocabulary m_size
     SequenceLength  DWORD       ?   ; Max sequence length
     CurrentShard    DWORD       ?   ; Current shard being processed
     Status          DWORD       ?   ; Overall inference status
@@ -512,7 +512,7 @@ Load_GGUF_Model_Distributed ENDP
 
 Get_Model_Architecture PROC
     ; Return packed arch descriptor:
-    ; EAX(low32)=layers, EAX(high32)=hidden size
+    ; EAX(low32)=layers, EAX(high32)=hidden m_size
     mov eax, 32
     shl rax, 32
     or rax, 4096
@@ -717,3 +717,4 @@ PUBLIC Create_Inference_Shards
 PUBLIC Execute_Distributed_Pipeline
 
 END
+

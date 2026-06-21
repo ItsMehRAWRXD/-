@@ -1,13 +1,15 @@
 ; =============================================================================
-; RawrXD_RT_Monitor.asm — Pure x64 MASM real-time monitor
+; RawrXD_RT_Monitor.asm ? Pure x64 MASM real-time monitor
 ; No Qt, no CRT, no std:: dependencies.
 ; =============================================================================
 
 option casemap:none
 
-include RawrXD_Common.inc
+INCLUDE rawrxd_win64.inc
 
-; --- RRTM buffer size constants ---
+FILE_ATTRIBUTE_NORMAL EQU 80h
+
+; --- RRTM buffer blockSize constants ---
 RRTM_LAST_BUILD_SIZE    EQU     128
 RRTM_LAST_AGENT_SIZE    EQU     64
 RRTM_LAST_STATUS_SIZE   EQU     96
@@ -104,6 +106,7 @@ RRTM_CopyZLimit ENDP
 
 ; RCX=zstr -> debugger + file sink
 RRTM_EmitZ PROC FRAME
+    .ENDPROLOG
     sub     rsp, 72
     .allocstack 72
     .endprolog
@@ -157,6 +160,7 @@ RRTM_EmitZ ENDP
 
 ; RCX=prefix, RDX=arg1, R8=arg2(optional)
 RRTM_Emit3 PROC FRAME
+    .ENDPROLOG
     sub     rsp, 72
     .allocstack 72
     .endprolog
@@ -183,6 +187,7 @@ RRTM_Emit3 ENDP
 
 ; RCX=customLogPath|null, RAX=0 success
 RRTM_Init PROC FRAME
+    .ENDPROLOG
     sub     rsp, 72
     .allocstack 72
     .endprolog
@@ -485,3 +490,4 @@ RRTM_Shutdown PROC FRAME
 RRTM_Shutdown ENDP
 
 END
+

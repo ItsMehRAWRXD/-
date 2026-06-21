@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_DynamicPromptEngine.asm — MASM64 Logic Kernels
+; RawrXD_DynamicPromptEngine.asm ? MASM64 Logic Kernels
 ; =============================================================================
 ; Implements the high-performance prompt generation and classification kernels
 ; for the Dynamic Prompt Engine DLL.
@@ -63,7 +63,7 @@ PromptGen_Interpolate ENDP
 
 ; -----------------------------------------------------------------------------
 ; PromptGen_GetTemplate
-; RCX = mode, RDX = type
+; RCX = mode, RDX = m_type
 ; Returns: RAX = pointer to template
 ; -----------------------------------------------------------------------------
 PromptGen_GetTemplate PROC

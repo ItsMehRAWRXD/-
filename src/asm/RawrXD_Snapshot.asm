@@ -1,5 +1,5 @@
 ; ============================================================================
-; RawrXD_Snapshot.asm — Process Memory Snapshot Kernel (x64 MASM)
+; RawrXD_Snapshot.asm ? Process Memory Snapshot Kernel (x64 MASM)
 ; ============================================================================
 ; Captures process memory snapshots for debugging and analysis.
 ; Exports: asm_snapshot_capture, asm_snapshot_restore, asm_snapshot_free
@@ -50,9 +50,9 @@ g_snapshot_valid    BYTE  0
 .code
 
 ; ============================================================================
-; asm_snapshot_capture — Capture process memory snapshot
+; asm_snapshot_capture ? Capture process memory snapshot
 ; RCX = buffer (output), RDX = max_size
-; Returns RAX = actual size captured, 0 on failure
+; Returns RAX = actual m_size captured, 0 on failure
 ; ============================================================================
 asm_snapshot_capture PROC FRAME
     .PUSHREG rbx
@@ -70,7 +70,7 @@ asm_snapshot_capture PROC FRAME
     jz  @@fail
 
     mov rbx, rcx        ; rbx = output buffer
-    mov rsi, rdx        ; rsi = max size
+    mov rsi, rdx        ; rsi = max m_size
 
     ; Write snapshot header
     mov DWORD PTR [rbx], SNAPSHOT_MAGIC
@@ -82,7 +82,7 @@ asm_snapshot_capture PROC FRAME
 
     ; Get process memory info (simplified)
     ; In production, this would enumerate all memory regions
-    mov rax, 32         ; Header size
+    mov rax, 32         ; Header m_size
     cmp rax, rsi
     ja  @@fail
 
@@ -91,7 +91,7 @@ asm_snapshot_capture PROC FRAME
     mov g_snapshot_buffer, rbx
     mov g_snapshot_size, rax
 
-    mov rax, rax        ; Return size
+    mov rax, rax        ; Return m_size
     jmp @@done
 
 @@fail:
@@ -105,7 +105,7 @@ asm_snapshot_capture PROC FRAME
 asm_snapshot_capture ENDP
 
 ; ============================================================================
-; asm_snapshot_restore — Restore process memory from snapshot
+; asm_snapshot_restore ? Restore process memory from snapshot
 ; RCX = buffer (input)
 ; Returns RAX = 0 on success, error code on failure
 ; ============================================================================
@@ -142,7 +142,7 @@ asm_snapshot_restore PROC FRAME
 asm_snapshot_restore ENDP
 
 ; ============================================================================
-; asm_snapshot_free — Free snapshot resources
+; asm_snapshot_free ? Free snapshot resources
 ; ============================================================================
 asm_snapshot_free PROC FRAME
     .ENDPROLOG
@@ -154,8 +154,8 @@ asm_snapshot_free PROC FRAME
 asm_snapshot_free ENDP
 
 ; ============================================================================
-; asm_snapshot_get_size — Get last snapshot size
-; Returns RAX = size
+; asm_snapshot_get_size ? Get last snapshot m_size
+; Returns RAX = m_size
 ; ============================================================================
 asm_snapshot_get_size PROC FRAME
     .ENDPROLOG

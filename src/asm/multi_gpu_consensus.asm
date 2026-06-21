@@ -1,5 +1,5 @@
 ; ============================================================================
-; multi_gpu_consensus.asm — Multi-GPU Consensus Handshake (Batch 12)
+; multi_gpu_consensus.asm ? Multi-GPU Consensus Handshake (Batch 12)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -32,7 +32,7 @@ Shield_GenerateConsensusToken PROC FRAME
     .allocstack 32
     .endprolog
 
-    ; In a production implementation, this would invoke an optimized
+    ; In a production implementation, this would call an optimized
     ; AVX-512 SHA-256 routine. For Batch 12, we implement the
     ; "Consensus Mix" logic that salts the nonce with the secret key.
     
@@ -91,3 +91,4 @@ Shield_VerifyConsensusToken PROC FRAME
 Shield_VerifyConsensusToken ENDP
 
 END
+

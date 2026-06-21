@@ -35,8 +35,8 @@ IMAGE_REL_BASED_DIR64           EQU 0Ah
 ; OS DISPATCH (BYTE TABLE, NO STRUCTS)
 ;==============================================================================
 
-OS_ALLOC                EQU 00h   ; (rcx=base, rdx=size, r8=flags, r9=prot) -> rax=ptr
-OS_FREE                 EQU 08h   ; (rcx=ptr, rdx=size, r8=flags) -> eax=ok
+OS_ALLOC                EQU 00h   ; (rcx=base, rdx=m_size, r8=flags, r9=prot) -> rax=ptr
+OS_FREE                 EQU 08h   ; (rcx=ptr, rdx=m_size, r8=flags) -> eax=ok
 OS_FOPEN                EQU 10h   ; (rcx=pathPtr, rdx=mode) -> rax=handle
 OS_FREAD                EQU 18h   ; (rcx=h, rdx=buf, r8=bytes, r9=outReadPtr) -> eax=ok
 OS_FWRITE               EQU 20h   ; (rcx=h, rdx=buf, r8=bytes, r9=outWrotePtr) -> eax=ok
@@ -234,11 +234,11 @@ DOS_HEADER:
 DOS_STUB:
     db 00Eh                        ; push cs
     db 01Fh                        ; pop ds
-    db 0BAh, 00Eh, 000h            ; mov dx, 0x000e
-    db 0B4h, 009h                  ; mov ah, 0x09
-    db 0CDh, 021h                  ; int 0x21
-    db 0B8h, 001h, 04Ch            ; mov ax, 0x4c01
-    db 0CDh, 021h                  ; int 0x21
+    db 0BAh, 00Eh, 000h            ; mov dx, 0000eh
+    db 0B4h, 009h                  ; mov ah, 009h
+    db 0CDh, 021h                  ; int 021h
+    db 0B8h, 001h, 04Ch            ; mov ax, 04c01h
+    db 0CDh, 021h                  ; int 021h
     db 'This program cannot be run in DOS mode.', 0Dh, 0Ah, '$'
 
 NT_HEADERS:
@@ -496,7 +496,7 @@ IDE_spin_release ENDP
 
 PUBLIC IDE_arena_init
 IDE_arena_init PROC
-    ; RCX=base, RDX=size
+    ; RCX=base, RDX=m_size
     lea r8, gState
     mov QWORD PTR [r8+ST_ARENA_BASE], rcx
     mov QWORD PTR [r8+ST_ARENA_SIZE], rdx
@@ -816,7 +816,7 @@ IDE_job_run_one ENDP
 
 PUBLIC IDE_telem_push
 IDE_telem_push PROC
-    ; RCX=type(DWORD), RDX=dataPtr, R8=size(DWORD), R9=ts(QWORD)
+    ; RCX=m_type(DWORD), RDX=dataPtr, R8=m_size(DWORD), R9=ts(QWORD)
     push rbx
     push rsi
     push rdi
@@ -1057,7 +1057,7 @@ IDE_sym_find ENDP
 
 PUBLIC code_init
 code_init PROC
-    ; RCX=buf, RDX=size
+    ; RCX=buf, RDX=m_size
     lea r8, gState
     mov QWORD PTR [r8+ST_CODE_BUF], rcx
     mov QWORD PTR [r8+ST_CODE_SIZE], rdx
@@ -1288,7 +1288,7 @@ emit_qword ENDP
 
 PUBLIC add_reloc
 add_reloc PROC
-    ; RCX=offset, RDX=type
+    ; RCX=offset, RDX=m_type
     lea r8, gState
     mov eax, DWORD PTR [r8+ST_RELOC_USED]
     cmp eax, DWORD PTR [r8+ST_RELOC_CAP]
@@ -4822,7 +4822,7 @@ voice_equalizer ENDP
 
 PUBLIC pe_emit
 pe_emit PROC
-    ; RCX=buffer, RDX=size -> EAX=ok
+    ; RCX=buffer, RDX=m_size -> EAX=ok
     push rbx
     mov rbx, rcx
 
@@ -4927,3 +4927,5 @@ main ENDP
 
 end_text:
 END
+
+

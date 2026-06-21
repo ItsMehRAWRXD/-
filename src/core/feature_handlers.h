@@ -84,6 +84,15 @@ CommandResult handlePlanOrchestratorViewStatus(const CommandContext& ctx);
 CommandResult handlePlanOrchestratorViewPlan(const CommandContext& ctx);
 
 // ============================================================================
+// HEXMAG JIT — CLI: !hexmag_init/!hexmag_emit/!hexmag_run/!hexmag_shutdown
+// ============================================================================
+
+CommandResult handleHexMagJIT_Init(const CommandContext& ctx);
+CommandResult handleHexMagJIT_Emit(const CommandContext& ctx);
+CommandResult handleHexMagJIT_Run(const CommandContext& ctx);
+CommandResult handleHexMagJIT_Shutdown(const CommandContext& ctx);
+
+// ============================================================================
 // SUB-AGENT — CLI: !subagent/!chain/!swarm, GUI: IDM_SUBAGENT_*
 // ============================================================================
 

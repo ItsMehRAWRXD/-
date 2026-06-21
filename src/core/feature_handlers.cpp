@@ -11,6 +11,7 @@
 #include "../../include/RawrXD_ColorSpace.h"
 #include "../agent/agentic_failure_detector.hpp"
 #include "../agent/agentic_puppeteer.hpp"
+#include "../agent/hexmag_client.hpp"
 #include "../agentic/NativeInferenceClient.h"
 #include "../server/gguf_server_hotpatch.hpp"
 #include "../win32app/Win32IDE.h"
@@ -1263,6 +1264,55 @@ CommandResult handlePlanOrchestratorViewPlan(const CommandContext& ctx)
     Win32IDE* ide = static_cast<Win32IDE*>(ctx.idePtr);
     ide->onPlanOrchestratorViewPlan();
     return CommandResult::ok("planOrchestrator.viewPlan");
+}
+
+// ============================================================================
+// HEXMAG JIT — Bridges HexMag CLI to SovereignKernelJIT emitter
+// ============================================================================
+
+CommandResult handleHexMagJIT_Init(const CommandContext& ctx)
+{
+    int rc = HexMagJIT_Init(4096);
+    if (rc == 0)
+        return CommandResult::ok("hexmag.jitInit: RWX buffer allocated (4096 bytes)");
+    return CommandResult::error("hexmag.jitInit: failed to allocate JIT buffer");
+}
+
+CommandResult handleHexMagJIT_Emit(const CommandContext& ctx)
+{
+    int bytes = HexMagJIT_EmitExit42();
+    if (bytes > 0)
+    {
+        static char buf[128];
+        snprintf(buf, sizeof(buf), "hexmag.jitEmit: emitted %d bytes (exit-42 function)", bytes);
+        return CommandResult::ok(buf);
+    }
+    return CommandResult::error("hexmag.jitEmit: emit failed");
+}
+
+CommandResult handleHexMagJIT_Run(const CommandContext& ctx)
+{
+    int result = HexMagJIT_Execute();
+    if (result == 42)
+        return CommandResult::ok("hexmag.jitRun: execution succeeded (returned 42)");
+    if (result == -2)
+        return CommandResult::error("hexmag.jitRun: access violation during execution");
+    if (result < 0)
+    {
+        static char buf[128];
+        snprintf(buf, sizeof(buf), "hexmag.jitRun: execution failed (rc=%d)", result);
+        return CommandResult::error(buf);
+    }
+    // Unexpected return value - treat as success with warning
+    static char buf[128];
+    snprintf(buf, sizeof(buf), "hexmag.jitRun: unexpected return value (%d)", result);
+    return CommandResult::ok(buf);
+}
+
+CommandResult handleHexMagJIT_Shutdown(const CommandContext& ctx)
+{
+    HexMagJIT_Shutdown();
+    return CommandResult::ok("hexmag.jitShutdown: JIT buffer freed");
 }
 
 // ============================================================================

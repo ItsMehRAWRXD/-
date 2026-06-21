@@ -1,12 +1,12 @@
 ; rawr_linear_allocator.asm
-; MASM x64 Linear Pool Allocator — replaces xmemory / std::allocator
+; MASM x64 Linear Pool Allocator ? replaces xmemory / std::allocator
 ; Uses HeapAlloc directly to bypass CRT heap management
 ;
 ; Exports:
-;   RawrLinearAlloc_Init      — initialize the process heap handle
-;   RawrLinearAlloc_Alloc     — allocate zeroed memory from process heap
-;   RawrLinearAlloc_Free      — free memory back to process heap
-;   RawrLinearAlloc_Realloc   — resize an existing block
+;   RawrLinearAlloc_Init      ? initialize the process heap handle
+;   RawrLinearAlloc_Alloc     ? allocate zeroed memory from process heap
+;   RawrLinearAlloc_Free      ? free memory back to process heap
+;   RawrLinearAlloc_Realloc   ? resize an existing block
 ;
 ; Calling convention: Microsoft x64 (RCX, RDX, R8, R9)
 
@@ -16,7 +16,7 @@ extern HeapFree       : proc
 extern HeapReAlloc    : proc
 
 .data
-    g_hHeap dq 0
+    EXTERNDEF g_hHeap : QWORD
     g_allocCount dq 0
     g_freeCount  dq 0
 
@@ -44,12 +44,12 @@ RawrLinearAlloc_Init endp
 
 ; ---------------------------------------------------------------------------
 ; RawrLinearAlloc_Alloc
-;   RCX = size in bytes
+;   RCX = m_size in bytes
 ;   Returns: RAX = pointer to zeroed memory, or NULL
 ; ---------------------------------------------------------------------------
 RawrLinearAlloc_Alloc proc public
     sub rsp, 40
-    mov r8, rcx                 ; dwBytes = size
+    mov r8, rcx                 ; dwBytes = m_size
     mov rdx, 8                  ; HEAP_ZERO_MEMORY
     mov rcx, g_hHeap
     call HeapAlloc
@@ -85,12 +85,12 @@ RawrLinearAlloc_Free endp
 ; ---------------------------------------------------------------------------
 ; RawrLinearAlloc_Realloc
 ;   RCX = old pointer (may be NULL)
-;   RDX = new size in bytes
+;   RDX = new m_size in bytes
 ;   Returns: RAX = new pointer, or NULL
 ; ---------------------------------------------------------------------------
 RawrLinearAlloc_Realloc proc public
     sub rsp, 40
-    mov r9, rdx                 ; dwBytes = new size
+    mov r9, rdx                 ; dwBytes = new m_size
     mov r8, rcx                 ; lpMem = old pointer
     mov rdx, 8                  ; HEAP_ZERO_MEMORY
     mov rcx, g_hHeap
@@ -112,3 +112,4 @@ RawrLinearAlloc_GetStats proc public
 RawrLinearAlloc_GetStats endp
 
 end
+

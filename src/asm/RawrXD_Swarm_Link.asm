@@ -99,7 +99,7 @@ RawrXD_Swarm_SyncTensorShard proc
     jne @net_err
 
     ; --- STEP B: SEND PAYLOAD ---
-    mov r8, [r13 + 40]      ; SwarmTensorShard.Size
+    mov r8, [r13 + 40]      ; SwarmTensorShard.m_size
     test r8, r8
     jz @push_done
 
@@ -121,7 +121,7 @@ RawrXD_Swarm_SyncTensorShard proc
     ; NOTE: Header is ALREADY RECEIVED by the caller (swarm_link_test.cpp)
     ; when performing a PULL, so we skip STEP A (Header Receive) here.
     
-    mov rsi, [r13 + 40]     ; SwarmTensorShard.Size
+    mov rsi, [r13 + 40]     ; SwarmTensorShard.m_size
     test rsi, rsi
     jz @pull_done
 
@@ -200,7 +200,7 @@ RawrXD_Swarm_RecvBuffer endp
 ; RCX = Model Source Handle (MMAP or File)
 ; RDX = Target Node Socket
 ; R8  = Shard Offset in Model
-; R9  = Shard Size to Stream
+; R9  = Shard m_size to Stream
 ; [RSP+40] = IOCP Handle
 ; Returns: RAX=1 (Queued), 0 (Error)
 ;-------------------------------------------------------------------------------
@@ -219,7 +219,7 @@ RawrXD_Swarm_StreamWeightsAsync proc
     mov r12, rcx            ; File Handle
     mov r13, rdx            ; Socket
     mov r14, r8             ; Offset
-    mov r15, r9             ; Size
+    mov r15, r9             ; m_size
     
     ; 1. Construct Overlapped structure on stack for async push
     ; [rsp+48] to [rsp+72] (simple overlapped stub)

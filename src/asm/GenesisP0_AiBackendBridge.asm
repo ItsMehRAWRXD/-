@@ -1,5 +1,5 @@
 ; ============================================================
-; GenesisP0_AiBackendBridge.asm — Raw WinHTTP to Ollama backend
+; GenesisP0_AiBackendBridge.asm ? Raw WinHTTP to Ollama backend
 ; Exports: AIBridge_Initialize, AIBridge_QueryModel, AIBridge_StreamResponse, AIBridge_Cleanup
 ; Zero dependencies beyond kernel32/winhttp
 ; WinHttpConnect expects LPCWSTR; use wstrServer for localhost.
@@ -33,7 +33,7 @@ sz_evt_ai_init  BYTE "[GenesisP0] AiBackendBridge Init",0
 wstrServer      WORD 006Ch, 006Fh, 0063h, 0061h, 006Ch, 0068h, 006Fh, 0073h, 0074h, 0
 szPost          BYTE "POST",0
 szEndpoint      BYTE "/api/generate",0
-szContentType   BYTE "Content-Type: application/json",0
+szContentType   BYTE "Content-m_type: application/json",0
 szJsonTemplate  BYTE '{"model":"%s","prompt":"%s","stream":true}',0
 g_readBuffer    BYTE 4096 DUP(0)
 
@@ -65,7 +65,7 @@ AIBridge_Initialize PROC
     jz @init_fail
     mov [g_hSession], rax
 
-    ; WinHttpConnect — server name must be LPCWSTR
+    ; WinHttpConnect ? server name must be LPCWSTR
     mov rcx, rax
     lea rdx, wstrServer         ; localhost (wide)
     movzx r8d, di               ; Port
@@ -96,7 +96,7 @@ AIBridge_Initialize ENDP
 
 ; ------------------------------------------------------------
 ; AIBridge_QueryModel(const char* model, const char* prompt, char* outBuf, UINT32 bufSize) -> INT (bytes read)
-; Stub: open request, send, receive, read loop; no sprintf — copy prompt only for stub.
+; Stub: open request, send, receive, read loop; no sprintf ? copy prompt only for stub.
 ; ------------------------------------------------------------
 AIBridge_QueryModel PROC
     push rbx
@@ -123,7 +123,7 @@ AIBridge_QueryModel PROC
     jz @query_fail
     mov [g_hRequest], rax
 
-    ; SendRequest — minimal stub body
+    ; SendRequest ? minimal stub body
     mov rcx, [g_hRequest]
     lea rdx, szContentType
     mov r8d, -1                 ; Length auto
@@ -139,7 +139,7 @@ AIBridge_QueryModel PROC
     xor edx, edx
     call WinHttpReceiveResponse
 
-    ; Read loop stub — return 0 bytes if no sprintf/body built
+    ; Read loop stub ? return 0 bytes if no sprintf/body built
     xor r12d, r12d              ; Total bytes
 
 @read_done:
@@ -207,3 +207,4 @@ AIBridge_Cleanup PROC
 AIBridge_Cleanup ENDP
 
 END
+

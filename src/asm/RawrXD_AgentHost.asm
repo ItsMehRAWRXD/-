@@ -4,8 +4,6 @@
 ; Replaces VS Code Extension Host with pure MASM64 zero-dep implementation
 ; Features: Command execution, File I/O, Tool API, IPC, Permission system
 ; =============================================================================
-OPTION CASEMAP:NONE
-; OPTION WIN64:3  ; UASM-only, not needed for ml64
 
 ; ============= HEADERS ============
 include masm64_compat.inc
@@ -20,6 +18,19 @@ PERM_FILE_RW    equ 0002h
 PERM_NETWORK    equ 0004h
 PERM_SHELL      equ 0008h
 TRACE_BUFFER    equ 65536
+
+; Windows constants
+ERROR_ALREADY_EXISTS        equ 183h
+PIPE_ACCESS_DUPLEX          equ 00000003h
+PIPE_TYPE_MESSAGE           equ 00000004h
+PIPE_READMODE_MESSAGE       equ 00000002h
+PIPE_WAIT                   equ 00000000h
+PIPE_UNLIMITED_INSTANCES    equ 255
+MAILSLOT_WAIT_FOREVER       equ 0FFFFFFFFh
+CREATE_NO_WINDOW            equ 08000000h
+CREATE_NEW_PROCESS_GROUP    equ 00000200h
+SIZEOF_STARTUPINFO          equ 104
+SIZEOF_PROCESS_INFO         equ 24
 
 ; ============= STRUCTS ============
 EXTENSION_ENTRY struct
@@ -38,6 +49,34 @@ AGENT_CMD struct
     payload_sz  dq ?
     payload     db MAX_CMD_LEN dup(?)
 AGENT_CMD ends
+
+STARTUPINFO struct
+    cb                  dd ?
+    lpReserved          dq ?
+    lpDesktop           dq ?
+    lpTitle             dq ?
+    dwX                 dd ?
+    dwY                 dd ?
+    dwXSize             dd ?
+    dwYSize             dd ?
+    dwXCountChars       dd ?
+    dwYCountChars       dd ?
+    dwFillAttribute     dd ?
+    dwFlags             dd ?
+    wShowWindow         dw ?
+    cbReserved2         dw ?
+    lpReserved2         dq ?
+    hStdInput           dq ?
+    hStdOutput          dq ?
+    hStdError           dq ?
+STARTUPINFO ends
+
+PROCESS_INFORMATION struct
+    hProcess            dq ?
+    hThread             dq ?
+    dwProcessId         dd ?
+    dwThreadId          dd ?
+PROCESS_INFORMATION ends
 
 ; ============= DATA ==============
 .data
@@ -63,25 +102,23 @@ szMethodFile    db 'fileOperation',0
 szMethodTool    db 'invokeTool',0
 
 ; ============= CODE ==============
-Run_Autonomous_Heal_Cycle PROC
-    ; Agent-internal self-reflection and healing stub
-    ; Implementation handles dynamic symbol re-binding
-    ret
-Run_Autonomous_Heal_Cycle ENDP
 .code
 
 ; -----------------------------------------------------------------------------
 ; Entry Point
 ; -----------------------------------------------------------------------------
 RawrXD_AgentHost proc FRAME
+    sub rsp, 28h
     .allocstack 28h
     .endprolog
-    sub rsp, 28h
 
     ; Singleton check
-    invoke CreateMutexA, 0, 1, addr szAgentMutex
+    lea rcx, szAgentMutex
+    xor rdx, rdx
+    mov r8d, 1
+    call CreateMutexA
     mov g_hMutex, rax
-    invoke GetLastError
+    call GetLastError
     cmp eax, ERROR_ALREADY_EXISTS
     je @@already_running
 
@@ -96,37 +133,52 @@ RawrXD_AgentHost proc FRAME
     call AgentLoop
 
     ; Cleanup
-    invoke CloseHandle, g_hMutex
+    mov rcx, g_hMutex
+    call CloseHandle
 
 @@already_running:
     xor eax, eax
-    pop r12
-    add rsp, 48h
+    add rsp, 28h
     ret
 RawrXD_AgentHost endp
+
+; -----------------------------------------------------------------------------
+; Agent-internal self-reflection and healing stub
+; -----------------------------------------------------------------------------
+Run_Autonomous_Heal_Cycle proc
+    ; Implementation handles dynamic symbol re-binding
+    ret
+Run_Autonomous_Heal_Cycle endp
 
 ; -----------------------------------------------------------------------------
 ; Initialize IPC Pipes
 ; -----------------------------------------------------------------------------
 InitIPC proc FRAME
+    sub rsp, 28h
     .allocstack 28h
     .endprolog
-    sub rsp, 28h
 
     ; Create named pipe for agent commands
-    invoke CreateNamedPipeA, addr szPipeName, \
-            PIPE_ACCESS_DUPLEX, \
-            PIPE_TYPE_MESSAGE or PIPE_READMODE_MESSAGE or PIPE_WAIT, \
-            PIPE_UNLIMITED_INSTANCES, \
-            65536, 65536, 0, 0
+    lea rcx, szPipeName
+    mov rdx, PIPE_ACCESS_DUPLEX
+    mov r8d, PIPE_TYPE_MESSAGE or PIPE_READMODE_MESSAGE or PIPE_WAIT
+    mov r9d, PIPE_UNLIMITED_INSTANCES
+    mov dword ptr [rsp+20h], 65536      ; out buffer size
+    mov dword ptr [rsp+28h], 65536      ; in buffer size
+    mov qword ptr [rsp+30h], 0          ; default timeout
+    mov qword ptr [rsp+38h], 0          ; security attr
+    call CreateNamedPipeA
     mov g_hPipe, rax
 
     ; Create mailslot for tracing
-    invoke CreateMailslotA, addr szMailSlotName, 0, MAILSLOT_WAIT_FOREVER, 0
+    lea rcx, szMailSlotName
+    xor rdx, rdx                         ; max message size (0 = any)
+    mov r8d, MAILSLOT_WAIT_FOREVER       ; read timeout
+    xor r9, r9                           ; security attr
+    call CreateMailslotA
     mov g_hMailSlot, rax
 
-    pop r12
-    add rsp, 48h
+    add rsp, 28h
     ret
 InitIPC endp
 
@@ -134,25 +186,24 @@ InitIPC endp
 ; Initialize Tracing System (cursorTracing API)
 ; -----------------------------------------------------------------------------
 InitTracing proc FRAME
+    sub rsp, 28h
     .allocstack 28h
     .endprolog
-    sub rsp, 28h
 
     ; Set up trace buffer with ring buffer semantics
     lea rcx, g_TraceBuffer
     mov g_TraceIdx, rcx
 
     ; Create async trace reader thread
-    xor ecx, ecx
-    lea rdx, TraceReaderThread
-    xor r8, r8
-    xor r9, r9
-    push 0
-    push 0
+    xor rcx, rcx                         ; security attr
+    lea rdx, TraceReaderThread           ; thread proc
+    xor r8, r8                           ; stack size
+    xor r9, r9                           ; param
+    mov qword ptr [rsp+20h], 0           ; flags
+    mov qword ptr [rsp+28h], 0           ; thread id
     call CreateThread
 
-    pop r12
-    add rsp, 48h
+    add rsp, 28h
     ret
 InitTracing endp
 
@@ -160,24 +211,27 @@ InitTracing endp
 ; Main Agent Loop (replaces VS Code extension host)
 ; -----------------------------------------------------------------------------
 AgentLoop proc FRAME
-    sub rsp, 20h
-    call Run_Autonomous_Heal_Cycle
-    add rsp, 20h
-    .pushreg r12
-    .allocstack 48h
+    sub rsp, 58h
+    .allocstack 58h
     .endprolog
-    sub rsp, 48h
 
 @@loop:
     cmp g_Running, 0
     je @@done
 
     ; Wait for pipe connection (agent request)
-    invoke ConnectNamedPipe, g_hPipe, 0
+    mov rcx, g_hPipe
+    xor rdx, rdx
+    call ConnectNamedPipe
 
     ; Read command structure
-    lea r12, [rsp+20h]  ; AGENT_CMD on stack
-    invoke ReadFile, g_hPipe, r12, sizeof AGENT_CMD, addr [rsp+40h], 0
+    lea r12, [rsp+20h]                   ; AGENT_CMD on stack
+    mov rcx, g_hPipe
+    mov rdx, r12
+    mov r8, SIZEOF AGENT_CMD
+    lea r9, [rsp+40h]                    ; bytes read
+    mov qword ptr [rsp+20h], 0           ; overlapped
+    call ReadFile
 
     ; Validate permissions
     mov eax, (AGENT_CMD ptr [r12]).perm_req
@@ -187,13 +241,13 @@ AgentLoop proc FRAME
 
     ; Route command
     mov eax, (AGENT_CMD ptr [r12]).cmd_id
-    cmp eax, 1          ; executeCommand
+    cmp eax, 1                           ; executeCommand
     je @@do_exec
-    cmp eax, 2          ; fileOperation
+    cmp eax, 2                           ; fileOperation
     je @@do_file
-    cmp eax, 3          ; invokeTool
+    cmp eax, 3                           ; invokeTool
     je @@do_tool
-    cmp eax, 4          ; extensionLoad
+    cmp eax, 4                           ; extensionLoad
     je @@do_ext_load
     jmp @@unknown_cmd
 
@@ -218,70 +272,92 @@ AgentLoop proc FRAME
     jmp @@send_response
 
 @@permission_denied:
-    mov rax, 403        ; HTTP 403 Forbidden equivalent
+    mov rax, 403                         ; HTTP 403 Forbidden equivalent
     jmp @@send_raw
 
 @@unknown_cmd:
-    mov rax, 404        ; Unknown command
+    mov rax, 404                         ; Unknown command
 
 @@send_response:
     ; Send result back via pipe
-    invoke WriteFile, g_hPipe, rax, 8, addr [rsp+40h], 0
+    mov rcx, g_hPipe
+    mov rdx, rax
+    mov r8, 8
+    lea r9, [rsp+40h]                    ; bytes written
+    mov qword ptr [rsp+20h], 0           ; overlapped
+    call WriteFile
 
 @@send_raw:
-    invoke FlushFileBuffers, g_hPipe
-    invoke DisconnectNamedPipe, g_hPipe
+    mov rcx, g_hPipe
+    call FlushFileBuffers
+    mov rcx, g_hPipe
+    call DisconnectNamedPipe
 
     jmp @@loop
 
 @@done:
-    add rsp, 48h
+    add rsp, 58h
     ret
 AgentLoop endp
 
 ; -----------------------------------------------------------------------------
 ; Execute Command with Permission Check (control API)
 ; -----------------------------------------------------------------------------
-ExecuteAgentCommand proc
+ExecuteAgentCommand proc FRAME
     sub rsp, 128h
+    .allocstack 128h
+    .endprolog
 
     ; Parse JSON-like command: {"cmd":"...","args":"..."}
-    mov rsi, rcx        ; payload
+    mov rsi, rcx                         ; payload
 
     ; Security: Check against shell escape patterns
+    mov rcx, rsi
     call SanitizeCommand
     test eax, eax
     jz @@blocked
 
     ; Create process with redirected I/O
-    lea rdi, [rsp+20h]  ; STARTUPINFO
+    lea rdi, [rsp+20h]                   ; STARTUPINFO
     mov rcx, rdi
     xor edx, edx
-    mov r8d, sizeof STARTUPINFO
+    mov r8d, SIZEOF_STARTUPINFO
     call memset
 
-    mov (STARTUPINFO ptr [rdi]).cb, sizeof STARTUPINFO
+    mov (STARTUPINFO ptr [rdi]).cb, SIZEOF_STARTUPINFO
 
-    lea rbx, [rsp+80h]  ; PROCESS_INFORMATION
+    lea rbx, [rsp+80h]                   ; PROCESS_INFORMATION
 
     ; Execute with CREATE_NO_WINDOW for agent background ops
-    invoke CreateProcessA, 0, rsi, 0, 0, 0, \
-            CREATE_NO_WINDOW or CREATE_NEW_PROCESS_GROUP, \
-            0, 0, rdi, rbx
+    xor rcx, rcx                         ; app name
+    mov rdx, rsi                         ; command line
+    xor r8, r8                           ; process attr
+    xor r9, r9                           ; thread attr
+    mov qword ptr [rsp+20h], 0           ; inherit handles
+    mov dword ptr [rsp+28h], CREATE_NO_WINDOW or CREATE_NEW_PROCESS_GROUP
+    mov qword ptr [rsp+30h], 0           ; environment
+    mov qword ptr [rsp+38h], 0           ; current dir
+    mov rax, rdi
+    mov qword ptr [rsp+40h], rax         ; startupinfo
+    mov rax, rbx
+    mov qword ptr [rsp+48h], rax         ; process info
+    call CreateProcessA
 
     test eax, eax
     jz @@failed
 
     ; Wait for completion (with timeout for safety)
     mov rcx, (PROCESS_INFORMATION ptr [rbx]).hProcess
-    mov edx, 30000      ; 30 second timeout max
+    mov edx, 30000                       ; 30 second timeout max
     call WaitForSingleObject
 
     ; Cleanup handles
-    invoke CloseHandle, (PROCESS_INFORMATION ptr [rbx]).hProcess
-    invoke CloseHandle, (PROCESS_INFORMATION ptr [rbx]).hThread
+    mov rcx, (PROCESS_INFORMATION ptr [rbx]).hProcess
+    call CloseHandle
+    mov rcx, (PROCESS_INFORMATION ptr [rbx]).hThread
+    call CloseHandle
 
-    mov rax, 200        ; Success code
+    mov rax, 200                         ; Success code
     jmp @@done
 
 @@blocked:
@@ -299,29 +375,34 @@ ExecuteAgentCommand endp
 ; -----------------------------------------------------------------------------
 ; File Operation Handler (fileOperation API)
 ; -----------------------------------------------------------------------------
-HandleFileOperation proc
+HandleFileOperation proc FRAME
     sub rsp, 28h
+    .allocstack 28h
+    .endprolog
 
     ; Parse: {"op":"read|write|delete","path":"...","content":"..."}
     mov rsi, rcx
 
     ; Validate path (sandbox check)
+    mov rcx, rsi
     call ValidatePath
     test eax, eax
     jz @@invalid_path
 
     ; Determine operation
     ; Simplified: check first byte pattern for read vs write
-    cmp byte ptr [rsi], 'r'     ; read
+    cmp byte ptr [rsi], 'r'              ; read
     je @@do_read
-    cmp byte ptr [rsi], 'w'     ; write
+    cmp byte ptr [rsi], 'w'              ; write
     je @@do_write
 
 @@do_read:
+    mov rcx, rsi
     call AgentReadFile
     jmp @@done
 
 @@do_write:
+    mov rcx, rsi
     call AgentWriteFile
     jmp @@done
 
@@ -329,21 +410,22 @@ HandleFileOperation proc
     mov rax, 403
 
 @@done:
-    pop r12
-    add rsp, 48h
+    add rsp, 28h
     ret
 HandleFileOperation endp
 
 ; -----------------------------------------------------------------------------
 ; Tool Invocation (invokeTool API)
 ; -----------------------------------------------------------------------------
-InvokeToolAPI proc
+InvokeToolAPI proc FRAME
     sub rsp, 28h
+    .allocstack 28h
+    .endprolog
 
     ; Tool routing table
     ; Tool IDs: 1=search, 2=terminal, 3=git, 4=lsp, 5=debugger
 
-    mov eax, dword ptr [rcx]    ; tool ID
+    mov eax, dword ptr [rcx]             ; tool ID
 
     cmp eax, 1
     je @@tool_search
@@ -356,7 +438,7 @@ InvokeToolAPI proc
     cmp eax, 5
     je @@tool_debug
 
-    mov rax, 404    ; Unknown tool
+    mov rax, 404                          ; Unknown tool
     jmp @@done
 
 @@tool_search:
@@ -379,16 +461,17 @@ InvokeToolAPI proc
     call ToolDebugBridge
 
 @@done:
-    pop r12
-    add rsp, 48h
+    add rsp, 28h
     ret
 InvokeToolAPI endp
 
 ; -----------------------------------------------------------------------------
 ; Extension Loader (replaces VS Code extensionService)
 ; -----------------------------------------------------------------------------
-LoadExtension proc
+LoadExtension proc FRAME
     sub rsp, 48h
+    .allocstack 48h
+    .endprolog
 
     ; Find free slot
     xor ebx, ebx
@@ -397,11 +480,11 @@ LoadExtension proc
 @@find_slot:
     cmp (EXTENSION_ENTRY ptr [rdi]).active, 0
     je @@found_slot
-    add rdi, sizeof EXTENSION_ENTRY
+    add rdi, SIZEOF EXTENSION_ENTRY
     inc ebx
     cmp ebx, MAX_EXTENSIONS
     jb @@find_slot
-    mov rax, 507    ; Insufficient space
+    mov rax, 507                        ; Insufficient space
     jmp @@done
 
 @@found_slot:
@@ -415,15 +498,15 @@ LoadExtension proc
 
     ; Spawn extension in isolated thread
     lea rcx, ExtensionThreadProc
-    mov rdx, rdi    ; pass EXTENSION_ENTRY ptr
+    mov rdx, rdi                        ; pass EXTENSION_ENTRY ptr
     xor r8, r8
     xor r9, r9
-    push 0
-    push 0
+    mov qword ptr [rsp+20h], 0          ; flags
+    mov qword ptr [rsp+28h], 0          ; thread id
     call CreateThread
     mov (EXTENSION_ENTRY ptr [rdi]).hThread, rax
 
-    mov rax, 200    ; Success
+    mov rax, 200                        ; Success
 
 @@done:
     add rsp, 48h
@@ -433,11 +516,18 @@ LoadExtension endp
 ; -----------------------------------------------------------------------------
 ; Extension Thread (isolated execution context)
 ; -----------------------------------------------------------------------------
-ExtensionThreadProc proc
-    mov r12, rcx    ; EXTENSION_ENTRY ptr
+ExtensionThreadProc proc FRAME
+    sub rsp, 28h
+    .allocstack 28h
+    .savereg r12, 20h
+    .endprolog
+
+    mov r12, rcx                         ; EXTENSION_ENTRY ptr
 
     ; Set thread description for debugging
-    invoke SetThreadDescription, -2, addr szApiCursor  ; GetCurrentThread = -2
+    mov rcx, -2                          ; GetCurrentThread pseudo-handle
+    lea rdx, szApiCursor
+    call SetThreadDescription
 
     ; Extension execution loop
     ; Extensions communicate via IPC back to host
@@ -449,19 +539,24 @@ ExtensionThreadProc proc
     jz @@ext_done
 
     ; Yield to prevent CPU spinning
-    invoke Sleep, 1
+    mov ecx, 1
+    call Sleep
     jmp @@ext_loop
 
 @@ext_done:
     xor eax, eax
+    mov r12, [rsp+20h]                   ; restore r12
+    add rsp, 28h
     ret
 ExtensionThreadProc endp
 
 ; -----------------------------------------------------------------------------
 ; Security: Validate Path Sandbox
 ; -----------------------------------------------------------------------------
-ValidatePath proc
+ValidatePath proc FRAME
     sub rsp, 28h
+    .allocstack 28h
+    .endprolog
 
     ; Check path doesn't escape workspace
     ; Simple check: no ".." sequences
@@ -482,16 +577,17 @@ ValidatePath proc
     xor eax, eax
 
 @@done:
-    pop r12
-    add rsp, 48h
+    add rsp, 28h
     ret
 ValidatePath endp
 
 ; -----------------------------------------------------------------------------
 ; Security: Sanitize Command
 ; -----------------------------------------------------------------------------
-SanitizeCommand proc
+SanitizeCommand proc FRAME
     sub rsp, 28h
+    .allocstack 28h
+    .endprolog
 
     ; Block dangerous patterns: |, ;, `, $(), &&, ||
     mov rsi, rcx
@@ -529,8 +625,7 @@ SanitizeCommand proc
     mov eax, 1
 
 @@done:
-    pop r12
-    add rsp, 48h
+    add rsp, 28h
     ret
 SanitizeCommand endp
 
@@ -576,26 +671,33 @@ AgentWriteFile endp
 ; -----------------------------------------------------------------------------
 ; Trace Reader Thread (cursorTracing)
 ; -----------------------------------------------------------------------------
-TraceReaderThread proc
-    sub rsp, 28h
+TraceReaderThread proc FRAME
+    sub rsp, 38h
+    .allocstack 38h
+    .endprolog
 
 @@trace_loop:
     lea rcx, g_TraceBuffer
     mov rdx, TRACE_BUFFER
-    xor r8, r8
-    invoke ReadFile, g_hMailSlot, rcx, rdx, addr r8, 0
+    xor r8, r8                          ; bytes read (ptr)
+    lea rax, [rsp+20h]
+    mov qword ptr [rsp+20h], rax        ; bytes read location
+    mov rcx, g_hMailSlot
+    lea rdx, g_TraceBuffer
+    mov r8, TRACE_BUFFER
+    lea r9, [rsp+28h]                   ; bytes read
+    mov qword ptr [rsp+20h], 0          ; overlapped
+    call ReadFile
 
     test eax, eax
     jz @@trace_loop
 
     ; Process trace data - write to debug console or file
-    invoke OutputDebugStringA, addr g_TraceBuffer
+    lea rcx, g_TraceBuffer
+    call OutputDebugStringA
 
     jmp @@trace_loop
 
-    pop r12
-    add rsp, 48h
-    ret
 TraceReaderThread endp
 
 ; -----------------------------------------------------------------------------
@@ -629,3 +731,4 @@ ValidatePermissions endp
 public RawrXD_AgentHost
 
 end
+

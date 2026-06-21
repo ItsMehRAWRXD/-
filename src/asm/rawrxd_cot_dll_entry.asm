@@ -1,5 +1,5 @@
 ; =============================================================================
-; rawrxd_cot_dll_entry.asm — DLL Entry Point + SRW Lock + TLS for CoT Engine
+; rawrxd_cot_dll_entry.asm ? DLL Entry Point + SRW Lock + TLS for CoT Engine
 ; =============================================================================
 ;
 ; Phase 37.1: Enterprise-hardened DllMain with:
@@ -18,16 +18,16 @@
 ;    +16: QWORD  FaultAddress (memory address that caused AV)
 ;
 ; Exports:
-;   DllMain                 — DLL entry point (called by loader)
-;   Acquire_CoT_Lock        — Acquire exclusive SRW lock
-;   Release_CoT_Lock        — Release exclusive SRW lock
-;   Acquire_CoT_Lock_Shared — Acquire shared SRW lock (for reads)
-;   Release_CoT_Lock_Shared — Release shared SRW lock
-;   CoT_Get_Thread_Count    — Get count of attached threads
-;   CoT_TLS_GetLastError    — Get per-thread last error code
-;   CoT_TLS_GetFaultRIP     — Get per-thread fault RIP
-;   CoT_TLS_SetError        — Set per-thread error (called by SEH handler)
-;   CoT_Has_Large_Pages     — Returns 1 if large pages are available
+;   DllMain                 ? DLL entry point (called by loader)
+;   Acquire_CoT_Lock        ? Acquire exclusive SRW lock
+;   Release_CoT_Lock        ? Release exclusive SRW lock
+;   Acquire_CoT_Lock_Shared ? Acquire shared SRW lock (for reads)
+;   Release_CoT_Lock_Shared ? Release shared SRW lock
+;   CoT_Get_Thread_Count    ? Get count of attached threads
+;   CoT_TLS_GetLastError    ? Get per-thread last error code
+;   CoT_TLS_GetFaultRIP     ? Get per-thread fault RIP
+;   CoT_TLS_SetError        ? Set per-thread error (called by SEH handler)
+;   CoT_Has_Large_Pages     ? Returns 1 if large pages are available
 ;
 ; Architecture: x64 MASM | Windows ABI | No CRT | No exceptions
 ; Build: ml64 /c /Zi /Zd /Fo rawrxd_cot_dll_entry.obj rawrxd_cot_dll_entry.asm
@@ -73,7 +73,7 @@ EXTERN OpenProcessToken: PROC
 EXTERN LookupPrivilegeValueA: PROC
 EXTERN GetCurrentProcess: PROC
 
-; Phase 39–42 initialization procs (from rawrxd_cot_phase39.asm)
+; Phase 39?42 initialization procs (from rawrxd_cot_phase39.asm)
 EXTERN CoT_SelectCopyEngine: PROC
 EXTERN CoT_UpdateTelemetry: PROC
 EXTERN CoT_EnableMultiProducer: PROC
@@ -93,13 +93,13 @@ DLL_PROCESS_DETACH      EQU     0
 ; SRW Lock is a single pointer-sized value on Windows (8 bytes on x64)
 SRWLOCK_SIZE            EQU     8
 
-; TLS block layout (per-thread state, 32 bytes — Phase 39 extended)
+; TLS block layout (per-thread state, 32 bytes ? Phase 39 extended)
 TLS_BLOCK_SIZE          EQU     32
 TLS_OFF_LAST_ERROR      EQU     0           ; DWORD  LastErrorCode
 TLS_OFF_NUMA_NODE       EQU     4           ; DWORD  NUMA node affinity (Phase 39)
 TLS_OFF_FAULT_RIP       EQU     8           ; QWORD  RIP where AV occurred
 TLS_OFF_FAULT_ADDR      EQU     16          ; QWORD  Address that faulted
-TLS_OFF_APPEND_COUNT    EQU     24          ; QWORD  Per-thread append stats (Phase 39)
+TLS_OFF_APPEND_COUNT    EQU     24          ; QWORD  Per-thread append m_stats (Phase 39)
 
 ; TlsAlloc failure sentinel
 TLS_OUT_OF_INDEXES      EQU     0FFFFFFFFh
@@ -135,7 +135,7 @@ g_largePageAvailable    DD 0                ; 1 if SeLockMemoryPrivilege held
 g_processHeap           DQ 0
 
 ; hInstance saved for DisableThreadLibraryCalls
-g_hInstance             DQ 0
+EXTERNDEF g_hInstance : QWORD
 
 ; =============================================================================
 ;                     READ-ONLY STRINGS (.const)
@@ -144,10 +144,10 @@ g_hInstance             DQ 0
 
 ALIGN 8
 
-szDll_ProcessAttach     DB "[CoT-DLL] DllMain: DLL_PROCESS_ATTACH — initializing SRW lock + TLS.", 0
-szDll_ProcessDetach     DB "[CoT-DLL] DllMain: DLL_PROCESS_DETACH — shutting down engine + TLS.", 0
-szDll_ThreadAttach      DB "[CoT-DLL] DllMain: DLL_THREAD_ATTACH — thread count incremented.", 0
-szDll_ThreadDetach      DB "[CoT-DLL] DllMain: DLL_THREAD_DETACH — thread count decremented.", 0
+szDll_ProcessAttach     DB "[CoT-DLL] DllMain: DLL_PROCESS_ATTACH ? initializing SRW lock + TLS.", 0
+szDll_ProcessDetach     DB "[CoT-DLL] DllMain: DLL_PROCESS_DETACH ? shutting down engine + TLS.", 0
+szDll_ThreadAttach      DB "[CoT-DLL] DllMain: DLL_THREAD_ATTACH ? thread count incremented.", 0
+szDll_ThreadDetach      DB "[CoT-DLL] DllMain: DLL_THREAD_DETACH ? thread count decremented.", 0
 szDll_LockInit          DB "[CoT-DLL] SRW lock initialized successfully.", 0
 szDll_LockAcquire       DB "[CoT-DLL] Acquire_CoT_Lock: exclusive lock acquired.", 0
 szDll_LockRelease       DB "[CoT-DLL] Release_CoT_Lock: exclusive lock released.", 0
@@ -156,14 +156,14 @@ szDll_AutoInitOK        DB "[CoT-DLL] CoT core arena initialized OK.", 0
 szDll_AutoInitFail      DB "[CoT-DLL] WARNING: CoT core arena init FAILED during attach!", 0
 szDll_ShutdownOK        DB "[CoT-DLL] Engine shutdown complete.", 0
 szDll_TlsAllocOK        DB "[CoT-DLL] TLS slot allocated successfully.", 0
-szDll_TlsAllocFail      DB "[CoT-DLL] WARNING: TlsAlloc FAILED — per-thread errors disabled!", 0
+szDll_TlsAllocFail      DB "[CoT-DLL] WARNING: TlsAlloc FAILED ? per-thread errors disabled!", 0
 szDll_TlsFreed          DB "[CoT-DLL] TLS slot freed.", 0
 szDll_DisableThreadCB   DB "[CoT-DLL] DisableThreadLibraryCalls set (data-plane DLL).", 0
-szDll_LargePageOK       DB "[CoT-DLL] SeLockMemoryPrivilege available — large pages enabled.", 0
+szDll_LargePageOK       DB "[CoT-DLL] SeLockMemoryPrivilege available ? large pages enabled.", 0
 szDll_LargePageNo       DB "[CoT-DLL] Large pages NOT available (privilege not held).", 0
 szPriv_SeLockMemory     DB "SeLockMemoryPrivilege", 0
 
-; Phase 39–42 debug strings
+; Phase 39?42 debug strings
 szDll_Phase39Init       DB "[CoT-DLL] Phase 39-42: Copy engine + telemetry initialized.", 0
 szDll_NumaTag           DB "[CoT-DLL] NUMA affinity tagged for main thread.", 0
 
@@ -173,7 +173,7 @@ szDll_NumaTag           DB "[CoT-DLL] NUMA affinity tagged for main thread.", 0
 .code
 
 ; =============================================================================
-; Internal: tls_alloc_block — Allocate and zero a TLS block for current thread
+; Internal: tls_alloc_block ? Allocate and zero a TLS block for current thread
 ; Returns: RAX = pointer to TLS block, or 0 on failure
 ; =============================================================================
 tls_alloc_block PROC FRAME
@@ -215,7 +215,7 @@ tls_alloc_block PROC FRAME
 tls_alloc_block ENDP
 
 ; =============================================================================
-; Internal: tls_free_block — Free TLS block for current thread
+; Internal: tls_free_block ? Free TLS block for current thread
 ; =============================================================================
 tls_free_block PROC FRAME
     push    rbx
@@ -260,7 +260,7 @@ tls_free_block ENDP
 ;
 ; Uses LookupPrivilegeValueA to verify the privilege exists.
 ; Actual privilege enabling (AdjustTokenPrivileges) is left to the
-; host process or installer — we just probe here.
+; host process or installer ? we just probe here.
 ; =============================================================================
 check_large_page_privilege PROC FRAME
     push    rbx
@@ -287,7 +287,7 @@ check_large_page_privilege PROC FRAME
     test    eax, eax
     jz      @@clp_no
 
-    ; Privilege exists — mark available
+    ; Privilege exists ? mark available
     ; NOTE: Actually *having* it enabled requires policy/admin setup.
     ; We optimistically flag it; CoT_Initialize_Core will try MEM_LARGE_PAGES
     ; and fall back to normal pages on failure.
@@ -315,7 +315,7 @@ check_large_page_privilege PROC FRAME
 check_large_page_privilege ENDP
 
 ; =============================================================================
-; DllMain — DLL entry point
+; DllMain ? DLL entry point
 ;
 ; BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 ;
@@ -352,7 +352,7 @@ DllMain PROC FRAME
     je      @@dm_process_detach
 
     ; DLL_THREAD_ATTACH and DLL_THREAD_DETACH are disabled by
-    ; DisableThreadLibraryCalls — if we somehow get here, just return TRUE.
+    ; DisableThreadLibraryCalls ? if we somehow get here, just return TRUE.
     ; (Kept for safety in case DisableThreadLibraryCalls was not called.)
     cmp     r13d, DLL_THREAD_ATTACH
     je      @@dm_thread_attach
@@ -360,7 +360,7 @@ DllMain PROC FRAME
     cmp     r13d, DLL_THREAD_DETACH
     je      @@dm_thread_detach
 
-    ; Unknown reason — return TRUE
+    ; Unknown reason ? return TRUE
     jmp     @@dm_ok
 
 ; ---- DLL_PROCESS_ATTACH ----
@@ -741,7 +741,7 @@ CoT_TLS_SetError PROC FRAME
     test    rax, rax
     jz      @@tse_alloc
 
-    ; TLS block exists — write directly
+    ; TLS block exists ? write directly
     jmp     @@tse_write
 
 @@tse_alloc:
@@ -780,3 +780,5 @@ CoT_Has_Large_Pages PROC
 CoT_Has_Large_Pages ENDP
 
 END
+
+

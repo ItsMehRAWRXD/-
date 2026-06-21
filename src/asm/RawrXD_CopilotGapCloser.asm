@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_CopilotGapCloser.asm — The Missing 60%: Pure x64 MASM
+; RawrXD_CopilotGapCloser.asm ? The Missing 60%: Pure x64 MASM
 ; =============================================================================
 ; Production-grade kernels for Copilot feature parity:
 ;   Module 1: HNSW Vector Database (FAISS-equivalent semantic search)
@@ -48,19 +48,19 @@ EXTERNDEF GetTickCount64:PROC
 ; Constants
 ; =============================================================================
 
-; ── Vector DB (HNSW) ──
-VECDB_DIMENSIONS          EQU 768           ; BERT-base embedding size
+; ?? Vector DB (HNSW) ??
+VECDB_DIMENSIONS          EQU 768           ; BERT-base embedding m_size
 VECDB_MAX_VECTORS         EQU 1000000       ; 1M code snippets
 VECDB_M                   EQU 16            ; HNSW M parameter (max links/layer)
 VECDB_M_MAX0              EQU 32            ; Max links at layer 0 (2*M)
 VECDB_EF_CONSTRUCTION     EQU 200           ; ef during index build
 VECDB_EF_SEARCH           EQU 50            ; ef during search
 VECDB_MAX_LEVEL           EQU 16            ; Max HNSW layers
-VECDB_ML                  EQU 3             ; 1/ln(M) ≈ 0.36, scaled ×8 → 3
+VECDB_ML                  EQU 3             ; 1/ln(M) ? 0.36, scaled ?8 ? 3
 VECDB_BYTES_PER_VEC       EQU (VECDB_DIMENSIONS * 4) ; 3072 bytes
-VECDB_HEAP_CAPACITY       EQU 256           ; Max heap size for search
+VECDB_HEAP_CAPACITY       EQU 256           ; Max heap m_size for search
 
-; ── Composer ──
+; ?? Composer ??
 COMPOSER_MAX_FILES        EQU 256
 COMPOSER_MAX_OPS          EQU 4096
 COMPOSER_STATE_IDLE       EQU 0
@@ -76,7 +76,7 @@ COMPOSER_JOURNAL_MAGIC    EQU 4A4E524Ch     ; "LRNJ" (little-endian)
 MOVEFILE_REPLACE_EXISTING EQU 1
 MOVEFILE_WRITE_THROUGH    EQU 8
 
-; ── CRDT ──
+; ?? CRDT ??
 CRDT_MAX_PEERS            EQU 16
 CRDT_MAX_DOC_SIZE         EQU 16777216      ; 16MB
 CRDT_OP_INSERT            EQU 0
@@ -85,25 +85,25 @@ CRDT_OP_RETAIN            EQU 2
 CRDT_OPLOG_SIZE           EQU 1048576       ; 1MB ring buffer
 CRDT_MAX_CONTENT          EQU 256
 
-; ── Git Context ──
+; ?? Git Context ??
 GIT_MAX_DIFF_SIZE         EQU 1048576
 GIT_CONTEXT_LINES         EQU 10
 GIT_MAX_HUNKS             EQU 512
 
-; ── ABA-safe tagged pointer ──
+; ?? ABA-safe tagged pointer ??
 ABA_TAG_BITS              EQU 32            ; Upper 32 bits = version tag
 
-; ── GlobalAlloc flags ──
+; ?? GlobalAlloc flags ??
 GMEM_FIXED                EQU 0000h
 GMEM_ZEROINIT             EQU 0040h
 GPTR                      EQU (GMEM_FIXED OR GMEM_ZEROINIT)
 
-; ── Virtual Memory flags ──
+; ?? Virtual Memory flags ??
 MEM_COMMIT                EQU 1000h
 MEM_RESERVE               EQU 2000h
 PAGE_READWRITE            EQU 04h
 
-; ── File access flags ──
+; ?? File access flags ??
 GENERIC_WRITE             EQU 40000000h
 CREATE_ALWAYS             EQU 2
 
@@ -128,9 +128,9 @@ HnswNode STRUCT
     metadata        dq ?                ; Pointer to code snippet metadata
     nextFree        dd ?                ; Free list chain (node index)
     _pad1           dd ?
-    links0          dd VECDB_M_MAX0 dup(?)   ; Layer 0 links (32 × 4 = 128 bytes)
-    linksUpper      dd VECDB_M dup(?)        ; Upper layer links (16 × 4 = 64 bytes)
-    vector          db VECDB_BYTES_PER_VEC dup(?)  ; 768 × fp32 = 3072 bytes
+    links0          dd VECDB_M_MAX0 dup(?)   ; Layer 0 links (32 ? 4 = 128 bytes)
+    linksUpper      dd VECDB_M dup(?)        ; Upper layer links (16 ? 4 = 64 bytes)
+    vector          db VECDB_BYTES_PER_VEC dup(?)  ; 768 ? fp32 = 3072 bytes
 HnswNode ENDS
 
 ; Min-heap entry for HNSW search
@@ -220,7 +220,7 @@ PerfCounter ENDS
 
 ALIGN 16
 
-; ── Vector DB State ──
+; ?? Vector DB State ??
 PUBLIC g_VecDbNodes
 PUBLIC g_VecDbNumNodes
 PUBLIC g_VecDbEntryPoint
@@ -236,7 +236,7 @@ g_VecDbRngState     dq 0DEADBEEF12345678h   ; xorshift128+ state
 g_VecDbRngState2    dq 0CAFEBABE87654321h
 g_VecDbPerf         PerfCounter <>
 
-; ── Composer State ──
+; ?? Composer State ??
 PUBLIC g_ComposerState
 PUBLIC g_ComposerPerf
 
@@ -245,7 +245,7 @@ g_ComposerCurrentTx dq 0
 g_ComposerTxCount   dq 0
 g_ComposerPerf      PerfCounter <>
 
-; ── CRDT State ──
+; ?? CRDT State ??
 PUBLIC g_CrdtLocalDoc
 PUBLIC g_CrdtPeerCount
 PUBLIC g_CrdtPerf
@@ -254,23 +254,23 @@ g_CrdtLocalDoc      dq 0
 g_CrdtPeerCount     dd 0
 g_CrdtPerf          PerfCounter <>
 
-; ── Git Context ──
+; ?? Git Context ??
 PUBLIC g_GitContext
 g_GitContext        GitContext <>
 
-; ── Task Ingestion State ──
+; ?? Task Ingestion State ??
 PUBLIC g_TaskCounter
 PUBLIC g_TaskPerf
 
 g_TaskCounter       dd 0
 g_TaskPerf          PerfCounter <>
 
-; ── Scratch / Constants ──
+; ?? Scratch / Constants ??
 ALIGN 16
 g_NegInfVec         dd 16 dup(0FF800000h)   ; -inf for SIMD masking
 g_OnesVec           dd 16 dup(3F800000h)    ; 1.0f for distance init
 
-; ── String Literals ──
+; ?? String Literals ??
 szJournalSuffix     db ".rawrjournal",0
 szBackupSuffix      db ".rawrbak",0
 szGitPrefix         db "Repository: ",0
@@ -289,7 +289,7 @@ szCommitMarker      db "COMMITTED",0Dh,0Ah,0
 ; #############################################################################
 
 ; =============================================================================
-; VecDb_Init — Initialize HNSW vector database
+; VecDb_Init ? Initialize HNSW vector database
 ;
 ; Allocates memory for up to VECDB_MAX_VECTORS nodes.
 ; Builds the ABA-safe free list. Initializes RNG.
@@ -396,7 +396,7 @@ VecDb_Init PROC FRAME
 VecDb_Init ENDP
 
 ; =============================================================================
-; VecDb_Xorshift128p — Internal xorshift128+ PRNG
+; VecDb_Xorshift128p ? Internal xorshift128+ PRNG
 ;
 ; Returns: RAX = 64-bit random value
 ; Clobbers: RCX, RDX
@@ -426,7 +426,7 @@ VecDb_Xorshift128p PROC
 VecDb_Xorshift128p ENDP
 
 ; =============================================================================
-; VecDb_RandomLevel — Assign HNSW level via geometric distribution
+; VecDb_RandomLevel ? Assign HNSW level via geometric distribution
 ;
 ; level = floor(-ln(U) * mL)
 ; Approximated via bit counting: count leading zeros of random bits
@@ -463,7 +463,7 @@ VecDb_RandomLevel PROC
 VecDb_RandomLevel ENDP
 
 ; =============================================================================
-; VecDb_L2Distance_AVX2 — Compute L2 distance between two 768-dim vectors
+; VecDb_L2Distance_AVX2 ? Compute L2 distance between two 768-dim vectors
 ;
 ; RCX = pointer to vector A (768 floats, 3072 bytes)
 ; RDX = pointer to vector B (768 floats, 3072 bytes)
@@ -486,7 +486,7 @@ VecDb_L2Distance_AVX2 PROC FRAME
     xor     r9d, r9d                    ; Byte offset
 
 @l2_loop:
-    ; Unrolled: 4 × 8 floats = 32 floats per outer iteration
+    ; Unrolled: 4 ? 8 floats = 32 floats per outer iteration
     vmovups ymm4, ymmword ptr [rcx + r9]
     vmovups ymm5, ymmword ptr [rdx + r9]
     vsubps  ymm4, ymm4, ymm5
@@ -507,7 +507,7 @@ VecDb_L2Distance_AVX2 PROC FRAME
     vsubps  ymm4, ymm4, ymm5
     vfmadd231ps ymm3, ymm4, ymm4       ; acc3 += (a-b)^2
 
-    add     r9d, 128                    ; 32 floats × 4 bytes
+    add     r9d, 128                    ; 32 floats ? 4 bytes
     dec     r8d
     jnz     @l2_loop
 
@@ -516,7 +516,7 @@ VecDb_L2Distance_AVX2 PROC FRAME
     vaddps  ymm0, ymm0, ymm2
     vaddps  ymm0, ymm0, ymm3
 
-    ; ymm0 has 8 partial sums — reduce to scalar
+    ; ymm0 has 8 partial sums ? reduce to scalar
     vextractf128 xmm1, ymm0, 1         ; Upper 128 bits
     vaddps  xmm0, xmm0, xmm1           ; 4 partial sums
     vhaddps xmm0, xmm0, xmm0           ; 2 partial sums
@@ -529,7 +529,7 @@ VecDb_L2Distance_AVX2 PROC FRAME
 VecDb_L2Distance_AVX2 ENDP
 
 ; =============================================================================
-; VecDb_AllocNode — ABA-safe lock-free pop from free list
+; VecDb_AllocNode ? ABA-safe lock-free pop from free list
 ;
 ; Uses CMPXCHG8B (64-bit CAS on the TaggedHead struct)
 ;
@@ -572,7 +572,7 @@ VecDb_AllocNode PROC
 VecDb_AllocNode ENDP
 
 ; =============================================================================
-; VecDb_FreeNode — ABA-safe lock-free push onto free list
+; VecDb_FreeNode ? ABA-safe lock-free push onto free list
 ;
 ; ECX = node index to free
 ; =============================================================================
@@ -606,7 +606,7 @@ VecDb_FreeNode PROC
 VecDb_FreeNode ENDP
 
 ; =============================================================================
-; VecDb_Insert — Insert embedding into HNSW index
+; VecDb_Insert ? Insert embedding into HNSW index
 ;
 ; RCX = Pointer to float32 vector (768 dims, 3072 bytes)
 ; RDX = Metadata pointer (code snippet info)
@@ -680,7 +680,7 @@ VecDb_Insert PROC FRAME
     jmp     @vi_done
 
 @vi_connect:
-    ; ── HNSW Connection: greedy search from entry to find neighbors ──
+    ; ?? HNSW Connection: greedy search from entry to find neighbors ??
     ; Then link bidirectionally at each layer
 
     ; Start from entry point, greedy descend from top layer to node's level
@@ -780,7 +780,7 @@ VecDb_Insert PROC FRAME
 VecDb_Insert ENDP
 
 ; =============================================================================
-; VecDb_Search — Approximate nearest neighbor search (HNSW greedy)
+; VecDb_Search ? Approximate nearest neighbor search (HNSW greedy)
 ;
 ; RCX = Query vector (768-dim float32)
 ; RDX = Results buffer (array of dwords: node IDs)
@@ -945,7 +945,7 @@ VecDb_Search PROC FRAME
 VecDb_Search ENDP
 
 ; =============================================================================
-; VecDb_Delete — Mark node as deleted (tombstone)
+; VecDb_Delete ? Mark node as deleted (tombstone)
 ;
 ; ECX = Node ID
 ; Returns: EAX = 0 on success
@@ -972,7 +972,7 @@ VecDb_Delete PROC
 VecDb_Delete ENDP
 
 ; =============================================================================
-; VecDb_GetNodeCount — Return current node count
+; VecDb_GetNodeCount ? Return current node count
 ; Returns: EAX = count
 ; =============================================================================
 PUBLIC VecDb_GetNodeCount
@@ -987,7 +987,7 @@ VecDb_GetNodeCount ENDP
 ; #############################################################################
 
 ; =============================================================================
-; Composer_BeginTransaction — Start multi-file edit session
+; Composer_BeginTransaction ? Start multi-file edit session
 ;
 ; Allocates a ComposerTx, opens a write-ahead journal file.
 ; Returns: RAX = Transaction handle, or 0 on failure
@@ -1061,11 +1061,11 @@ Composer_BeginTransaction PROC FRAME
 Composer_BeginTransaction ENDP
 
 ; =============================================================================
-; Composer_AddFileOp — Queue file modification in transaction
+; Composer_AddFileOp ? Queue file modification in transaction
 ;
 ; RCX = Transaction handle
 ; RDX = File path (LPCSTR)
-; R8D = Operation type (CREATE/MODIFY/DELETE/RENAME)
+; R8D = Operation m_type (CREATE/MODIFY/DELETE/RENAME)
 ; R9  = New content pointer (may be NULL for DELETE)
 ; [RSP+40] = Content length (QWORD)
 ; Returns: EAX = 1 on success, 0 on failure
@@ -1088,7 +1088,7 @@ Composer_AddFileOp PROC FRAME
 
     mov     rbx, rcx                    ; Transaction
     mov     rsi, rdx                    ; File path
-    mov     r12d, r8d                   ; Op type
+    mov     r12d, r8d                   ; Op m_type
     mov     r13, r9                     ; Content ptr
     mov     rax, [rsp + 80 + 48 + 40]  ; Content length (past saved regs + shadow)
 
@@ -1134,7 +1134,7 @@ Composer_AddFileOp PROC FRAME
     mov     byte ptr [rcx], 0
 @cao_path_done:
 
-    ; Set op type
+    ; Set op m_type
     mov     [r8 + FileOp.opType], r12d
 
     ; Copy content if provided
@@ -1190,7 +1190,7 @@ Composer_AddFileOp PROC FRAME
 Composer_AddFileOp ENDP
 
 ; =============================================================================
-; Composer_Commit — Atomically apply all queued file operations
+; Composer_Commit ? Atomically apply all queued file operations
 ;
 ; 1. Write journal (WAL)
 ; 2. Apply each operation
@@ -1294,7 +1294,7 @@ Composer_Commit PROC FRAME
 
 @cc_do_modify:
     ; Read existing file for backup, then overwrite with new content
-    ; (Same as create for simplicity — production would backup first)
+    ; (Same as create for simplicity ? production would backup first)
     jmp     @cc_do_create
 
 @cc_do_delete:
@@ -1342,7 +1342,7 @@ Composer_Commit PROC FRAME
 Composer_Commit ENDP
 
 ; =============================================================================
-; Composer_GetState — Return current composer state
+; Composer_GetState ? Return current composer state
 ; Returns: EAX = state enum
 ; =============================================================================
 PUBLIC Composer_GetState
@@ -1352,7 +1352,7 @@ Composer_GetState PROC
 Composer_GetState ENDP
 
 ; =============================================================================
-; Composer_GetTxCount — Return total transactions completed
+; Composer_GetTxCount ? Return total transactions completed
 ; Returns: RAX = count
 ; =============================================================================
 PUBLIC Composer_GetTxCount
@@ -1367,7 +1367,7 @@ Composer_GetTxCount ENDP
 ; #############################################################################
 
 ; =============================================================================
-; Crdt_InitDocument — Initialize a new CRDT document
+; Crdt_InitDocument ? Initialize a new CRDT document
 ;
 ; RCX = Pointer to 16-byte document UUID
 ; EDX = Local peer ID (0..15)
@@ -1458,7 +1458,7 @@ Crdt_InitDocument PROC FRAME
 Crdt_InitDocument ENDP
 
 ; =============================================================================
-; Crdt_InsertText — Local insertion at position
+; Crdt_InsertText ? Local insertion at position
 ;
 ; RCX = Document handle
 ; RDX = Position (byte offset)
@@ -1576,7 +1576,7 @@ Crdt_InsertText PROC FRAME
 Crdt_InsertText ENDP
 
 ; =============================================================================
-; Crdt_DeleteText — Local deletion at position
+; Crdt_DeleteText ? Local deletion at position
 ;
 ; RCX = Document handle
 ; RDX = Position
@@ -1661,7 +1661,7 @@ Crdt_DeleteText PROC FRAME
 Crdt_DeleteText ENDP
 
 ; =============================================================================
-; Crdt_MergeRemoteOp — Merge a remote operation with causal ordering
+; Crdt_MergeRemoteOp ? Merge a remote operation with causal ordering
 ;
 ; RCX = Document handle
 ; RDX = Pointer to CrdtOp from remote peer
@@ -1766,7 +1766,7 @@ Crdt_MergeRemoteOp PROC FRAME
 Crdt_MergeRemoteOp ENDP
 
 ; =============================================================================
-; Crdt_GetDocLength — Return current document text length
+; Crdt_GetDocLength ? Return current document text length
 ;
 ; RCX = Document handle
 ; Returns: RAX = text length in bytes
@@ -1778,7 +1778,7 @@ Crdt_GetDocLength PROC
 Crdt_GetDocLength ENDP
 
 ; =============================================================================
-; Crdt_GetLamport — Return current Lamport timestamp
+; Crdt_GetLamport ? Return current Lamport timestamp
 ;
 ; RCX = Document handle
 ; Returns: RAX = Lamport counter
@@ -1795,7 +1795,7 @@ Crdt_GetLamport ENDP
 ; #############################################################################
 
 ; =============================================================================
-; Git_ExtractContext — Build AI context string from git state
+; Git_ExtractContext ? Build AI context string from git state
 ;
 ; RCX = Repo path (LPCSTR)
 ; RDX = Current file (LPCSTR)
@@ -1899,7 +1899,7 @@ Git_ExtractContext PROC FRAME
 Git_ExtractContext ENDP
 
 ; =============================================================================
-; Git_AppendStr — Internal: append NUL-terminated string to buffer at [RDI]
+; Git_AppendStr ? Internal: append NUL-terminated string to buffer at [RDI]
 ;
 ; RSI = source string
 ; RDI = current write position (advanced on return)
@@ -1918,7 +1918,7 @@ Git_AppendStr PROC
 Git_AppendStr ENDP
 
 ; =============================================================================
-; Git_SetBranch — Set current branch name in global context
+; Git_SetBranch ? Set current branch name in global context
 ;
 ; RCX = Branch name string (LPCSTR, max 63 chars)
 ; =============================================================================
@@ -1944,7 +1944,7 @@ Git_SetBranch PROC
 Git_SetBranch ENDP
 
 ; =============================================================================
-; Git_SetCommitHash — Set current commit hash in global context
+; Git_SetCommitHash ? Set current commit hash in global context
 ;
 ; RCX = Commit hash string (40 hex chars)
 ; =============================================================================
@@ -1968,9 +1968,9 @@ Git_SetCommitHash ENDP
 ; #############################################################################
 
 ; =============================================================================
-; GapCloser_GetPerfCounters — Read all perf counters
+; GapCloser_GetPerfCounters ? Read all perf counters
 ;
-; RCX = Output buffer (3 × PerfCounter = 72 bytes)
+; RCX = Output buffer (3 ? PerfCounter = 72 bytes)
 ;       [0..23]  = VecDb perf
 ;       [24..47] = Composer perf
 ;       [48..71] = CRDT perf

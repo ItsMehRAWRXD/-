@@ -4,9 +4,9 @@
 ; =============================================================================
 
 OPTION CASemap:NONE
-OPTION WIN64:3
+OPTION CASEMAP:NONE
 
-INCLUDE \masm64\include64\win64.inc
+INCLUDE rawrxd_win64.inc
 
 ; Tool Engine States
 TOOL_STATE_PENDING          EQU 0
@@ -81,7 +81,10 @@ TOOL_BATCH ENDS
 ToolEngine_Initialize PROC FRAME
     LOCAL hHeap:QWORD
     push rbx
+    .pushreg rbx
     push rdi
+    .pushreg rdi
+    .endprolog
     mov rbx, rcx                    ; Context
     
     ; Zero context structure
@@ -121,3 +124,4 @@ ToolEngine_Initialize ENDP
 PUBLIC ToolEngine_Initialize
 
 END
+

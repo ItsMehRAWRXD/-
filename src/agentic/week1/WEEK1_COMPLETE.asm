@@ -413,12 +413,9 @@ WEEK1_INFRASTRUCTURE ENDS
 ; GetCurrentTimestamp - Get QPC value
 ; Returns RAX = QPC timestamp
 ;------------------------------------------------------------------------------
-GetCurrentTimestamp PROC FRAME
+GetCurrentTimestamp PROC
     push rbx
-    .pushreg rbx
     sub rsp, 32
-    .allocstack 32
-    .endprolog
     
     lea rcx, [rsp+24]
     call QWORD PTR [__imp_QueryPerformanceCounter]
@@ -433,12 +430,9 @@ GetCurrentTimestamp ENDP
 ; GetQPFrequency - Get cached QPC frequency
 ; Returns RAX = frequency
 ;------------------------------------------------------------------------------
-GetQPFrequency PROC FRAME
+GetQPFrequency PROC
     push rbx
-    .pushreg rbx
     sub rsp, 32
-    .allocstack 32
-    .endprolog
     
     ; Check cached value
     mov rax, g_QPFrequency
@@ -461,14 +455,10 @@ GetQPFrequency ENDP
 ; ECX = milliseconds
 ; Returns RAX = QPC ticks
 ;------------------------------------------------------------------------------
-MsToQPC PROC FRAME
+MsToQPC PROC
     push rbx
-    .pushreg rbx
     push rdi
-    .pushreg rdi
     sub rsp, 40
-    .allocstack 40
-    .endprolog
     
     mov edi, ecx                ; Save ms
     
@@ -494,14 +484,10 @@ MsToQPC ENDP
 ; RCX = QPC ticks
 ; Returns RAX = milliseconds
 ;------------------------------------------------------------------------------
-QPCToMs PROC FRAME
+QPCToMs PROC
     push rbx
-    .pushreg rbx
     push rdi
-    .pushreg rdi
     sub rsp, 40
-    .allocstack 40
-    .endprolog
     
     mov rdi, rcx                ; Save ticks
     
@@ -650,25 +636,16 @@ StrNCopy ENDP
 ; HeartbeatMonitorThread - Background heartbeat monitoring
 ; RCX = WEEK1_INFRASTRUCTURE pointer
 ;------------------------------------------------------------------------------
-HeartbeatMonitorThread PROC FRAME
+HeartbeatMonitorThread PROC
     push r15
-    .pushreg r15
     push r14
-    .pushreg r14
     push r13
-    .pushreg r13
     push r12
-    .pushreg r12
     push rbx
-    .pushreg rbx
     push rsi
-    .pushreg rsi
     push rdi
-    .pushreg rdi
     
     sub rsp, 128
-    .allocstack 128
-    .endprolog
     
     mov r12, rcx                        ; R12 = infrastructure
     lea r13, [r12+WEEK1_INFRASTRUCTURE.Heartbeat]  ; R13 = heartbeat monitor
@@ -900,23 +877,15 @@ HeartbeatMonitorThread ENDP
 ; RCX = infrastructure, EDX = node_id, R8 = timestamp, R9 = latency_ns
 ; Returns EAX = 1 success, 0 failure
 ;------------------------------------------------------------------------------
-ProcessReceivedHeartbeat PROC EXPORT FRAME
+ProcessReceivedHeartbeat PROC `EXPORT
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push r15
-    .pushreg r15
     push rdi
-    .pushreg rdi
     
     sub rsp, 64
-    .allocstack 64
-    .endprolog
     
     mov r12, rcx                        ; R12 = infrastructure
     mov r13d, edx                       ; R13 = node_id
@@ -1032,23 +1001,15 @@ ProcessReceivedHeartbeat ENDP
 ; [rsp+40] = callback, [rsp+48] = callback_context
 ; Returns EAX = 1 success, 0 failure
 ;------------------------------------------------------------------------------
-Week1RegisterNode PROC EXPORT FRAME
+Week1RegisterNode PROC `EXPORT
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push r15
-    .pushreg r15
     push rdi
-    .pushreg rdi
     
     sub rsp, 64
-    .allocstack 64
-    .endprolog
     
     mov r12, rcx                        ; infrastructure
     mov r13d, edx                       ; node_id
@@ -1165,25 +1126,16 @@ Week1RegisterNode ENDP
 ; ConflictDetectorThread - Background deadlock detection
 ; RCX = WEEK1_INFRASTRUCTURE pointer
 ;------------------------------------------------------------------------------
-ConflictDetectorThread PROC FRAME
+ConflictDetectorThread PROC
     push r15
-    .pushreg r15
     push r14
-    .pushreg r14
     push r13
-    .pushreg r13
     push r12
-    .pushreg r12
     push rbx
-    .pushreg rbx
     push rsi
-    .pushreg rsi
     push rdi
-    .pushreg rdi
     
     sub rsp, 128
-    .allocstack 128
-    .endprolog
     
     mov r12, rcx                        ; R12 = infrastructure
     lea r13, [r12+WEEK1_INFRASTRUCTURE.ConflictDetector]
@@ -1235,25 +1187,16 @@ ConflictDetectorThread ENDP
 ; BuildWaitGraph - Construct resource wait graph for cycle detection
 ; RCX = infrastructure, RDX = conflict detector
 ;------------------------------------------------------------------------------
-BuildWaitGraph PROC FRAME
+BuildWaitGraph PROC
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push r15
-    .pushreg r15
     push rsi
-    .pushreg rsi
     push rdi
-    .pushreg rdi
     
     sub rsp, 64
-    .allocstack 64
-    .endprolog
     
     mov r12, rcx                        ; infrastructure
     mov r13, rdx                        ; conflict detector
@@ -1356,25 +1299,16 @@ BuildWaitGraph ENDP
 ; RCX = infrastructure, RDX = conflict detector
 ; Returns EAX = number of deadlocks detected
 ;------------------------------------------------------------------------------
-DetectDeadlocks PROC FRAME
+DetectDeadlocks PROC
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push r15
-    .pushreg r15
     push rsi
-    .pushreg rsi
     push rdi
-    .pushreg rdi
     
     sub rsp, 256                        ; Space for visited array
-    .allocstack 256
-    .endprolog
     
     mov r12, rcx                        ; infrastructure
     mov r13, rdx                        ; conflict detector
@@ -1507,21 +1441,14 @@ DetectDeadlocks ENDP
 ; RCX = infrastructure, RDX = resource_id, R8 = name (optional)
 ; Returns EAX = 1 success, 0 failure
 ;------------------------------------------------------------------------------
-Week1RegisterResource PROC EXPORT FRAME
+Week1RegisterResource PROC `EXPORT
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push rdi
-    .pushreg rdi
     
     sub rsp, 48
-    .allocstack 48
-    .endprolog
     
     mov r12, rcx                        ; infrastructure
     mov r13, rdx                        ; resource_id
@@ -1632,21 +1559,14 @@ Week1RegisterResource ENDP
 ; SchedulerCoordinatorThread - Load balancing and coordination
 ; RCX = WEEK1_INFRASTRUCTURE pointer
 ;------------------------------------------------------------------------------
-SchedulerCoordinatorThread PROC FRAME
+SchedulerCoordinatorThread PROC
     push r15
-    .pushreg r15
     push r14
-    .pushreg r14
     push r13
-    .pushreg r13
     push r12
-    .pushreg r12
     push rbx
-    .pushreg rbx
     
     sub rsp, 128
-    .allocstack 128
-    .endprolog
     
     mov r12, rcx                        ; R12 = infrastructure
     lea r13, [r12+WEEK1_INFRASTRUCTURE.Scheduler]
@@ -1691,25 +1611,16 @@ SchedulerCoordinatorThread ENDP
 ; WorkerThreadProc - Individual worker thread
 ; RCX = THREAD_CONTEXT pointer
 ;------------------------------------------------------------------------------
-WorkerThreadProc PROC FRAME
+WorkerThreadProc PROC
     push r15
-    .pushreg r15
     push r14
-    .pushreg r14
     push r13
-    .pushreg r13
     push r12
-    .pushreg r12
     push rbx
-    .pushreg rbx
     push rsi
-    .pushreg rsi
     push rdi
-    .pushreg rdi
     
     sub rsp, 128
-    .allocstack 128
-    .endprolog
     
     mov r12, rcx                        ; R12 = thread context
     mov r13d, [r12+THREAD_CONTEXT.WorkerId]
@@ -1830,15 +1741,11 @@ WorkerThreadProc ENDP
 ; RCX = THREAD_CONTEXT pointer
 ; Returns RAX = task pointer or NULL
 ;------------------------------------------------------------------------------
-PopLocalTask PROC FRAME
+PopLocalTask PROC
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     
     sub rsp, 40
-    .allocstack 40
-    .endprolog
     
     mov r12, rcx                        ; Thread context
     
@@ -1894,17 +1801,12 @@ PopLocalTask ENDP
 ; RCX = THREAD_CONTEXT pointer
 ; Returns RAX = task pointer or NULL
 ;------------------------------------------------------------------------------
-PopGlobalTask PROC FRAME
+PopGlobalTask PROC
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     
     sub rsp, 48
-    .allocstack 48
-    .endprolog
     
     mov r12, rcx                        ; Thread context
     
@@ -1970,25 +1872,16 @@ PopGlobalTask ENDP
 ; RCX = THREAD_CONTEXT pointer (this worker)
 ; Returns RAX = stolen task or NULL
 ;------------------------------------------------------------------------------
-StealTask PROC FRAME
+StealTask PROC
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push r15
-    .pushreg r15
     push rsi
-    .pushreg rsi
     push rdi
-    .pushreg rdi
     
     sub rsp, 64
-    .allocstack 64
-    .endprolog
     
     mov r12, rcx                        ; This worker
     mov r13d, [r12+THREAD_CONTEXT.WorkerId]
@@ -2121,17 +2014,12 @@ StealTask ENDP
 ; RCX = infrastructure, RDX = task pointer
 ; Returns EAX = 1 success, 0 failure
 ;------------------------------------------------------------------------------
-SubmitTask PROC EXPORT FRAME
+SubmitTask PROC `EXPORT
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     
     sub rsp, 48
-    .allocstack 48
-    .endprolog
     
     mov r12, rcx                        ; Infrastructure
     mov r13, rdx                        ; Task
@@ -2214,23 +2102,15 @@ SubmitTask ENDP
 ; BalanceLoad - Redistribute tasks across workers
 ; RCX = infrastructure, RDX = scheduler
 ;------------------------------------------------------------------------------
-BalanceLoad PROC FRAME
+BalanceLoad PROC
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push rsi
-    .pushreg rsi
     push rdi
-    .pushreg rdi
     
     sub rsp, 64
-    .allocstack 64
-    .endprolog
     
     mov r12, rcx                        ; Infrastructure
     mov r13, rdx                        ; Scheduler
@@ -2301,21 +2181,14 @@ BalanceLoad ENDP
 ; RCX = infrastructure, EDX = worker_id, R8 = entry_point, R9 = context
 ; Returns RAX = thread handle or NULL
 ;------------------------------------------------------------------------------
-CreateWorkerThread PROC FRAME
+CreateWorkerThread PROC
     push r15
-    .pushreg r15
     push r14
-    .pushreg r14
     push r13
-    .pushreg r13
     push r12
-    .pushreg r12
     push rbx
-    .pushreg rbx
     
     sub rsp, 96
-    .allocstack 96
-    .endprolog
     
     mov r12, rcx                        ; Infrastructure
     mov r13d, edx                       ; Worker ID
@@ -2386,23 +2259,15 @@ CreateWorkerThread ENDP
 ; RCX = pointer to receive infrastructure handle
 ; Returns EAX = error code (0 = success)
 ;------------------------------------------------------------------------------
-Week1Initialize PROC EXPORT FRAME
+Week1Initialize PROC `EXPORT
     push r15
-    .pushreg r15
     push r14
-    .pushreg r14
     push r13
-    .pushreg r13
     push r12
-    .pushreg r12
     push rbx
-    .pushreg rbx
     push rdi
-    .pushreg rdi
     
     sub rsp, 96
-    .allocstack 96
-    .endprolog
     
     mov r14, rcx                        ; Output pointer
     
@@ -2672,23 +2537,15 @@ Week1Initialize ENDP
 ; RCX = infrastructure
 ; Returns EAX = error code (0 = success)
 ;------------------------------------------------------------------------------
-Week1StartBackgroundThreads PROC EXPORT FRAME
+Week1StartBackgroundThreads PROC `EXPORT
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push r15
-    .pushreg r15
     push rsi
-    .pushreg rsi
     
     sub rsp, 72
-    .allocstack 72
-    .endprolog
     
     mov r12, rcx                        ; Infrastructure
     
@@ -2806,21 +2663,14 @@ Week1StartBackgroundThreads ENDP
 ; Week1Shutdown - Graceful shutdown
 ; RCX = infrastructure
 ;------------------------------------------------------------------------------
-Week1Shutdown PROC EXPORT FRAME
+Week1Shutdown PROC `EXPORT
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     push r13
-    .pushreg r13
     push r14
-    .pushreg r14
     push rsi
-    .pushreg rsi
     
     sub rsp, 56
-    .allocstack 56
-    .endprolog
     
     mov r12, rcx
     
@@ -3009,15 +2859,11 @@ Week1Shutdown ENDP
 ; Week1GetStatistics - Get statistics snapshot
 ; RCX = infrastructure, RDX = output pointer
 ;------------------------------------------------------------------------------
-Week1GetStatistics PROC EXPORT FRAME
+Week1GetStatistics PROC `EXPORT
     push rbx
-    .pushreg rbx
     push r12
-    .pushreg r12
     
     sub rsp, 40
-    .allocstack 40
-    .endprolog
     
     mov r12, rcx
     mov rbx, rdx

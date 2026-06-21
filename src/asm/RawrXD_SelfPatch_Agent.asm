@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_SelfPatch_Agent.asm — Agent Self-Repair MASM64 Kernel
+; RawrXD_SelfPatch_Agent.asm ? Agent Self-Repair MASM64 Kernel
 ; =============================================================================
 ;
 ; The agent uses this kernel to fix its own bugs at runtime.
@@ -12,17 +12,17 @@
 ;   - NOP sled detection for accidental code elimination
 ;
 ; Legacy (retained but unused in enterprise-safe mode):
-;   - asm_selfpatch_apply         — Direct byte patching (superseded by LiveBinaryPatcher)
-;   - asm_selfpatch_install_tramp — Raw trampoline write (superseded by LiveBinaryPatcher)
-;   - asm_selfpatch_rollback      — Journal rollback (superseded by LiveBinaryPatcher)
+;   - asm_selfpatch_apply         ? Direct byte patching (superseded by LiveBinaryPatcher)
+;   - asm_selfpatch_install_tramp ? Raw trampoline write (superseded by LiveBinaryPatcher)
+;   - asm_selfpatch_rollback      ? Journal rollback (superseded by LiveBinaryPatcher)
 ;
 ; Active Exports (used by C++ bridge):
-;   asm_selfpatch_init          — Initialize self-patch subsystem
-;   asm_selfpatch_scan_text     — Scan .text for known bug patterns (READ-ONLY)
-;   asm_selfpatch_verify_crc    — CRC32 verify a memory region (READ-ONLY)
-;   asm_selfpatch_get_stats     — Get scan statistics (READ-ONLY)
-;   asm_selfpatch_scan_nop_sled — Detect accidental NOP slides (READ-ONLY)
-;   asm_selfpatch_cas_patch     — Atomic 8-byte compare-and-swap (callback slots)
+;   asm_selfpatch_init          ? Initialize self-patch subsystem
+;   asm_selfpatch_scan_text     ? Scan .text for known bug patterns (READ-ONLY)
+;   asm_selfpatch_verify_crc    ? CRC32 verify a memory region (READ-ONLY)
+;   asm_selfpatch_get_stats     ? Get scan statistics (READ-ONLY)
+;   asm_selfpatch_scan_nop_sled ? Detect accidental NOP slides (READ-ONLY)
+;   asm_selfpatch_cas_patch     ? Atomic 8-byte compare-and-swap (callback slots)
 ;
 ; Architecture: x64 MASM64 | Windows x64 ABI | No CRT | No exceptions
 ; Build: ml64.exe /c /Zi /Zd /Fo RawrXD_SelfPatch_Agent.obj
@@ -80,7 +80,7 @@ MIN_NOP_SLED_LENGTH     EQU     8
 ;                    STRUCTURES
 ; =============================================================================
 
-; Journal entry — records one applied patch for rollback
+; Journal entry ? records one applied patch for rollback
 JOURNAL_ENTRY STRUCT
     patch_id        QWORD   ?           ; Unique patch identifier
     target_addr     QWORD   ?           ; Virtual address that was patched
@@ -94,7 +94,7 @@ JOURNAL_ENTRY STRUCT
     _pad1           DWORD   ?           ; Alignment to 128 bytes
 JOURNAL_ENTRY ENDS
 
-; Scan result — returned from pattern scan
+; Scan result ? returned from pattern scan
 SCAN_RESULT STRUCT
     status_code     DWORD   ?           ; SCAN_* code
     match_count     DWORD   ?           ; Number of matches found
@@ -123,7 +123,7 @@ SELFPATCH_STATS ENDS
 ; =============================================================================
 .data
 
-; Journal — pre-allocated array
+; Journal ? pre-allocated array
 ALIGN 16
 g_journal       JOURNAL_ENTRY MAX_JOURNAL_ENTRIES DUP(<>)
 g_journal_count QWORD   0               ; Current number of entries
@@ -144,14 +144,14 @@ g_sp_cs         CRITICAL_SECTION <>
 
 ; Status messages
 szInitOk        DB "SelfPatch: subsystem initialized", 0
-szInitFail      DB "SelfPatch: init failed — already initialized", 0
+szInitFail      DB "SelfPatch: init failed ? already initialized", 0
 szPatchApplied  DB "SelfPatch: patch applied successfully", 0
 szPatchFailed   DB "SelfPatch: patch application failed", 0
 szRollbackOk    DB "SelfPatch: rollback successful", 0
 szCrcOk         DB "SelfPatch: CRC32 verification passed", 0
 szCrcFail       DB "SelfPatch: CRC32 verification FAILED", 0
 szTrampolineOk  DB "SelfPatch: trampoline installed", 0
-szNopSledFound  DB "SelfPatch: NOP sled detected — probable bug", 0
+szNopSledFound  DB "SelfPatch: NOP sled detected ? probable bug", 0
 
 ; =============================================================================
 ;                    EXPORTS
@@ -187,7 +187,7 @@ EXTERN asm_apply_memory_patch: PROC
 .code
 
 ; =============================================================================
-; build_crc32_table — Internal: populate g_crc32_table (IEEE CRC32)
+; build_crc32_table ? Internal: populate g_crc32_table (IEEE CRC32)
 ; Called once from asm_selfpatch_init
 ; =============================================================================
 build_crc32_table PROC FRAME
@@ -232,7 +232,7 @@ build_crc32_table PROC FRAME
 build_crc32_table ENDP
 
 ; =============================================================================
-; compute_crc32 — Internal: CRC32 of a memory region
+; compute_crc32 ? Internal: CRC32 of a memory region
 ; RCX = data pointer, RDX = length
 ; Returns: EAX = CRC32
 ; =============================================================================
@@ -257,7 +257,7 @@ compute_crc32 PROC FRAME
 
 @@crc_loop:
     movzx   ecx, BYTE PTR [rsi]
-    xor     ecx, eax                    ; index = (crc ^ byte) & 0xFF
+    xor     ecx, eax                    ; index = (crc ^ byte) & 0FFh
     and     ecx, 0FFh
     shr     eax, 8                      ; crc >>= 8
     xor     eax, DWORD PTR [rbx + rcx*4] ; crc ^= table[index]
@@ -395,7 +395,7 @@ asm_selfpatch_scan_text PROC FRAME
     mov     ecx, SIZEOF SCAN_RESULT
     rep     stosb
 
-    ; Update stats
+    ; Update m_stats
     lock inc QWORD PTR g_sp_stats.total_scans
     lock add QWORD PTR g_sp_stats.bytes_scanned, r13
 
@@ -409,7 +409,7 @@ asm_selfpatch_scan_text PROC FRAME
     test    rax, rax
     jz      @@scan_no_match
 
-    ; Pattern found — count total matches
+    ; Pattern found ? count total matches
     mov     rbx, rax                    ; rbx = first match
     mov     DWORD PTR g_scan_result.match_count, 1
     mov     g_scan_result.first_match, rax
@@ -481,7 +481,7 @@ asm_selfpatch_scan_text ENDP
 ;
 ; RCX = target address
 ; RDX = patch data pointer
-; R8  = patch size (bytes, max MAX_PATCH_SIZE)
+; R8  = patch m_size (bytes, max MAX_PATCH_SIZE)
 ;
 ; Returns: RAX = 0 on success, SELFPATCH_ERR_* on failure
 ;          RDX = patch_id (on success) for later rollback
@@ -521,7 +521,7 @@ asm_selfpatch_apply PROC FRAME
 
     mov     r12, rcx                    ; r12 = target addr
     mov     r13, rdx                    ; r13 = patch data
-    mov     r14, r8                     ; r14 = patch size
+    mov     r14, r8                     ; r14 = patch m_size
 
     ; Lock critical section
     lea     rcx, g_sp_cs
@@ -544,7 +544,7 @@ asm_selfpatch_apply PROC FRAME
     mov     rsi, rax                    ; save patch_id for return
     inc     QWORD PTR g_next_patch_id
 
-    ; Record target address and size
+    ; Record target address and m_size
     mov     QWORD PTR [r15 + JOURNAL_ENTRY.target_addr], r12
     mov     DWORD PTR [r15 + JOURNAL_ENTRY.patch_size], r14d
 
@@ -566,7 +566,7 @@ asm_selfpatch_apply PROC FRAME
     mov     QWORD PTR [r15 + JOURNAL_ENTRY.timestamp], rax
 
     ; Apply the patch via VirtualProtect + memcpy
-    ; VirtualProtect(target, size, PAGE_EXECUTE_READWRITE, &oldProtect)
+    ; VirtualProtect(target, m_size, PAGE_EXECUTE_READWRITE, &oldProtect)
     lea     r9, [rsp + 48]              ; &oldProtect
     mov     r8d, PAGE_EXECUTE_READWRITE
     mov     rdx, r14
@@ -607,7 +607,7 @@ asm_selfpatch_apply PROC FRAME
     ; Increment journal count
     inc     QWORD PTR g_journal_count
 
-    ; Update stats
+    ; Update m_stats
     lock inc QWORD PTR g_sp_stats.patches_applied
 
     ; Unlock
@@ -864,7 +864,7 @@ asm_selfpatch_rollback PROC FRAME
     ; Mark as rolled back
     mov     DWORD PTR [rbx + JOURNAL_ENTRY.active], 0
 
-    ; Update stats
+    ; Update m_stats
     lock inc QWORD PTR g_sp_stats.patches_rolled_back
 
     ; Unlock
@@ -1031,7 +1031,7 @@ asm_selfpatch_cas_patch PROC FRAME
     lock cmpxchg QWORD PTR [rcx], r8   ; if [rcx]==rax: [rcx]=r8, ZF=1
     jz      @@cas_ok
 
-    ; CAS failed — value was not expected
+    ; CAS failed ? value was not expected
     lock inc QWORD PTR g_sp_stats.cas_retries
     mov     eax, SELFPATCH_ERR_CAS_FAIL
     jmp     @@cas_done
@@ -1041,10 +1041,10 @@ asm_selfpatch_cas_patch PROC FRAME
     sub     rsp, 8                      ; Re-align
     call    GetCurrentProcess
     mov     rcx, rax
-    ; RCX still holds target in original call — restore from stack
+    ; RCX still holds target in original call ? restore from stack
     ; Actually we need the original target. Save it before CAS.
     ; Bug: we lost RCX by here. Fix: save it upfront.
-    ; This is fine — we handle it by noting that the CAS already did the write.
+    ; This is fine ? we handle it by noting that the CAS already did the write.
     ; FlushInstructionCache on the general code page is sufficient.
     ; We use NULL + 0 to flush entire process cache.
     xor     edx, edx
@@ -1068,3 +1068,4 @@ asm_selfpatch_cas_patch ENDP
 ; END
 ; =============================================================================
 END
+

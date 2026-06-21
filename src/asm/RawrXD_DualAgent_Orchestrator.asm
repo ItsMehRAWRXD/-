@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_DualAgent_Orchestrator.asm — Phase 41: Architect↔Coder Swarm Engine
+; RawrXD_DualAgent_Orchestrator.asm ? Phase 41: Architect?Coder Swarm Engine
 ; =============================================================================
 ;
 ; Dual-agent orchestration engine for RawrXD inference pipeline.
@@ -73,8 +73,8 @@ SHUTDOWN_SPIN_LIMIT     EQU     10000000    ; ~1 second at ~10 GHz retire rate
 ;                    STRUCTURES
 ; =============================================================================
 
-; Agent Context — one per agent (Architect / Coder)
-; Size: 4096 bytes (page-aligned for NUMA awareness)
+; Agent Context ? one per agent (Architect / Coder)
+; m_size: 4096 bytes (page-aligned for NUMA awareness)
 AGENT_CTX STRUCT
     agent_id        QWORD   ?           ; AGENT_ID_ARCHITECT or AGENT_ID_CODER
     model_profile   DWORD   ?           ; Model profile index in bridge table
@@ -94,8 +94,8 @@ AGENT_CTX STRUCT
     _reserved       DB      1944 DUP(?) ; Pad to 4096 bytes total
 AGENT_CTX ENDS
 
-; Task Packet — enqueued into agent's task queue
-; Size: 256 bytes (cache-line-aligned for lock-free SPSC)
+; Task Packet ? enqueued into agent's task queue
+; m_size: 256 bytes (cache-line-aligned for lock-free SPSC)
 TASK_PKT STRUCT
     task_id         QWORD   ?           ; Unique incrementing ID
     task_type       DWORD   ?           ; TASK_TYPE_*
@@ -109,15 +109,15 @@ TASK_PKT STRUCT
     _reserved       DB      200 DUP(?)  ; Pad to 256 bytes
 TASK_PKT ENDS
 
-; Swarm State — global orchestrator state
+; Swarm State ? global orchestrator state
 SWARM_STATE STRUCT
     initialized     DWORD   ?           ; 1 if Swarm_Init completed
     agent_count     DWORD   ?           ; Always 2 for dual-agent
     architect_ctx   QWORD   ?           ; Pointer to Architect AGENT_CTX
     coder_ctx       QWORD   ?           ; Pointer to Coder AGENT_CTX
     ring_base       QWORD   ?           ; Shared context ring base
-    ring_size       QWORD   ?           ; Ring size in bytes (64MB)
-    total_handoffs  QWORD   ?           ; Total Architect→Coder handoffs
+    ring_size       QWORD   ?           ; Ring m_size in bytes (64MB)
+    total_handoffs  QWORD   ?           ; Total Architect?Coder handoffs
     total_tasks     QWORD   ?           ; Total tasks submitted
     lock_flag       DWORD   ?           ; Spinlock for init/shutdown
     _pad            DWORD   3 DUP(?)    ; Alignment
@@ -137,12 +137,12 @@ g_NextTaskID    QWORD   0
 ; Status message strings
 g_MsgSwarmInit      DB  'DualAgent: swarm initialized (Architect + Coder)', 0
 g_MsgSwarmShutdown  DB  'DualAgent: swarm shutdown complete', 0
-g_MsgSwarmAllocFail DB  'DualAgent: ERROR — VirtualAlloc failed', 0
-g_MsgSwarmModelFail DB  'DualAgent: ERROR — model load failed', 0
-g_MsgSwarmNotInit   DB  'DualAgent: ERROR — swarm not initialized', 0
-g_MsgSwarmAlready   DB  'DualAgent: ERROR — swarm already initialized', 0
+g_MsgSwarmAllocFail DB  'DualAgent: ERROR ? VirtualAlloc failed', 0
+g_MsgSwarmModelFail DB  'DualAgent: ERROR ? model load failed', 0
+g_MsgSwarmNotInit   DB  'DualAgent: ERROR ? swarm not initialized', 0
+g_MsgSwarmAlready   DB  'DualAgent: ERROR ? swarm already initialized', 0
 g_MsgHandoffOK      DB  'DualAgent: context handoff complete', 0
-g_MsgRingFull       DB  'DualAgent: ERROR — ring buffer full (backpressure)', 0
+g_MsgRingFull       DB  'DualAgent: ERROR ? ring buffer full (backpressure)', 0
 
 _DATA64 ENDS
 
@@ -179,7 +179,7 @@ EXTERNDEF ModelBridge_Init:PROC
 _TEXT SEGMENT ALIGN(16) 'CODE'
 
 ; =============================================================================
-; Swarm_Init — Initialize Dual-Agent Orchestrator
+; Swarm_Init ? Initialize Dual-Agent Orchestrator
 ; =============================================================================
 ; Allocates context ring (64MB), agent contexts (4KB each), task queues,
 ; and loads the Architect + Coder models into the bridge.
@@ -317,7 +317,7 @@ Swarm_Init PROC FRAME
     sub     rsp, 20h
     call    ModelBridge_Init
     add     rsp, 20h
-    ; Ignore return — may already be initialized
+    ; Ignore return ? may already be initialized
 
     ; ---- Validate Architect model can be loaded ----
     mov     ecx, r12d
@@ -335,7 +335,7 @@ Swarm_Init PROC FRAME
     test    rax, rax
     jnz     @init_model_fail
 
-    ; NOTE: We do NOT call ModelBridge_LoadModel here — that is done
+    ; NOTE: We do NOT call ModelBridge_LoadModel here ? that is done
     ; by the C++ orchestration layer when inference is needed.
     ; The ASM layer only validates capability and manages context.
 
@@ -384,7 +384,7 @@ Swarm_Init PROC FRAME
 Swarm_Init ENDP
 
 ; =============================================================================
-; Swarm_Shutdown — Gracefully shut down the dual-agent swarm
+; Swarm_Shutdown ? Gracefully shut down the dual-agent swarm
 ; =============================================================================
 ; Signals both agents to stop, waits with bounded spin, then frees memory.
 ;
@@ -424,7 +424,7 @@ Swarm_Shutdown PROC FRAME
 @shutdown_wait:
     pause
     dec     r12d
-    jz      @shutdown_force             ; Timeout — force cleanup
+    jz      @shutdown_force             ; Timeout ? force cleanup
 
     ; Check if both are idle (acknowledged shutdown)
     mov     eax, DWORD PTR [rsi].AGENT_CTX.state_flags
@@ -509,7 +509,7 @@ Swarm_Shutdown PROC FRAME
 Swarm_Shutdown ENDP
 
 ; =============================================================================
-; Swarm_GetState — Return pointer to global swarm state
+; Swarm_GetState ? Return pointer to global swarm state
 ; =============================================================================
 ; Parameters: none
 ; Returns:    RAX = pointer to SWARM_STATE
@@ -520,7 +520,7 @@ Swarm_GetState PROC
 Swarm_GetState ENDP
 
 ; =============================================================================
-; Swarm_GetAgentStatus — Return status of a specific agent
+; Swarm_GetAgentStatus ? Return status of a specific agent
 ; =============================================================================
 ; Parameters: ECX = agent ID (0 = Architect, 1 = Coder)
 ; Returns:    RAX = AGENT_STATE_* flag
@@ -554,7 +554,7 @@ Swarm_GetAgentStatus PROC
 Swarm_GetAgentStatus ENDP
 
 ; =============================================================================
-; Swarm_SubmitTask — Enqueue a task to an agent's task queue
+; Swarm_SubmitTask ? Enqueue a task to an agent's task queue
 ; =============================================================================
 ; Lock-free SPSC enqueue. Only one producer thread should call this per agent.
 ;
@@ -595,7 +595,7 @@ Swarm_SubmitTask PROC FRAME
     mov     rdi, QWORD PTR [rbx].AGENT_CTX.queue_base
     add     rdi, rdx                    ; RDI = dest slot
 
-    ; Copy TASK_PKT (256 bytes) — use rep movsb for simplicity
+    ; Copy TASK_PKT (256 bytes) ? use rep movsb for simplicity
     mov     ecx, TASK_PKT_SIZE
     ; RSI = source, RDI = dest (already set)
     rep     movsb
@@ -608,7 +608,7 @@ Swarm_SubmitTask PROC FRAME
     ; Store fence: ensure task data is visible before advancing head
     sfence
 
-    ; Advance head (atomic — only producer writes head)
+    ; Advance head (atomic ? only producer writes head)
     mov     eax, DWORD PTR [rbx].AGENT_CTX.queue_head
     inc     eax
     and     eax, (MAX_TASKS - 1)
@@ -646,7 +646,7 @@ Swarm_SubmitTask PROC FRAME
 Swarm_SubmitTask ENDP
 
 ; =============================================================================
-; Swarm_Handoff — Zero-copy context transfer (Architect → Coder)
+; Swarm_Handoff ? Zero-copy context transfer (Architect ? Coder)
 ; =============================================================================
 ; Writes data into the shared ring buffer at Architect's head position,
 ; then advances head so Coder can consume it. Uses sfence to guarantee
@@ -694,7 +694,7 @@ Swarm_Handoff PROC FRAME
     dec     rdx
     and     rdx, RING_MASK
     cmp     rdx, r12                    ; Enough space?
-    jb      @handoff_full               ; Not enough — backpressure
+    jb      @handoff_full               ; Not enough ? backpressure
 
     ; Get ring base
     mov     rdi, QWORD PTR [rbx].SWARM_STATE.ring_base
@@ -736,7 +736,7 @@ Swarm_Handoff PROC FRAME
 @handoff_copy_done:
     ; Store fence: CRITICAL for Zen 4 cache coherency
     ; All ring writes must be globally visible before we advance the head pointer.
-    ; Without this: Coder reads stale data → cache coherency crash on Ryzen 7000.
+    ; Without this: Coder reads stale data ? cache coherency crash on Ryzen 7000.
     sfence
 
     ; Advance Architect's head pointer (atomic from Coder's perspective)
@@ -772,7 +772,7 @@ Swarm_Handoff PROC FRAME
 Swarm_Handoff ENDP
 
 ; =============================================================================
-; Agent_Architect_Loop — Worker thread main loop for Architect agent
+; Agent_Architect_Loop ? Worker thread main loop for Architect agent
 ; =============================================================================
 ; Runs on a dedicated thread. Dequeues tasks from the Architect's SPSC queue,
 ; transitions state to INFERENCING, invokes the C++ inference callback, and
@@ -781,7 +781,7 @@ Swarm_Handoff ENDP
 ; The inference itself is dispatched to C++ via a function pointer callback
 ; (passed in RDX) because the actual model inference uses the HTTP/streaming
 ; engine. The ASM loop handles state management, queue draining, and
-; Architect→Coder ring buffer handoff with proper fencing.
+; Architect?Coder ring buffer handoff with proper fencing.
 ;
 ; Parameters: RCX = pointer to Architect AGENT_CTX
 ;             RDX = function pointer: int64_t (*InferenceCallback)(AGENT_CTX*, TASK_PKT*)
@@ -827,7 +827,7 @@ Agent_Architect_Loop PROC FRAME
     mov     r14d, DWORD PTR [rbx].AGENT_CTX.queue_head   ; Producer position
 
     cmp     r13d, r14d
-    je      @@architect_spin             ; Queue empty — spin-wait
+    je      @@architect_spin             ; Queue empty ? spin-wait
 
     ; ---- Dequeue task packet ----
     ; Compute slot address: queue_base + tail * 256
@@ -894,7 +894,7 @@ Agent_Architect_Loop PROC FRAME
     jmp     @@architect_loop
 
 @@architect_exit:
-    ; Signal acknowledgment: set state to SHUTDOWN + 1 = 0xFFFFFFFF is already set
+    ; Signal acknowledgment: set state to SHUTDOWN + 1 = 0FFFFFFFFh is already set
     ; Return total tasks processed
     mov     rax, r15
     mov     DWORD PTR [rbx].AGENT_CTX.state_flags, AGENT_STATE_SHUTDOWN
@@ -911,10 +911,10 @@ Agent_Architect_Loop PROC FRAME
 Agent_Architect_Loop ENDP
 
 ; =============================================================================
-; Agent_Coder_Loop — Worker thread main loop for Coder agent
+; Agent_Coder_Loop ? Worker thread main loop for Coder agent
 ; =============================================================================
 ; Runs on a dedicated thread. Consumes tasks from the Coder's SPSC queue
-; AND monitors the shared ring buffer for Architect→Coder handoff data.
+; AND monitors the shared ring buffer for Architect?Coder handoff data.
 ;
 ; The Coder has two input sources:
 ;   1. Direct task submissions (via Swarm_SubmitTask to Coder queue)
@@ -966,7 +966,7 @@ Agent_Coder_Loop PROC FRAME
     lfence
     mov     r14d, DWORD PTR [rbx].AGENT_CTX.queue_head
     cmp     r13d, r14d
-    jne     @@coder_dequeue              ; Has direct task — process it
+    jne     @@coder_dequeue              ; Has direct task ? process it
 
     ; ---- Priority 2: Check ring buffer for Architect handoff ----
     ; Coder reads at its ring_tail; Architect writes at Architect's ring_head
@@ -979,7 +979,7 @@ Agent_Coder_Loop PROC FRAME
     lfence                              ; Serialize: read Architect's head
     mov     rax, QWORD PTR [rbx].AGENT_CTX.ring_tail    ; Coder's read pos
     cmp     rax, rsi
-    je      @@coder_spin                 ; Ring empty — no handoff data
+    je      @@coder_spin                 ; Ring empty ? no handoff data
 
     ; ---- Ring data available: synthesize a CODE_GEN task on stack ----
     ; We create a temporary TASK_PKT pointing to the ring data
@@ -1106,3 +1106,4 @@ Agent_Coder_Loop ENDP
 _TEXT ENDS
 
 END
+

@@ -87,10 +87,10 @@ reconstructed_asm           db 65536 dup(0)
 reconstructed_size          dd 0
 
 ; Strings
-sz_banner       db "╔═══════════════════════════════════╗", 13, 10
-                db "║  Code Pattern Reconstructor v1.0  ║", 13, 10
-                db "║  Pure MASM x64                    ║", 13, 10
-                db "╚═══════════════════════════════════╝", 13, 10, 0
+sz_banner       db "?????????????????????????????????????", 13, 10
+                db "?  Code Pattern Reconstructor v1.0  ?", 13, 10
+                db "?  Pure MASM x64                    ?", 13, 10
+                db "?????????????????????????????????????", 13, 10, 0
 sz_analyzing    db "[*] Analyzing binary patterns...", 13, 10, 0
 sz_functions    db "[+] Found %d functions", 13, 10, 0
 sz_patterns     db "[+] Matched %d patterns", 13, 10, 0
@@ -140,7 +140,7 @@ AnalyzeFunctionRange    PROTO
 ;--------------------------------------------------------------------------------
 ; Initialize reconstructor
 ; RCX = binary base
-; RDX = binary size
+; RDX = binary m_size
 ;--------------------------------------------------------------------------------
 Reconstructor_Initialize PROC
     push rbx
@@ -730,7 +730,7 @@ build_done:
     lea rcx, sz_complete
     call CPR_PrintString
 
-    ; Finalize reconstructed size
+    ; Finalize reconstructed m_size
     mov rax, r15
     mov rcx, g_context.output_buffer
     sub rax, rcx
@@ -750,7 +750,7 @@ Reconstructor_BuildASM ENDP
 ;--------------------------------------------------------------------------------
 ; Get reconstruction result
 ; RCX = output buffer pointer (out)
-; RDX = output size pointer (out)
+; RDX = output m_size pointer (out)
 ;--------------------------------------------------------------------------------
 Reconstructor_GetResult PROC
     mov rax, g_context.output_buffer
@@ -780,7 +780,7 @@ AnalyzeFunctionRange PROC
     mov eax, dword ptr [r12 + FUNCTION_INFO.size_bytes]
     test eax, eax
     jz afr_done
-    mov r15d, eax                               ; size
+    mov r15d, eax                               ; m_size
 
     lea rbx, [r13 + r14]                        ; start ptr
     xor r10d, r10d                              ; calls
@@ -836,7 +836,7 @@ afr_next:
 afr_finish:
     mov dword ptr [r12 + FUNCTION_INFO.call_count], r10d
     mov dword ptr [r12 + FUNCTION_INFO.loop_count], r11d
-    ; complexity = calls + loops + (size/64)
+    ; complexity = calls + loops + (m_size/64)
     mov eax, r15d
     shr eax, 6
     add eax, r10d
@@ -1041,7 +1041,7 @@ Reconstructor_Cleanup PROC
     ; Call VirtualFree(output_buffer, 0, MEM_RELEASE)
     mov rcx, rax              ; lpAddress = output_buffer
     xor rdx, rdx              ; dwSize = 0 (must be 0 for MEM_RELEASE)
-    mov r8d, 8000h            ; dwFreeType = MEM_RELEASE (0x8000)
+    mov r8d, 8000h            ; dwFreeType = MEM_RELEASE (08000h)
     call VirtualFree
     
     ; Clear the buffer pointer
@@ -1055,3 +1055,4 @@ cleanup_done:
 Reconstructor_Cleanup ENDP
 
 END
+

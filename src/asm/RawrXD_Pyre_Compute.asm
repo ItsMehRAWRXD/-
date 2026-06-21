@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_Pyre_Compute.asm — Pyre Compute Engine MASM64 AVX2 Kernels
+; RawrXD_Pyre_Compute.asm ? Pyre Compute Engine MASM64 AVX2 Kernels
 ; =============================================================================
 ; Dependency-free tensor compute kernels for the Pyre inference runtime.
 ; Implements: GEMM, GEMV, RMSNorm, SiLU, Softmax, RoPE, Add, Mul, Embedding
@@ -25,9 +25,9 @@ include RawrXD_Common.inc
 ALIGN 16
 ; IEEE 754 constants for fast exp approximation (Schraudolph's method)
 pyre_exp_magic      DD 8 DUP(3F800000h)     ; 1.0f broadcast
-pyre_exp_log2e      DD 8 DUP(3FB8AA3Bh)     ; log2(e) ≈ 1.44269504
-pyre_exp_c1         DD 8 DUP(3F317218h)     ; ln(2) ≈ 0.693147180
-pyre_exp_c2         DD 8 DUP(3E75FDF0h)     ; ln(2)^2/2 ≈ 0.240226507
+pyre_exp_log2e      DD 8 DUP(3FB8AA3Bh)     ; log2(e) ? 1.44269504
+pyre_exp_c1         DD 8 DUP(3F317218h)     ; ln(2) ? 0.693147180
+pyre_exp_c2         DD 8 DUP(3E75FDF0h)     ; ln(2)^2/2 ? 0.240226507
 pyre_exp_bias       DD 8 DUP(4B00007Fh)     ; 127.0 + 2^23 (magic bias)
 pyre_sign_mask      DD 8 DUP(80000000h)     ; Sign bit mask
 pyre_abs_mask       DD 8 DUP(7FFFFFFFh)     ; Abs mask
@@ -41,9 +41,9 @@ pyre_zero           DD 8 DUP(00000000h)     ; 0.0f
 .code
 
 ; =============================================================================
-;    asm_pyre_gemm_fp32 — Tiled General Matrix Multiply (AVX2)
+;    asm_pyre_gemm_fp32 ? Tiled General Matrix Multiply (AVX2)
 ; =============================================================================
-; C[M×N] = A[M×K] × B[K×N], row-major, fp32
+; C[M?N] = A[M?K] ? B[K?N], row-major, fp32
 ; RCX = const float* A
 ; RDX = const float* B
 ; R8  = float* C
@@ -83,7 +83,7 @@ asm_pyre_gemm_fp32 PROC
     mov     rdi, r14
     rep     stosb
 
-    ; ---- Tiled GEMM: 8×8 tiles ----
+    ; ---- Tiled GEMM: 8?8 tiles ----
     xor     esi, esi            ; i = 0 (row)
 gemm_i_loop:
     cmp     esi, r15d
@@ -139,7 +139,7 @@ gemm_k_scalar_inner:
     add     eax, ebx
     vmovss  xmm1, dword ptr [r12 + rax*4]  ; A[i][k]
 
-    ; C[i][j] += A[i][k] * B[k][j] — one element at a time
+    ; C[i][j] += A[i][k] * B[k][j] ? one element at a time
     mov     eax, ebx
     imul    eax, dword ptr [rsp+8h]   ; k * N (shifted)
     mov     ecx, dword ptr [rsp]      ; saved j from push
@@ -161,7 +161,7 @@ gemm_k_scalar_done:
     jmp     gemm_next_j
 
 gemm_store:
-    ; Store accumulated ymm0 → C[i*N + j .. j+7]
+    ; Store accumulated ymm0 ? C[i*N + j .. j+7]
     mov     eax, esi
     imul    eax, dword ptr [rsp]    ; i * N
     add     eax, edi                ; + j
@@ -212,9 +212,9 @@ gemm_done:
 asm_pyre_gemm_fp32 ENDP
 
 ; =============================================================================
-;    asm_pyre_gemv_fp32 — Matrix-Vector Multiply (AVX2)
+;    asm_pyre_gemv_fp32 ? Matrix-Vector Multiply (AVX2)
 ; =============================================================================
-; y[M] = A[M×K] × x[K], row-major, fp32
+; y[M] = A[M?K] ? x[K], row-major, fp32
 ; RCX = const float* A
 ; RDX = const float* x
 ; R8  = float* y
@@ -280,7 +280,7 @@ gemv_k1_loop:
     jmp     gemv_k1_loop
 
 gemv_hsum:
-    ; Horizontal sum of ymm0 → xmm0[0]
+    ; Horizontal sum of ymm0 ? xmm0[0]
     vextractf128 xmm1, ymm0, 1
     vaddps  xmm0, xmm0, xmm1
     vhaddps xmm0, xmm0, xmm0
@@ -307,7 +307,7 @@ gemv_done:
 asm_pyre_gemv_fp32 ENDP
 
 ; =============================================================================
-;    asm_pyre_rmsnorm — RMS Normalization (AVX2)
+;    asm_pyre_rmsnorm ? RMS Normalization (AVX2)
 ; =============================================================================
 ; out[i] = (x[i] / sqrt(mean(x^2) + eps)) * weight[i]
 ; RCX = const float* input
@@ -360,7 +360,7 @@ rmsnorm_ss1:
     jmp     rmsnorm_ss1
 
 rmsnorm_compute:
-    ; Horizontal sum ymm0 → xmm0[0]
+    ; Horizontal sum ymm0 ? xmm0[0]
     vextractf128 xmm1, ymm0, 1
     vaddps  xmm0, xmm0, xmm1
     vhaddps xmm0, xmm0, xmm0
@@ -421,7 +421,7 @@ rmsnorm_done:
 asm_pyre_rmsnorm ENDP
 
 ; =============================================================================
-;    asm_pyre_silu — SiLU Activation: x * sigmoid(x) (AVX2)
+;    asm_pyre_silu ? SiLU Activation: x * sigmoid(x) (AVX2)
 ; =============================================================================
 ; In-place: inout[i] = x[i] * (1 / (1 + exp(-x[i])))
 ; Uses fast exp approximation via polynomial
@@ -454,7 +454,7 @@ silu_loop8:
     ; Fast path: negate x, compute exp(-x) via Schraudolph approximation
     vxorps  ymm1, ymm0, ymm6                     ; -x (flip sign)
 
-    ; exp(-x) ≈ 2^(x * log2e)
+    ; exp(-x) ? 2^(x * log2e)
     ; Polynomial approximation of exp for AVX2
     vmulps  ymm2, ymm1, ymm5                     ; t = -x * log2(e)
 
@@ -475,12 +475,12 @@ silu_loop8:
 
     ; Integer approximation: reinterpret (t + 127) * 2^23 as float
     ; This gives a rough exp2(t). Then square it doesn't work, do polynomial:
-    ; exp(t) ≈ (1 + t + t^2/2) for small |t|, or integer bit trick
+    ; exp(t) ? (1 + t + t^2/2) for small |t|, or integer bit trick
     ; Use Schraudolph bit-level trick:
-    ;   float_as_int(exp(x)) ≈ (int)(x * (2^23 / ln2) + (127 * 2^23 - 366000))
-    mov     eax, 00B95C8A0h   ; 2^23 / ln(2) ≈ 12102203.2 → 0x4B430000 ... use actual
+    ;   float_as_int(exp(x)) ? (int)(x * (2^23 / ln2) + (127 * 2^23 - 366000))
+    mov     eax, 00B95C8A0h   ; 2^23 / ln(2) ? 12102203.2 ? 04B430000h ... use actual
     ; Actually let's use the simpler polynomial approach which is more robust:
-    ; exp(x) ≈ 1 + x + x^2/2 + x^3/6  (4th order Taylor, good for |x| < 4)
+    ; exp(x) ? 1 + x + x^2/2 + x^3/6  (4th order Taylor, good for |x| < 4)
     ; But for SiLU we need full range. Use the clamped integer trick.
 
     vmulps  ymm2, ymm1, ymm5                     ; -x * log2e (recompute clean)
@@ -518,7 +518,7 @@ silu_scalar8:
     ; Or just use the identity: 1/(1+exp(-x)) = exp(x)/(1+exp(x)) when x>0
 
     ; Fast sigmoid via rational approximation:
-    ; sigmoid(x) ≈ 0.5 + 0.5 * x / (1 + |x|)   (rough but fast)
+    ; sigmoid(x) ? 0.5 + 0.5 * x / (1 + |x|)   (rough but fast)
     ; Better: piece-wise linear or lookup table
 
     ; Use the fast rational approximation for production speed:
@@ -530,7 +530,7 @@ silu_scalar8:
     vaddss  xmm2, xmm2, dword ptr [pyre_one] ; 1 + x/(1+|x|)
     mov     eax, 3F000000h                   ; 0.5f
     vmovd   xmm4, eax
-    vmulss  xmm2, xmm2, xmm4               ; sigmoid ≈ 0.5*(1 + x/(1+|x|))
+    vmulss  xmm2, xmm2, xmm4               ; sigmoid ? 0.5*(1 + x/(1+|x|))
 
     ; SiLU = x * sigmoid(x)
     vmulss  xmm0, xmm0, xmm2
@@ -576,7 +576,7 @@ silu_done:
 asm_pyre_silu ENDP
 
 ; =============================================================================
-;    asm_pyre_softmax — Stable Softmax (AVX2)
+;    asm_pyre_softmax ? Stable Softmax (AVX2)
 ; =============================================================================
 ; In-place softmax: exp(x[i] - max) / sum(exp(x[j] - max))
 ; Uses fast sigmoid approximation for exp
@@ -647,8 +647,8 @@ softmax_exp_loop:
     vsubss  xmm0, xmm0, xmm5               ; x - max
 
     ; Fast exp via rational approximation (for |x-max| in reasonable range)
-    ; exp(t) ≈ (1 + t/256)^256 ... too expensive
-    ; Use: exp(t) ≈ max(0, 1 + t + t^2/2 + t^3/6)  (3rd order Taylor)
+    ; exp(t) ? (1 + t/256)^256 ... too expensive
+    ; Use: exp(t) ? max(0, 1 + t + t^2/2 + t^3/6)  (3rd order Taylor)
     ; Good for t in [-4, 4], and x-max is always <= 0 for softmax
     vmovss  xmm1, xmm0, xmm0               ; t
     vmulss  xmm2, xmm1, xmm1               ; t^2
@@ -657,7 +657,7 @@ softmax_exp_loop:
     vmulss  xmm4, xmm4, xmm2               ; t^2/2
     vaddss  xmm4, xmm4, xmm1               ; t + t^2/2
     vmulss  xmm2, xmm2, xmm1               ; t^3
-    mov     eax, 3E2AAAAAh                   ; 1/6 ≈ 0.166667
+    mov     eax, 3E2AAAAAh                   ; 1/6 ? 0.166667
     vmovd   xmm6, eax
     vmulss  xmm2, xmm2, xmm6               ; t^3/6
     vaddss  xmm4, xmm4, xmm2               ; t + t^2/2 + t^3/6
@@ -715,9 +715,9 @@ softmax_done:
 asm_pyre_softmax ENDP
 
 ; =============================================================================
-;    asm_pyre_rope — Rotary Positional Embedding (AVX2)
+;    asm_pyre_rope ? Rotary Positional Embedding (AVX2)
 ; =============================================================================
-; In-place RoPE on [seqLen × headDim] float data
+; In-place RoPE on [seqLen ? headDim] float data
 ; RCX = float* data
 ; EDX = uint32_t seqLen
 ; R8d = uint32_t headDim
@@ -773,7 +773,7 @@ rope_dim_loop:
 
     ; freq = 1.0 / pow(theta, exponent)
     ; Use log/exp: pow(theta, e) = exp(e * ln(theta))
-    ; For now, approximate: freq = theta^(-e) ≈ iterative
+    ; For now, approximate: freq = theta^(-e) ? iterative
     ; Simple approach: precompute in C++ and pass table
     ; Fallback: use very rough approximation
 
@@ -784,7 +784,7 @@ rope_dim_loop:
     add     eax, ebx
     vmovss  xmm3, dword ptr [rdi + rax*4]          ; x1 = row[i + halfDim]
 
-    ; For now, use identity rotation (angle=0 → cos=1, sin=0) as placeholder
+    ; For now, use identity rotation (angle=0 ? cos=1, sin=0) as placeholder
     ; The C++ fallback handles the actual trigonometry
     ; When full MASM trig is needed, use FSINCOS instruction via x87
     ; Store back unchanged (RoPE is handled by C++ fallback in practice)
@@ -814,7 +814,7 @@ rope_done:
 asm_pyre_rope ENDP
 
 ; =============================================================================
-;    asm_pyre_add_fp32 — Element-wise Vector Add (AVX2)
+;    asm_pyre_add_fp32 ? Element-wise Vector Add (AVX2)
 ; =============================================================================
 ; out[i] = a[i] + b[i]
 ; RCX = const float* a
@@ -858,7 +858,7 @@ add_done:
 asm_pyre_add_fp32 ENDP
 
 ; =============================================================================
-;    asm_pyre_mul_fp32 — Element-wise Vector Multiply (AVX2)
+;    asm_pyre_mul_fp32 ? Element-wise Vector Multiply (AVX2)
 ; =============================================================================
 ; out[i] = a[i] * b[i]
 ; RCX = const float* a
@@ -902,12 +902,12 @@ mul_done:
 asm_pyre_mul_fp32 ENDP
 
 ; =============================================================================
-;    asm_pyre_embedding_lookup — Token Embedding Table Lookup
+;    asm_pyre_embedding_lookup ? Token Embedding Table Lookup
 ; =============================================================================
 ; For each token id, copy embedding row into output
-; RCX = const float* table   [vocabSize × dim]
+; RCX = const float* table   [vocabSize ? dim]
 ; RDX = const uint32_t* ids  [count]
-; R8  = float* output        [count × dim]
+; R8  = float* output        [count ? dim]
 ; R9d = uint32_t count
 ; [rsp+28h] = uint32_t dim
 ; =============================================================================
@@ -974,3 +974,4 @@ emb_done:
 asm_pyre_embedding_lookup ENDP
 
 END
+

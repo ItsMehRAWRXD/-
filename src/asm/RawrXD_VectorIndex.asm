@@ -148,7 +148,7 @@ CS_Done:
     ret
 Vector_CosineSimilarity ENDP
 
-; Legacy 2-arg alias — hardcodes 768 dims then tail-calls CosineSimilarity
+; Legacy 2-arg alias ? hardcodes 768 dims then tail-calls CosineSimilarity
 ; Signature: float Vector_ComputeSimilarity(const float* q, const float* t)
 Vector_ComputeSimilarity PROC
     mov r8, 768
@@ -156,3 +156,4 @@ Vector_ComputeSimilarity PROC
 Vector_ComputeSimilarity ENDP
 
 END
+

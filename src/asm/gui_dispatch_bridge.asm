@@ -1,5 +1,5 @@
 ; ============================================================================
-; gui_dispatch_bridge.asm — x64 MASM Win32 GUI Dispatch Hot-Path
+; gui_dispatch_bridge.asm ? x64 MASM Win32 GUI Dispatch Hot-Path
 ; ============================================================================
 ; Architecture: x64 MASM, Windows x64 calling convention
 ; Purpose: High-performance WM_COMMAND dispatch bridge for Win32 IDE.
@@ -18,7 +18,7 @@ EXTERN rawrxd_dispatch_command:PROC      ; int rawrxd_dispatch_command(uint32_t 
 EXTERN rawrxd_get_feature_count:PROC     ; int rawrxd_get_feature_count(void)
 
 ; ============================================================================
-; CONSTANTS — Command ID ranges for fast validation
+; CONSTANTS ? Command ID ranges for fast validation
 ; ============================================================================
 
 CMD_FILE_MIN        EQU 1000
@@ -76,26 +76,26 @@ masm_gui_dispatch_command PROC
     mov     ebx, ecx            ; Save command ID
     mov     rsi, rdx            ; Save IDE pointer
     
-    ; ── Range validation: reject obviously invalid IDs ──────────────────
+    ; ?? Range validation: reject obviously invalid IDs ??????????????????
     test    ebx, ebx
     jz L_not_handled
     cmp     ebx, 20000
     ja L_not_handled
     
-    ; ── Hot-path: File commands (most frequent) ──────────────────────────
+    ; ?? Hot-path: File commands (most frequent) ??????????????????????????
     cmp     ebx, CMD_FILE_MIN
     jb L_check_higher_ranges
     cmp     ebx, CMD_FILE_MAX
     jbe L_dispatch_it
     
-    ; ── Edit commands ────────────────────────────────────────────────────
+    ; ?? Edit commands ????????????????????????????????????????????????????
     cmp     ebx, CMD_EDIT_MIN
     jb L_check_higher_ranges
     cmp     ebx, CMD_EDIT_MAX
     jbe L_dispatch_it
     
 L_check_higher_ranges:
-    ; ── Agent commands ──────────────────────────────────────────────────
+    ; ?? Agent commands ??????????????????????????????????????????????????
     cmp     ebx, CMD_AGENT_MIN
     jb L_check_terminal
     cmp     ebx, CMD_AGENT_MAX
@@ -341,3 +341,4 @@ L_done:
 masm_gui_batch_wm_command ENDP
 
 END
+

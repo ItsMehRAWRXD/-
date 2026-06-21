@@ -94,6 +94,16 @@ EXTERN RawrXD_HealBuild:PROC
 EXTERN Tool_Init:PROC
 EXTERN Tool_Execute:PROC
 
+; Unified Debugger (Phase 13)
+EXTERN Dbg_Attach:PROC
+EXTERN Dbg_Detach:PROC
+EXTERN Dbg_IsWritable:PROC
+EXTERN Dbg_ReadMemory:PROC
+EXTERN Dbg_WriteMemory:PROC
+EXTERN Dbg_SetHWBP:PROC
+EXTERN Dbg_InjectINT3:PROC
+EXTERN Dbg_EventLoop:PROC
+
 PUBLIC WinMain
 PUBLIC WinMainCRTStartup
 PUBLIC g_hInstance

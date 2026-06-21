@@ -9,7 +9,7 @@ option casemap:none
 RawrXD_Emit_Buffer struct
     base_ptr    dq ?    ; Start of buffer
     current_ptr dq ?    ; Current write position
-    capacity    dq ?    ; Total size of buffer
+    capacity    dq ?    ; Total m_size of buffer
 RawrXD_Emit_Buffer ends
 
 .code
@@ -166,3 +166,4 @@ Emit_Nop proc
 Emit_Nop endp
 
 end
+

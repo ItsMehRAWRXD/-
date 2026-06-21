@@ -14,6 +14,7 @@
 
 #include "rust_parser.hpp"
 #include "symbol_table.hpp"
+#include "../autonomous_model_manager.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -160,7 +161,7 @@ private:
                              size_t line, size_t column);
     float calculateProjectRelevance(const rawrxd::ast::Symbol& sym,
                                     const std::string& prefix);
-    SymbolKind nodeTypeToCompletionKind(RawrXD::AST::NodeType type);
+    SymbolKind nodeTypeToCompletionKind(rawrxd::ast::NodeType type);
     std::string extractPrefix(const std::string& source_code, size_t pos);
 
     // State

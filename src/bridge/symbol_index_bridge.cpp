@@ -330,7 +330,7 @@ float SymbolIndexBridge::calculateRelevance(
     score -= static_cast<float>(distance) * 0.5f;
     
     // Prefer functions over other types
-    if (sym.type == RawrXD::AST::NodeType::FunctionDecl) score += 20.0f;
+    if (sym.type == rawrxd::ast::NodeType::FunctionDecl) score += 20.0f;
     
     // Prefer public symbols
     if (isPublic(sym)) score += 10.0f;
@@ -350,7 +350,7 @@ float SymbolIndexBridge::calculateProjectRelevance(
     else score += 5.0f;
     
     // Prefer public functions
-    if (sym.type == RawrXD::AST::NodeType::FunctionDecl && isPublic(sym)) {
+    if (sym.type == rawrxd::ast::NodeType::FunctionDecl && isPublic(sym)) {
         score += 15.0f;
     }
     
@@ -358,19 +358,19 @@ float SymbolIndexBridge::calculateProjectRelevance(
 }
 
 SymbolKind SymbolIndexBridge::nodeTypeToCompletionKind(
-    RawrXD::AST::NodeType type) {
+    rawrxd::ast::NodeType type) {
     
     switch (type) {
-        case RawrXD::AST::NodeType::FunctionDecl:
+        case rawrxd::ast::NodeType::FunctionDecl:
             return SymbolKind::Function;
-        case RawrXD::AST::NodeType::VariableDecl:
+        case rawrxd::ast::NodeType::VariableDecl:
             return SymbolKind::Variable;
-        case RawrXD::AST::NodeType::ClassDecl:
-        case RawrXD::AST::NodeType::StructDecl:
+        case rawrxd::ast::NodeType::ClassDecl:
+        case rawrxd::ast::NodeType::StructDecl:
             return SymbolKind::Type;
-        case RawrXD::AST::NodeType::EnumDecl:
+        case rawrxd::ast::NodeType::EnumDecl:
             return SymbolKind::Enum;
-        case RawrXD::AST::NodeType::NamespaceDecl:
+        case rawrxd::ast::NodeType::NamespaceDecl:
             return SymbolKind::Module;
         default:
             return SymbolKind::Other;

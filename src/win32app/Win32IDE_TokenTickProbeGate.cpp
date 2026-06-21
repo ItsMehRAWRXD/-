@@ -2,6 +2,7 @@
 
 #include "Win32IDE_TokenTickProbe.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <windows.h>

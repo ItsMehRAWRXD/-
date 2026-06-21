@@ -166,7 +166,7 @@ LSP_CreateRequest PROC FRAME
     ret
 LSP_CreateRequest ENDP
 
-; RCX = buffer, RDX = size, R8 = outResult
+; RCX = buffer, RDX = m_size, R8 = outResult
 ; Returns: RAX = 1 success, 0 fail
 LSP_ParseResponse PROC FRAME
     push rbx
@@ -180,7 +180,7 @@ LSP_ParseResponse PROC FRAME
     .endprolog
 
     mov rbx, rcx            ; buffer
-    mov rsi, rdx            ; size
+    mov rsi, rdx            ; m_size
     mov rdi, r8             ; outResult
 
     test rbx, rbx
@@ -285,3 +285,4 @@ lsp_gcld:
 LSP_GetContentLen ENDP
 
 END
+

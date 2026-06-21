@@ -893,11 +893,11 @@ CmdPatch PROC
     je @@open_failed
     mov r12, rax                    ; hFile
 
-    ; Get file size
+    ; Get file m_size
     mov rcx, r12
     xor edx, edx                    ; lpFileSizeHigh = NULL
     call GetFileSize
-    mov r13d, eax                   ; file size
+    mov r13d, eax                   ; file m_size
 
     ; Create file mapping
     mov rcx, r12                    ; hFile
@@ -1117,7 +1117,7 @@ ParseAndExecute PROC
     cmp BYTE PTR [rbx], '"'
     jne @@unquoted_exe
 
-    ; Quoted program name — skip to closing quote
+    ; Quoted program name ? skip to closing quote
     inc rbx
 @@skip_quoted:
     cmp BYTE PTR [rbx], 0
@@ -1187,7 +1187,7 @@ ParseAndExecute PROC
     test rax, rax
     jnz @@do_verify
 
-    ; Unknown command — fall through to usage
+    ; Unknown command ? fall through to usage
     jmp @@show_usage
 
 @@do_build:
@@ -1224,7 +1224,7 @@ ParseAndExecute PROC
 ParseAndExecute ENDP
 
 ; ============================================================================
-; Entry Point — Standalone console application
+; Entry Point ? Standalone console application
 ; ============================================================================
 EntryPoint PROC
     sub rsp, 40                     ; shadow space + alignment
@@ -1258,3 +1258,4 @@ EntryPoint PROC
 EntryPoint ENDP
 
 END
+

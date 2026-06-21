@@ -2,9 +2,9 @@
 ; Stone MASM64 hardware preflight for RawrXD.
 ;
 ; Exported functions:
-;   rawrxd_has_avx512     — CPUID leaf 7 + XGETBV OS-save probe
-;   rawrxd_has_vulkan     — LoadLibraryA("vulkan-1.dll") probe
-;   rawrxd_preflight_lock — VirtualLock 64 KB dry-run
+;   rawrxd_has_avx512     ? CPUID leaf 7 + XGETBV OS-save probe
+;   rawrxd_has_vulkan     ? LoadLibraryA("vulkan-1.dll") probe
+;   rawrxd_preflight_lock ? VirtualLock 64 KB dry-run
 ;
 ; All functions follow the Microsoft x64 ABI (RCX/RDX/R8/R9 args,
 ; RAX return, 32-byte shadow space on the callee's frame, 16-byte RSP
@@ -16,7 +16,7 @@
 OPTION CASEMAP:NONE
 
 ; ---------------------------------------------------------------------------
-; External Win32 imports — resolved by linker from kernel32.lib
+; External Win32 imports ? resolved by linker from kernel32.lib
 ; ---------------------------------------------------------------------------
 EXTRN   LoadLibraryA:PROC
 EXTRN   FreeLibrary:PROC
@@ -59,7 +59,7 @@ PUBLIC rawrxd_preflight_lock
 ; (via XGETBV XCR0 check). Returns 0 otherwise.
 ;
 ; Register use:
-;   CPUID clobbers RBX — saved/restored via PROC FRAME.
+;   CPUID clobbers RBX ? saved/restored via PROC FRAME.
 ;   RAX/RCX/RDX are caller-save; we hold our own copy in EBX.
 ; ===========================================================================
 rawrxd_has_avx512 PROC FRAME
@@ -71,7 +71,7 @@ rawrxd_has_avx512 PROC FRAME
     xor     eax, eax
     cpuid
     cmp     eax, 7
-    jl      has_avx512_no           ; leaf 7 unavailable — AVX-512 not present
+    jl      has_avx512_no           ; leaf 7 unavailable ? AVX-512 not present
 
     ; --- CPUID leaf 1: verify OSXSAVE (bit 27) and XSAVE (bit 26) ---
     mov     eax, 1
@@ -118,7 +118,7 @@ rawrxd_has_avx512 ENDP
 ;
 ; Frame layout (in stack offset from RSP after sub rsp,32):
 ;   [rsp+0 .. rsp+31]  = shadow home space for callee
-;   [rsp+32]           = saved rbx (via push rbx — below return address)
+;   [rsp+32]           = saved rbx (via push rbx ? below return address)
 ; ===========================================================================
 rawrxd_has_vulkan PROC FRAME
     push    rbx
@@ -133,7 +133,7 @@ rawrxd_has_vulkan PROC FRAME
     test    rax, rax
     jz      has_vulkan_no
 
-    ; DLL found — release it; note result in EBX
+    ; DLL found ? release it; note result in EBX
     mov     rbx, rax
     mov     rcx, rbx
     call    FreeLibrary
@@ -188,7 +188,7 @@ rawrxd_preflight_lock PROC FRAME
     test    eax, eax
     jz      lock_lock_fail
 
-    ; Lock succeeded — VirtualUnlock and free
+    ; Lock succeeded ? VirtualUnlock and free
     mov     rcx, rbx
     mov     rdx, PROBE_SIZE
     call    VirtualUnlock
@@ -202,7 +202,7 @@ rawrxd_preflight_lock PROC FRAME
     jmp     lock_done
 
 lock_lock_fail:
-    ; Locking denied — still free the committed pages
+    ; Locking denied ? still free the committed pages
     mov     rcx, rbx
     xor     rdx, rdx
     mov     r8d, MEM_RELEASE
@@ -219,3 +219,4 @@ lock_done:
 rawrxd_preflight_lock ENDP
 
 END
+

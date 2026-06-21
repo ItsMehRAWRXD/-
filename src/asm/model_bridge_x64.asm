@@ -1,10 +1,10 @@
 ; =============================================================================
-; model_bridge_x64.asm — Pure x64 MASM Model Selector / Loader Bridge
+; model_bridge_x64.asm ? Pure x64 MASM Model Selector / Loader Bridge
 ; =============================================================================
 ;
 ; Production-grade model management bridge for RawrXD inference engine.
 ; Provides:
-;   - Model profile table (8B → 800B) with quantization + memory metadata
+;   - Model profile table (8B ? 800B) with quantization + memory metadata
 ;   - Model tier validation (small/medium/large/ultra/800B dual-engine)
 ;   - VRAM/RAM estimation per model + quantization combination
 ;   - CPUID capability gating (AVX2 required, AVX-512 for 100B+)
@@ -35,7 +35,7 @@ MODEL_TIER_LARGE        EQU     3       ; 28B-70B (multi-GPU or CPU offload)
 MODEL_TIER_ULTRA        EQU     4       ; 71B-100B (swarm inference recommended)
 MODEL_TIER_800B_DUAL    EQU     5       ; 800B dual-engine (5-drive tensor dist)
 
-; Quantization type IDs (mapped from GGML types in RawrXD_Common.inc)
+; Quantization m_type IDs (mapped from GGML types in RawrXD_Common.inc)
 QUANT_F32               EQU     0
 QUANT_F16               EQU     1
 QUANT_Q8_0              EQU     2
@@ -74,18 +74,18 @@ MAX_MODEL_PROFILES      EQU     24
 ;                         MODEL PROFILE STRUCTURE
 ; =============================================================================
 ; Each model profile describes a loadable model configuration.
-; Size: 128 bytes per entry (aligned for cache efficiency)
+; m_size: 128 bytes per entry (aligned for cache efficiency)
 
 MODEL_PROFILE STRUCT
     model_id        DD ?                ; Unique model ID (0-based index)
     tier            DD ?                ; MODEL_TIER_* classification
     param_count_b   DD ?                ; Parameter count in billions (integer)
     param_count_frac DD ?               ; Fractional billions (e.g. 5 = 0.5B, for 1.5B)
-    quant_type      DD ?                ; Default QUANT_* type
+    quant_type      DD ?                ; Default QUANT_* m_type
     quant_bits      DD ?                ; Bits per weight (2, 3, 4, 5, 6, 8, 16, 32)
     ram_mb          DD ?                ; Estimated RAM in MB at default quant
     vram_mb         DD ?                ; Estimated VRAM in MB at default quant
-    context_default DD ?                ; Default context window size
+    context_default DD ?                ; Default context window m_size
     context_max     DD ?                ; Maximum safe context window
     max_tokens      DD ?                ; Default max tokens per response
     engine_mode     DD ?                ; Bitmask of ENGINE_MODE_* flags
@@ -96,7 +96,7 @@ MODEL_PROFILE STRUCT
     num_heads       DD ?                ; Number of attention heads
     num_kv_heads    DD ?                ; Number of KV heads (GQA)
     ffn_dim         DD ?                ; FFN intermediate dimension
-    vocab_size      DD ?                ; Vocabulary size
+    vocab_size      DD ?                ; Vocabulary m_size
     name_offset     DQ ?                ; Offset into g_ModelNames string table
     name_length     DD ?                ; Length of model name string
     _reserved       DD 3 DUP(?)         ; Padding to 128 bytes
@@ -117,7 +117,7 @@ BRIDGE_STATE STRUCT
     profile_count   DD ?                ; Number of registered model profiles
     active_profile  DD ?                ; Currently loaded profile ID (-1 = none)
     active_tier     DD ?                ; Tier of currently loaded model
-    active_quant    DD ?                ; Quant type of currently loaded model
+    active_quant    DD ?                ; Quant m_type of currently loaded model
     engine_flags    DD ?                ; Current ENGINE_MODE_* bitmask
     load_count      DQ ?                ; Total models loaded since init
     unload_count    DQ ?                ; Total models unloaded since init
@@ -172,13 +172,13 @@ g_MsgProfiles   DB ' profiles, AVX2=', 0
 g_MsgAVX512     DB ' AVX512=', 0
 g_MsgRAM        DB ' RAM=', 0
 g_MsgMB         DB 'MB)', 0
-g_MsgLoadOK     DB 'ModelBridge: model loaded — ', 0
+g_MsgLoadOK     DB 'ModelBridge: model loaded ? ', 0
 g_MsgUnloadOK   DB 'ModelBridge: model unloaded', 0
-g_MsgErrNoAVX2  DB 'ModelBridge: ERROR — AVX2 required but not available', 0
-g_MsgErrNoAVX512 DB 'ModelBridge: ERROR — AVX-512 required for this model tier', 0
-g_MsgErrOOM     DB 'ModelBridge: ERROR — insufficient RAM for model', 0
-g_MsgErrBusy    DB 'ModelBridge: ERROR — model load already in progress', 0
-g_MsgErrIdx     DB 'ModelBridge: ERROR — invalid profile index', 0
+g_MsgErrNoAVX2  DB 'ModelBridge: ERROR ? AVX2 required but not available', 0
+g_MsgErrNoAVX512 DB 'ModelBridge: ERROR ? AVX-512 required for this model tier', 0
+g_MsgErrOOM     DB 'ModelBridge: ERROR ? insufficient RAM for model', 0
+g_MsgErrBusy    DB 'ModelBridge: ERROR ? model load already in progress', 0
+g_MsgErrIdx     DB 'ModelBridge: ERROR ? invalid profile index', 0
 
 _DATA64 ENDS
 
@@ -210,7 +210,7 @@ PUBLIC EstimateRAM_Safe
 _TEXT SEGMENT ALIGN(16) 'CODE'
 
 ; =============================================================================
-; ModelBridge_Init — Initialize the model bridge subsystem
+; ModelBridge_Init ? Initialize the model bridge subsystem
 ; =============================================================================
 ; Detects CPU capabilities, queries system RAM, and populates the model
 ; profile table with all supported 8B-800B configurations.
@@ -247,7 +247,7 @@ ModelBridge_Init PROC FRAME
     rep     stosb
 
     ; ---- CPUID: detect AVX2, FMA3, AVX-512 ----
-    ; EAX=7, ECX=0 → structured extended features
+    ; EAX=7, ECX=0 ? structured extended features
     mov     eax, 7
     xor     ecx, ecx
     cpuid
@@ -270,7 +270,7 @@ ModelBridge_Init PROC FRAME
     mov     DWORD PTR [rbx].BRIDGE_STATE.has_avx512bw, 1
 @no_avx512bw:
 
-    ; EAX=1 → ECX bit 12 = FMA3
+    ; EAX=1 ? ECX bit 12 = FMA3
     mov     eax, 1
     cpuid
     bt      ecx, 12
@@ -296,7 +296,7 @@ ModelBridge_Init PROC FRAME
     lea     rdi, [rsp+20h]              ; Use local space for MEMORYSTATUSEX
     mov     DWORD PTR [rdi], 64         ; dwLength = sizeof(MEMORYSTATUSEX)
     mov     rcx, rdi
-    ; Call GlobalMemoryStatusEx — we resolve dynamically to avoid link dep
+    ; Call GlobalMemoryStatusEx ? we resolve dynamically to avoid link dep
     ; For simplicity, store a fallback: assume 64GB if call fails
     ; (Actual link is via kernel32.lib which is always available)
     sub     rsp, 28h                    ; Shadow space
@@ -349,7 +349,7 @@ ModelBridge_Init PROC FRAME
 ModelBridge_Init ENDP
 
 ; =============================================================================
-; PopulateProfiles — Internal: fill g_ModelProfiles table
+; PopulateProfiles ? Internal: fill g_ModelProfiles table
 ; =============================================================================
 ; Populates all 24 model profiles with metadata.
 ; Called once from ModelBridge_Init.
@@ -1052,7 +1052,7 @@ PopulateProfiles PROC FRAME
 PopulateProfiles ENDP
 
 ; =============================================================================
-; ModelBridge_GetProfileCount — Return number of registered profiles
+; ModelBridge_GetProfileCount ? Return number of registered profiles
 ; =============================================================================
 ; Parameters: none
 ; Returns:    EAX = profile count
@@ -1064,7 +1064,7 @@ ModelBridge_GetProfileCount PROC
 ModelBridge_GetProfileCount ENDP
 
 ; =============================================================================
-; ModelBridge_GetProfile — Get pointer to profile by index
+; ModelBridge_GetProfile ? Get pointer to profile by index
 ; =============================================================================
 ; Parameters: ECX = profile index (0-based)
 ; Returns:    RAX = pointer to MODEL_PROFILE, or NULL if invalid
@@ -1092,7 +1092,7 @@ ModelBridge_GetProfile PROC
 ModelBridge_GetProfile ENDP
 
 ; =============================================================================
-; ModelBridge_GetProfileByName — Find profile by name substring match
+; ModelBridge_GetProfileByName ? Find profile by name substring match
 ; =============================================================================
 ; Parameters: RCX = pointer to name string (null-terminated)
 ; Returns:    RAX = pointer to MODEL_PROFILE, or NULL if not found
@@ -1133,11 +1133,11 @@ ModelBridge_GetProfileByName PROC FRAME
 
 @cmp_loop:
     cmp     r10d, ecx
-    jae     @match_found                ; Matched all name bytes → hit
+    jae     @match_found                ; Matched all name bytes ? hit
 
     movzx   eax, BYTE PTR [r8+r10]
     test    al, al
-    jz      @partial_check              ; Search string ended — partial match?
+    jz      @partial_check              ; Search string ended ? partial match?
 
     movzx   edx, BYTE PTR [r9+r10]
     ; Lowercase both
@@ -1159,7 +1159,7 @@ ModelBridge_GetProfileByName PROC FRAME
     jmp     @cmp_loop
 
 @partial_check:
-    ; Search string was shorter than profile name — accept if >= 3 chars matched
+    ; Search string was shorter than profile name ? accept if >= 3 chars matched
     cmp     r10d, 3
     jae     @match_found
     jmp     @next_profile
@@ -1188,7 +1188,7 @@ ModelBridge_GetProfileByName PROC FRAME
 ModelBridge_GetProfileByName ENDP
 
 ; =============================================================================
-; ModelBridge_ValidateLoad — Check if a model profile can be loaded
+; ModelBridge_ValidateLoad ? Check if a model profile can be loaded
 ; =============================================================================
 ; Checks CPU capabilities, RAM availability, and engine compatibility.
 ;
@@ -1268,7 +1268,7 @@ ModelBridge_ValidateLoad PROC FRAME
 ModelBridge_ValidateLoad ENDP
 
 ; =============================================================================
-; ModelBridge_LoadModel — Load a model by profile index
+; ModelBridge_LoadModel ? Load a model by profile index
 ; =============================================================================
 ; Validates and sets the active model profile. Actual model weight loading
 ; is dispatched to the C++ InferenceEngine via callback.
@@ -1302,7 +1302,7 @@ ModelBridge_LoadModel PROC FRAME
 @lock_acquired:
 
     ; Validate first
-    ; (Inline validation — check index)
+    ; (Inline validation ? check index)
     cmp     ecx, DWORD PTR [rbx].BRIDGE_STATE.profile_count
     jae     @load_bad_idx
 
@@ -1359,7 +1359,7 @@ ModelBridge_LoadModel PROC FRAME
 ModelBridge_LoadModel ENDP
 
 ; =============================================================================
-; ModelBridge_UnloadModel — Unload the current model
+; ModelBridge_UnloadModel ? Unload the current model
 ; =============================================================================
 ; Parameters: none
 ; Returns:    EAX = BRIDGE_OK on success, BRIDGE_ERR_NOT_LOADED if no model
@@ -1388,7 +1388,7 @@ ModelBridge_UnloadModel PROC
 ModelBridge_UnloadModel ENDP
 
 ; =============================================================================
-; ModelBridge_GetActiveProfile — Get the currently loaded profile
+; ModelBridge_GetActiveProfile ? Get the currently loaded profile
 ; =============================================================================
 ; Parameters: none
 ; Returns:    RAX = pointer to active MODEL_PROFILE, or NULL if none
@@ -1415,7 +1415,7 @@ ModelBridge_GetActiveProfile PROC
 ModelBridge_GetActiveProfile ENDP
 
 ; =============================================================================
-; ModelBridge_GetState — Get pointer to bridge state structure
+; ModelBridge_GetState ? Get pointer to bridge state structure
 ; =============================================================================
 ; Parameters: none
 ; Returns:    RAX = pointer to BRIDGE_STATE
@@ -1426,9 +1426,9 @@ ModelBridge_GetState PROC
 ModelBridge_GetState ENDP
 
 ; =============================================================================
-; ModelBridge_EstimateRAM — Estimate RAM needed for model at given quant
+; ModelBridge_EstimateRAM ? Estimate RAM needed for model at given quant
 ; =============================================================================
-; Approximate formula: RAM_MB ≈ (params_B * bits_per_weight) / 8 * 1.15
+; Approximate formula: RAM_MB ? (params_B * bits_per_weight) / 8 * 1.15
 ; The 1.15 multiplier accounts for KV cache, activations, and overhead.
 ;
 ; Parameters: ECX = param_count_b (billions)
@@ -1441,7 +1441,7 @@ ModelBridge_EstimateRAM PROC
     ; Integer approx: RAM_MB = (param_count_b * quant_bits * 144) / 1
     ; Better: RAM_MB = param_count_b * quant_bits * 125 + param_count_b * quant_bits * 19
     ;       = param_count_b * quant_bits * 144
-    ; This gives ~15% overhead over raw weight size
+    ; This gives ~15% overhead over raw weight m_size
 
     imul    eax, ecx, 144              ; EAX = param_b * 144
     imul    eax, edx                   ; EAX = param_b * 144 * bits
@@ -1450,7 +1450,7 @@ ModelBridge_EstimateRAM PROC
 ModelBridge_EstimateRAM ENDP
 
 ; =============================================================================
-; ModelBridge_GetTierForSize — Classify a model by parameter count
+; ModelBridge_GetTierForSize ? Classify a model by parameter count
 ; =============================================================================
 ; Parameters: ECX = parameter count in billions
 ; Returns:    EAX = MODEL_TIER_* classification
@@ -1493,9 +1493,9 @@ ModelBridge_GetTierForSize PROC
 ModelBridge_GetTierForSize ENDP
 
 ; =============================================================================
-; ModelBridge_GetQuantName — Get quantization type name string
+; ModelBridge_GetQuantName ? Get quantization m_type name string
 ; =============================================================================
-; Parameters: ECX = QUANT_* type ID
+; Parameters: ECX = QUANT_* m_type ID
 ; Returns:    RAX = pointer to null-terminated name string
 ; =============================================================================
 ModelBridge_GetQuantName PROC
@@ -1534,7 +1534,7 @@ ALIGN 8
 ModelBridge_GetQuantName ENDP
 
 ; =============================================================================
-; ModelBridge_GetCapabilities — Return packed capability bitmask
+; ModelBridge_GetCapabilities ? Return packed capability bitmask
 ; =============================================================================
 ; Returns a 64-bit bitmask describing current bridge + hardware capabilities.
 ;
@@ -1631,7 +1631,7 @@ ModelBridge_GetCapabilities PROC
 
     ; Bits 32-47: Total RAM in GB (total_ram_mb / 1024)
     mov     rdx, QWORD PTR [rcx].BRIDGE_STATE.total_ram_mb
-    shr     rdx, 10                     ; MB → GB
+    shr     rdx, 10                     ; MB ? GB
     and     edx, 0FFFFh
     shl     rdx, 32
     or      rax, rdx
@@ -1647,7 +1647,7 @@ ModelBridge_GetCapabilities PROC
 ModelBridge_GetCapabilities ENDP
 
 ; =============================================================================
-; AcquireBridgeLock — Reusable PAUSE-based spinlock acquire
+; AcquireBridgeLock ? Reusable PAUSE-based spinlock acquire
 ; =============================================================================
 ; Acquires the bridge spinlock with proper PAUSE for power efficiency.
 ; Prevents hypervisor traps on VMware/Hyper-V and saves ~90% power vs busy spin.
@@ -1671,7 +1671,7 @@ AcquireBridgeLock PROC
 AcquireBridgeLock ENDP
 
 ; =============================================================================
-; ReleaseBridgeLock — Release the bridge spinlock
+; ReleaseBridgeLock ? Release the bridge spinlock
 ; =============================================================================
 ; Parameters: none
 ; Returns:    none
@@ -1684,10 +1684,10 @@ ReleaseBridgeLock PROC
 ReleaseBridgeLock ENDP
 
 ; =============================================================================
-; ValidateModelAlignment — 64-byte align model base before ZMM touch
+; ValidateModelAlignment ? 64-byte align model base before ZMM touch
 ; =============================================================================
 ; AVX-512 vmovntdq/vmovaps require 64-byte aligned addresses.
-; Without this, 800B dual-engine loads WILL 0xC0000005 (access violation).
+; Without this, 800B dual-engine loads WILL 0C0000005h (access violation).
 ; This is NON-NEGOTIABLE for Ryzen 7000 cache coherency.
 ;
 ; Parameters: RCX = load_address (raw allocation pointer)
@@ -1696,9 +1696,9 @@ ReleaseBridgeLock ENDP
 ALIGN 16
 ValidateModelAlignment PROC
     mov     rax, rcx                    ; RAX = load_address
-    test    rax, 3Fh                    ; & 0x3F (64-1) — check 64-byte alignment
+    test    rax, 3Fh                    ; & 03Fh (64-1) ? check 64-byte alignment
     jz      @@aligned
-    ; Force align up (wastes up to 63 bytes but prevents 0xC0000005)
+    ; Force align up (wastes up to 63 bytes but prevents 0C0000005h)
     add     rax, 63
     and     rax, -64                    ; Round up to next 64-byte boundary
 @@aligned:
@@ -1710,7 +1710,7 @@ ValidateModelAlignment PROC
 ValidateModelAlignment ENDP
 
 ; =============================================================================
-; EstimateRAM_Safe — RAM estimation with load fence (serialized read)
+; EstimateRAM_Safe ? RAM estimation with load fence (serialized read)
 ; =============================================================================
 ; Same formula as ModelBridge_EstimateRAM but with lfence to serialize
 ; volatile reads before multiplication. Prevents stale QuantBits/ParamCount
@@ -1725,7 +1725,7 @@ ALIGN 16
 EstimateRAM_Safe PROC
     ; Serialize: ensure we read current values, not stale cache lines
     ; This is critical when 800B dual-engine handoff updates quant/param
-    ; on another core — lfence guarantees all prior loads complete first.
+    ; on another core ? lfence guarantees all prior loads complete first.
     lfence                              ; <- Serialize before computation
     imul    eax, ecx, 144              ; EAX = param_b * 144
     imul    eax, edx                   ; EAX = param_b * 144 * bits
@@ -1741,3 +1741,4 @@ _TEXT ENDS
 EXTERNDEF GlobalMemoryStatusEx:PROC
 
 END
+

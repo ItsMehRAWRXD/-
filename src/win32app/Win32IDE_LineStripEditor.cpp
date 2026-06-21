@@ -608,7 +608,7 @@ bool Win32IDE::ensureLineStripEditorInitialized()
         ReleaseDC(m_hwndLineStripOverlay, overlayDc);
     }
 
-    const std::size_t arenaRequired = rawrxd::ui::SovereignWorkspaceController::requiredArenaBytes(
+    const std::size_t arenaRequired = rawrxd::ui::SovereignWorkspaceController::calculateRequiredArenaBytes(
         kMaxLines, m_lineStripStream.cellWidth, m_lineStripStream.cellHeight, kMaxCharsPerLine);
     if (arenaRequired == 0 || arenaRequired > sizeof(g_lineStripArena) ||
         !m_lineStripController.initialize(g_lineStripArena, sizeof(g_lineStripArena), kMaxLines,

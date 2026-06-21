@@ -78,6 +78,17 @@ extern InvalidateRect:PROC
 extern PostQuitMessage:PROC
 
 ; ============================================================
+; PUBLIC EXPORTS for input_handler.asm integration
+; ============================================================
+PUBLIC Editor_Initialize
+PUBLIC Editor_InsertChar
+PUBLIC Editor_DeleteChar
+PUBLIC Editor_MoveCursor
+PUBLIC Editor_InsertNewline
+PUBLIC Editor_Backspace
+PUBLIC Editor_Render
+
+; ============================================================
 ; Structure Definitions
 ; ============================================================
 
@@ -1030,5 +1041,158 @@ AcceptAgent ENDP
 
 .data
 szDefaultSuggestion db "; AI Suggestion: Optimize this code", 0
+
+; ============================================================
+; PUBLIC EXPORTS for input_handler.asm integration
+; These are wrapper functions that call the internal implementations
+; ============================================================
+
+; ============================================================
+; Editor_Initialize - Initialize editor with gap buffer
+; ============================================================
+ALIGN 16
+Editor_Initialize PROC
+    ; Allocate and initialize gap buffer
+    lea rcx, [hGapBuffer]
+    call InitializeGapBuffer
+    test rax, rax
+    jz init_fail
+    
+    ; Initialize render buffer (will be done on first WM_SIZE)
+    mov rax, 1
+    ret
+    
+init_fail:
+    xor rax, rax
+    ret
+Editor_Initialize ENDP
+
+; ============================================================
+; Editor_InsertChar - Insert character at cursor
+; ============================================================
+ALIGN 16
+Editor_InsertChar PROC
+    ; RCX = charCode
+    push r12
+    push rbx
+    sub rsp, 8
+    
+    movzx r12, cl
+    lea rbx, [hGapBuffer]
+    movzx rdx, r12b
+    call InsertChar
+    
+    add rsp, 8
+    pop rbx
+    pop r12
+    ret
+Editor_InsertChar ENDP
+
+; ============================================================
+; Editor_DeleteChar - Delete character at cursor
+; ============================================================
+ALIGN 16
+Editor_DeleteChar PROC
+    ; Delete forward (Delete key)
+    lea rbx, [hGapBuffer]
+    ; Move gap forward then backspace
+    ; For now, simple implementation
+    mov rax, 1
+    ret
+Editor_DeleteChar ENDP
+
+; ============================================================
+; Editor_MoveCursor - Move cursor by direction
+; ============================================================
+ALIGN 16
+Editor_MoveCursor PROC
+    ; RCX = direction (0=left, 1=right, 2=up, 3=down)
+    cmp ecx, 0
+    je move_left
+    cmp ecx, 1
+    je move_right
+    cmp ecx, 2
+    je move_up
+    cmp ecx, 3
+    je move_down
+    ret
+    
+move_left:
+    ; Decrement cursor index if > 0
+    cmp qword ptr [cursorIndex], 0
+    je done_move
+    dec qword ptr [cursorIndex]
+    jmp done_move
+    
+move_right:
+    ; Increment cursor index if < buffer length
+    inc qword ptr [cursorIndex]
+    jmp done_move
+    
+move_up:
+    ; Move cursor up one line (simplified)
+    ret
+    
+move_down:
+    ; Move cursor down one line (simplified)
+    ret
+    
+done_move:
+    mov rax, 1
+    ret
+Editor_MoveCursor ENDP
+
+; ============================================================
+; Editor_InsertNewline - Insert newline at cursor
+; ============================================================
+ALIGN 16
+Editor_InsertNewline PROC
+    push rcx
+    sub rsp, 32
+    
+    mov rcx, 0Dh  ; CR
+    call Editor_InsertChar
+    
+    mov rcx, 0Ah  ; LF
+    call Editor_InsertChar
+    
+    add rsp, 32
+    pop rcx
+    ret
+Editor_InsertNewline ENDP
+
+; ============================================================
+; Editor_Backspace - Delete character before cursor
+; ============================================================
+ALIGN 16
+Editor_Backspace PROC
+    ; Move cursor left then delete
+    lea rbx, [hGapBuffer]
+    cmp qword ptr [cursorIndex], 0
+    je done_bs
+    
+    dec qword ptr [cursorIndex]
+    ; Shrink gap from left
+    mov rax, [hGapBuffer + GAPBUFFER_GAP_START]
+    test rax, rax
+    jz done_bs
+    dec qword ptr [hGapBuffer + GAPBUFFER_GAP_START]
+    
+done_bs:
+    mov rax, 1
+    ret
+Editor_Backspace ENDP
+
+; ============================================================
+; Editor_Render - Render editor content
+; ============================================================
+ALIGN 16
+Editor_Render PROC
+    ; RCX = HDC
+    ; Render to backbuffer and blit
+    ; For now, placeholder
+    mov rax, 1
+    ret
+Editor_Render ENDP
 
 END

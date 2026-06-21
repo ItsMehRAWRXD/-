@@ -1,5 +1,5 @@
 ; =============================================================================
-; gpu_requantize_rocm.asm — AMD GPU offload for layer surgery
+; gpu_requantize_rocm.asm ? AMD GPU offload for layer surgery
 ; =============================================================================
 ; Purpose: ROCm/HIP dispatch stubs for GPU-accelerated requantization.
 ;          Provides thunks that set up parameters for HIP kernel launches
@@ -46,7 +46,7 @@ HIP_ERROR_DEINITIALIZED EQU     4
 HIP_ERROR_NO_DEVICE     EQU     100
 
 ; =============================================================================
-;                       QUANT TYPE CONSTANTS
+;                       QUANT m_type CONSTANTS
 ; =============================================================================
 QUANT_Q2_K              EQU     0
 QUANT_Q3_K_M            EQU     1
@@ -70,17 +70,17 @@ DEFAULT_GRID_SCALE      EQU     4       ; CUs to target per dispatch (auto-scale
 ; gpu_requantize_layer_dispatch
 ; =============================================================================
 ; void gpu_requantize_layer_dispatch(
-;     uint64_t gpu_buffer_handle,   ; RCX — HIP device pointer (hipDeviceptr_t)
-;     uint32_t layer_index,         ; EDX — layer index in the model
-;     uint32_t target_quant_type,   ; R8D — target quantization type (QUANT_* enum)
-;     uint64_t element_count,       ; R9  — number of elements in the layer
-;     [rsp+40] uint64_t src_quant   ; source quantization type
+;     uint64_t gpu_buffer_handle,   ; RCX ? HIP device pointer (hipDeviceptr_t)
+;     uint32_t layer_index,         ; EDX ? layer index in the model
+;     uint32_t target_quant_type,   ; R8D ? target quantization m_type (QUANT_* enum)
+;     uint64_t element_count,       ; R9  ? number of elements in the layer
+;     [rsp+40] uint64_t src_quant   ; source quantization m_type
 ; );
 ;
 ; Returns: RAX = 0 on success, HIP error code on failure
 ;
 ; Strategy:
-;   1. Validate inputs (buffer non-null, quant type in range)
+;   1. Validate inputs (buffer non-null, quant m_type in range)
 ;   2. Compute grid dimensions based on element_count
 ;   3. Set up kernel launch parameters on stack
 ;   4. Call hipLaunchKernel via dynamic dispatch (function pointer from C++ init)
@@ -119,7 +119,7 @@ gpu_requantize_layer_dispatch PROC PUBLIC FRAME
     mov     r14d, r8d           ; target_quant_type
     mov     r15, r9             ; element_count
 
-    ; Validate quant type range
+    ; Validate quant m_type range
     cmp     r14d, QUANT_F32
     ja      @@error_invalid
 
@@ -130,7 +130,7 @@ gpu_requantize_layer_dispatch PROC PUBLIC FRAME
     ; Load source quant from stack arg
     mov     esi, DWORD PTR [rbp+48]  ; src_quant_type
 
-    ; ─── Compute Grid Dimensions ───
+    ; ??? Compute Grid Dimensions ???
     ; gridDim.x = ceil(element_count / (DEFAULT_BLOCK_X * elements_per_thread))
     ; For requantization: each thread processes 8 elements (2 GGML blocks of 4)
     mov     rax, r15
@@ -140,14 +140,14 @@ gpu_requantize_layer_dispatch PROC PUBLIC FRAME
     div     rcx                 ; rax = grid.x
     mov     rdi, rax            ; gridDim.x
 
-    ; ─── Build Kernel Arguments Structure ───
+    ; ??? Build Kernel Arguments Structure ???
     ; Layout on stack at [rsp+0]:
     ;   [+0]  uint64_t  device_ptr     (gpu_buffer_handle)
     ;   [+8]  uint32_t  src_quant      (source quantization)
     ;   [+12] uint32_t  dst_quant      (target quantization)
     ;   [+16] uint64_t  element_count  (total elements)
     ;   [+24] uint32_t  layer_index    (for offset computation)
-    ;   [+28] uint32_t  block_size     (GGML block size, quant-dependent)
+    ;   [+28] uint32_t  block_size     (GGML block m_size, quant-dependent)
 
     mov     QWORD PTR [rsp+0], r12       ; device_ptr
     mov     DWORD PTR [rsp+8], esi       ; src_quant
@@ -155,7 +155,7 @@ gpu_requantize_layer_dispatch PROC PUBLIC FRAME
     mov     QWORD PTR [rsp+16], r15      ; element_count
     mov     DWORD PTR [rsp+24], r13d     ; layer_index
 
-    ; Compute block size based on target quant type
+    ; Compute block m_size based on target quant m_type
     xor     eax, eax
     cmp     r14d, QUANT_Q2_K
     je      @@blk_96
@@ -208,7 +208,7 @@ gpu_requantize_layer_dispatch PROC PUBLIC FRAME
 @@blk_set:
     mov     DWORD PTR [rsp+28], eax     ; block_size
 
-    ; ─── HIP Kernel Launch ───
+    ; ??? HIP Kernel Launch ???
     ; In production, this calls through a function pointer table set up by
     ; AMDGPUAccelerator::initialize(). The table is loaded from hiprt64.dll.
     ;
@@ -231,7 +231,7 @@ gpu_requantize_layer_dispatch PROC PUBLIC FRAME
     ; Store dispatch parameters in a structure that C++ can read
     ; The C++ side checks g_gpu_requant_pending and executes the actual HIP call
 
-    ; Signal success — parameters are marshaled and ready for C++ dispatch
+    ; Signal success ? parameters are marshaled and ready for C++ dispatch
     xor     rax, rax            ; hipSuccess = 0
 
 @@cleanup:
@@ -253,13 +253,13 @@ gpu_requantize_layer_dispatch PROC PUBLIC FRAME
 gpu_requantize_layer_dispatch ENDP
 
 ; =============================================================================
-; gpu_requantize_batch_dispatch — Batch requantization across multiple layers
+; gpu_requantize_batch_dispatch ? Batch requantization across multiple layers
 ; =============================================================================
 ; void gpu_requantize_batch_dispatch(
-;     uint64_t gpu_buffer_handle,   ; RCX — base device pointer
-;     uint32_t start_layer,         ; EDX — first layer index
-;     uint32_t end_layer,           ; R8D — last layer index (inclusive)
-;     uint32_t target_quant_type,   ; R9D — target quant type
+;     uint64_t gpu_buffer_handle,   ; RCX ? base device pointer
+;     uint32_t start_layer,         ; EDX ? first layer index
+;     uint32_t end_layer,           ; R8D ? last layer index (inclusive)
+;     uint32_t target_quant_type,   ; R9D ? target quant m_type
 ;     [rsp+40] uint64_t* layer_sizes ; array of per-layer element counts
 ; );
 ;
@@ -357,7 +357,7 @@ gpu_requantize_batch_dispatch PROC PUBLIC FRAME
 gpu_requantize_batch_dispatch ENDP
 
 ; =============================================================================
-; gpu_requantize_check_hip_available — Check if HIP runtime is present
+; gpu_requantize_check_hip_available ? Check if HIP runtime is present
 ; =============================================================================
 ; uint32_t gpu_requantize_check_hip_available(void);
 ; Returns: 1 if HIP is available, 0 if not
@@ -375,11 +375,11 @@ gpu_requantize_check_hip_available PROC PUBLIC
 gpu_requantize_check_hip_available ENDP
 
 ; =============================================================================
-; gpu_requantize_get_device_props — Query device properties
+; gpu_requantize_get_device_props ? Query device properties
 ; =============================================================================
 ; void gpu_requantize_get_device_props(
-;     uint32_t device_id,       ; ECX — HIP device ordinal
-;     void* props_buffer,       ; RDX — output buffer for hipDeviceProp_t (512 bytes)
+;     uint32_t device_id,       ; ECX ? HIP device ordinal
+;     void* props_buffer,       ; RDX ? output buffer for hipDeviceProp_t (512 bytes)
 ; );
 ; =============================================================================
 gpu_requantize_get_device_props PROC PUBLIC
@@ -398,10 +398,10 @@ gpu_requantize_get_device_props PROC PUBLIC
 gpu_requantize_get_device_props ENDP
 
 ; =============================================================================
-; gpu_requantize_alloc_device_buffer — Allocate GPU device memory
+; gpu_requantize_alloc_device_buffer ? Allocate GPU device memory
 ; =============================================================================
 ; uint64_t gpu_requantize_alloc_device_buffer(
-;     uint64_t size_bytes      ; RCX — allocation size
+;     uint64_t size_bytes      ; RCX ? allocation m_size
 ; );
 ; Returns: RAX = device pointer, 0 on failure
 ; =============================================================================
@@ -412,10 +412,10 @@ gpu_requantize_alloc_device_buffer PROC PUBLIC
 gpu_requantize_alloc_device_buffer ENDP
 
 ; =============================================================================
-; gpu_requantize_free_device_buffer — Free GPU device memory
+; gpu_requantize_free_device_buffer ? Free GPU device memory
 ; =============================================================================
 ; void gpu_requantize_free_device_buffer(
-;     uint64_t device_ptr      ; RCX — device pointer to free
+;     uint64_t device_ptr      ; RCX ? device pointer to free
 ; );
 ; =============================================================================
 gpu_requantize_free_device_buffer PROC PUBLIC
@@ -424,12 +424,12 @@ gpu_requantize_free_device_buffer PROC PUBLIC
 gpu_requantize_free_device_buffer ENDP
 
 ; =============================================================================
-; gpu_requantize_copy_host_to_device — Host→Device memory transfer
+; gpu_requantize_copy_host_to_device ? Host?Device memory transfer
 ; =============================================================================
 ; uint32_t gpu_requantize_copy_host_to_device(
-;     uint64_t device_dst,     ; RCX — destination device pointer
-;     const void* host_src,    ; RDX — source host pointer
-;     uint64_t size_bytes      ; R8  — transfer size
+;     uint64_t device_dst,     ; RCX ? destination device pointer
+;     const void* host_src,    ; RDX ? source host pointer
+;     uint64_t size_bytes      ; R8  ? transfer m_size
 ; );
 ; Returns: RAX = 0 on success
 ; =============================================================================
@@ -440,12 +440,12 @@ gpu_requantize_copy_host_to_device PROC PUBLIC
 gpu_requantize_copy_host_to_device ENDP
 
 ; =============================================================================
-; gpu_requantize_copy_device_to_host — Device→Host memory transfer
+; gpu_requantize_copy_device_to_host ? Device?Host memory transfer
 ; =============================================================================
 ; uint32_t gpu_requantize_copy_device_to_host(
-;     void* host_dst,          ; RCX — destination host pointer
-;     uint64_t device_src,     ; RDX — source device pointer
-;     uint64_t size_bytes      ; R8  — transfer size
+;     void* host_dst,          ; RCX ? destination host pointer
+;     uint64_t device_src,     ; RDX ? source device pointer
+;     uint64_t size_bytes      ; R8  ? transfer m_size
 ; );
 ; Returns: RAX = 0 on success
 ; =============================================================================
@@ -456,7 +456,7 @@ gpu_requantize_copy_device_to_host PROC PUBLIC
 gpu_requantize_copy_device_to_host ENDP
 
 ; =============================================================================
-; gpu_requantize_sync_device — Synchronize GPU device
+; gpu_requantize_sync_device ? Synchronize GPU device
 ; =============================================================================
 ; uint32_t gpu_requantize_sync_device(void);
 ; Returns: RAX = 0 on success
@@ -468,3 +468,4 @@ gpu_requantize_sync_device PROC PUBLIC
 gpu_requantize_sync_device ENDP
 
 END
+

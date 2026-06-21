@@ -1,5 +1,5 @@
 ; ============================================================================
-; kernel_polymorph_engine.asm — JIT Adaptive Kernel Polymorphism (Batch 15)
+; kernel_polymorph_engine.asm ? JIT Adaptive Kernel Polymorphism (Batch 15)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -14,7 +14,7 @@
 
 ; Shield_PolymorphKernel
 ; RCX: Pointer to the kernel buffer (must be RWX or RW then X)
-; RDX: Size of the kernel buffer
+; RDX: m_size of the kernel buffer
 ; R8:  Polymorph Seed (derived from Consensus Nonce)
 PUBLIC Shield_PolymorphKernel
 Shield_PolymorphKernel PROC FRAME
@@ -37,7 +37,7 @@ Shield_PolymorphKernel PROC FRAME
     ; e.g., MOV RAX, [RCX] / MOV RBX, [RDX] -> swap if seed bit is set
     
     mov     rdi, rcx            ; Kernel Base
-    mov     rsi, rdx            ; Kernel Size
+    mov     rsi, rdx            ; Kernel m_size
     mov     r9, r8              ; Seed
     
     shr     rsi, 3              ; Process in QWORDs for pattern matching
@@ -105,3 +105,4 @@ Shield_InjectOpaquePredicates PROC FRAME
 Shield_InjectOpaquePredicates ENDP
 
 END
+

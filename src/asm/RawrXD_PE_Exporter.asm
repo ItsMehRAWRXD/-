@@ -44,7 +44,7 @@ rawrxd_walk_export_table PROC
     jne L_exit
     
     ; 3. Data Directory Index for EXPORT (Index 0)
-    ; Offset 0x88 from NT Header (x64 Image Optional Header)
+    ; Offset 088h from NT Header (x64 Image Optional Header)
     mov eax, [rbx + 088h]        ; eax = Export Directory RVA
     test eax, eax
     jz L_exit
@@ -53,10 +53,10 @@ rawrxd_walk_export_table PROC
     
     ; 4. Export Table Parsing
     ; Offsets from IMAGE_EXPORT_DIRECTORY:
-    ; 0x18: NumberOfNames
-    ; 0x1C: AddressOfFunctions RVA
-    ; 0x20: AddressOfNames RVA
-    ; 0x24: AddressOfNameOrdinals RVA
+    ; 018h: NumberOfNames
+    ; 01Ch: AddressOfFunctions RVA
+    ; 020h: AddressOfNames RVA
+    ; 024h: AddressOfNameOrdinals RVA
     
     mov r15d, [r9 + 018h]       ; r15d = Number of named exports
     mov eax, [r9 + 020h]        ; eax = AddressOfNames RVA
@@ -106,3 +106,4 @@ L_exit:
 rawrxd_walk_export_table ENDP
 
 END
+

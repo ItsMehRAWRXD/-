@@ -1,32 +1,32 @@
 ; =============================================================================
-; FlashAttention_AVX512.asm — Tiled Flash-Attention v2 (AVX-512 MASM64)
+; FlashAttention_AVX512.asm ? Tiled Flash-Attention v2 (AVX-512 MASM64)
 ; =============================================================================
 ;
 ; Pure x64 assembly implementation of Flash-Attention with:
 ;   - AVX-512F/BW/VL fused scaled dot-product attention
-;   - Tiled O(N) memory — fits in L1/L2 cache, zero heap allocation
+;   - Tiled O(N) memory ? fits in L1/L2 cache, zero heap allocation
 ;   - Online softmax (running max + log-sum-exp correction)
 ;   - Causal masking (autoregressive generation)
 ;   - GQA (Grouped-Query Attention) head mapping
 ;   - Prefetch hints for sequential K/V tile access
 ;
-; This kernel is the ENTIRE reason FEATURE_FLASH_ATTENTION (0x40) exists.
+; This kernel is the ENTIRE reason FEATURE_FLASH_ATTENTION (040h) exists.
 ; Without this file, the "Pro" license tier is a lock with no key.
 ;
 ; Architecture:
-;   - Input:  Q[M×D], K[N×D], V[N×D]  (fp32, row-major)
-;   - Output: O[M×D] = softmax(Q·K^T / √D) · V
+;   - Input:  Q[M?D], K[N?D], V[N?D]  (fp32, row-major)
+;   - Output: O[M?D] = softmax(Q?K^T / ?D) ? V
 ;   - Tiling: Br=TILE_M rows of Q, Bc=TILE_N cols of K at a time
-;   - Memory: Only TILE_M×TILE_N scratch on stack (~16KB for 64×64)
+;   - Memory: Only TILE_M?TILE_N scratch on stack (~16KB for 64?64)
 ;
 ; Performance Target:
 ;   - 2.4x over AVX2 C intrinsics (measured at D=128, N=4096)
-;   - 4.1x over naive PyTorch attention (eliminates N² materialization)
+;   - 4.1x over naive PyTorch attention (eliminates N? materialization)
 ;
 ; Build: ml64.exe /c /Zi FlashAttention_AVX512.asm
 ; Link:  Linked into RawrXD-Win32IDE alongside enterprise license objects
 ;
-; License Gate: FEATURE_FLASH_ATTENTION (0x40) in enterprise_license.h
+; License Gate: FEATURE_FLASH_ATTENTION (040h) in enterprise_license.h
 ; =============================================================================
 
 INCLUDE RawrXD_Common.inc
@@ -46,9 +46,9 @@ FLASH_TILE_D        EQU 16          ; D-dimension inner tile (16 floats = 1 ZMM)
 FLASH_NEG_INF       EQU 0FF800000h  ; IEEE 754 -infinity (fp32)
 
 ; Stack frame sizes
-FLASH_SCRATCH_SIZE  EQU (FLASH_TILE_M * FLASH_TILE_N * 4)  ; S tile: 64×64×4 = 16KB
-FLASH_ROWMAX_SIZE   EQU (FLASH_TILE_M * 4)                  ; m_i: 64×4 = 256 bytes
-FLASH_ROWSUM_SIZE   EQU (FLASH_TILE_M * 4)                  ; l_i: 64×4 = 256 bytes
+FLASH_SCRATCH_SIZE  EQU (FLASH_TILE_M * FLASH_TILE_N * 4)  ; S tile: 64?64?4 = 16KB
+FLASH_ROWMAX_SIZE   EQU (FLASH_TILE_M * 4)                  ; m_i: 64?4 = 256 bytes
+FLASH_ROWSUM_SIZE   EQU (FLASH_TILE_M * 4)                  ; l_i: 64?4 = 256 bytes
 
 ; =============================================================================
 ;                             EXPORTS
@@ -57,7 +57,7 @@ PUBLIC FlashAttention_Forward
 PUBLIC FlashAttention_CheckAVX512
 PUBLIC FlashAttention_Init
 PUBLIC FlashAttention_GetTileConfig
-; g_FlashAttnCalls, g_FlashAttnTiles — now in rawr_globals.asm
+; g_FlashAttnCalls, g_FlashAttnTiles ? now in rawr_globals.asm
 INCLUDE rawr_globals.inc
 
 ; =============================================================================
@@ -76,7 +76,7 @@ INCLUDE rawr_globals.inc
 ;     int32_t headDim;     // Head dimension (D), typically 128
 ;     int32_t numHeads;    // Number of attention heads
 ;     int32_t numKVHeads;  // Number of KV heads (for GQA, <= numHeads)
-;     int32_t batchSize;   // Batch size
+;     int32_t batchSize;   // Batch m_size
 ;     float   scale;       // 1/sqrt(headDim), precomputed
 ;     int32_t causal;      // 1 = causal masking, 0 = full attention
 ; };
@@ -99,7 +99,7 @@ CFG_CAUSAL      EQU 60
 ;                             DATA
 ; =============================================================================
 ; g_NegInf, g_AVX512Ready, g_FlashAttnCalls, g_FlashAttnTiles
-; are now defined in rawr_globals.asm — accessed via EXTERNDEF (rawr_globals.inc)
+; are now defined in rawr_globals.asm ? accessed via EXTERNDEF (rawr_globals.inc)
 
 ; =============================================================================
 ;                             CODE
@@ -141,7 +141,7 @@ FlashAttention_CheckAVX512 PROC
 
     ; Also check OS XSAVE support for ZMM (XCR0 bits 5,6,7)
     xor     ecx, ecx
-    xgetbv              ; ECX=0 → EAX=XCR0[31:0], EDX=XCR0[63:32]
+    xgetbv              ; ECX=0 ? EAX=XCR0[31:0], EDX=XCR0[63:32]
     and     eax, 0E0h   ; Bits 5,6,7 = OPMASK, ZMM_Hi256, Hi16_ZMM
     cmp     eax, 0E0h
     jne     @@no_avx512
@@ -196,12 +196,12 @@ FlashAttention_GetTileConfig ENDP
 ;     l_i = 0                 (running row sum)
 ;     O_i = 0                 (running output)
 ;     for each tile Bc of K (cols j..j+Bc):
-;       S_ij = Q_i · K_j^T * scale         [Br × Bc]
+;       S_ij = Q_i ? K_j^T * scale         [Br ? Bc]
 ;       if causal: mask S_ij where col > row
 ;       m_new = max(m_i, rowmax(S_ij))
-;       P_ij = exp(S_ij - m_new)            [Br × Bc]
+;       P_ij = exp(S_ij - m_new)            [Br ? Bc]
 ;       l_new = exp(m_i - m_new) * l_i + rowsum(P_ij)
-;       O_i = exp(m_i - m_new) * O_i + P_ij · V_j
+;       O_i = exp(m_i - m_new) * O_i + P_ij ? V_j
 ;       m_i = m_new
 ;       l_i = l_new
 ;     O_i /= l_i                            (normalize)
@@ -235,9 +235,9 @@ FlashAttention_Forward PROC FRAME
     LOCAL   scaleVec:QWORD         ; pointer to broadcast scale on stack
 
     ; Scratch space (allocated on stack)
-    ; S tile:    FLASH_TILE_M × FLASH_TILE_N × 4 = 16384 bytes
-    ; rowMax:    FLASH_TILE_M × 4 = 256 bytes
-    ; rowSum:    FLASH_TILE_M × 4 = 256 bytes
+    ; S tile:    FLASH_TILE_M ? FLASH_TILE_N ? 4 = 16384 bytes
+    ; rowMax:    FLASH_TILE_M ? 4 = 256 bytes
+    ; rowSum:    FLASH_TILE_M ? 4 = 256 bytes
     ; scaleVec:  64 bytes (16 floats broadcast)
     ; Total:     ~17KB on stack
     LOCAL   scratchS[16384]:BYTE
@@ -304,7 +304,7 @@ FlashAttention_Forward PROC FRAME
     movsxd  rax, seqM
     movsxd  rbx, headDim
     imul    rax, rbx
-    shl     rax, 2                          ; × sizeof(float)
+    shl     rax, 2                          ; ? sizeof(float)
     mov     headStride, rax
 
     ; kvHeadStride = seqN * headDim * 4
@@ -340,7 +340,7 @@ FlashAttention_Forward PROC FRAME
     lock inc g_FlashAttnCalls
 
     ; ========================================================================
-    ; Main Loop: batch × head × tile_row × tile_col
+    ; Main Loop: batch ? head ? tile_row ? tile_col
     ; ========================================================================
     mov     curBatch, 0
 
@@ -369,7 +369,7 @@ FlashAttention_Forward PROC FRAME
     mov     r13, pO
     add     r13, rax                        ; R13 = O pointer for this head
 
-    ; ---- Compute K/V pointer (GQA: map head → kv_head) ----
+    ; ---- Compute K/V pointer (GQA: map head ? kv_head) ----
     ; kv_head = head * numKVHeads / numHeads (integer division)
     movsxd  rax, curHead
     movsxd  rbx, numKVHeads
@@ -418,7 +418,7 @@ FlashAttention_Forward PROC FRAME
     ; O_tile[i][d] = 0.0 for all i in [0..TILE_M), d in [0..headDim)
     ; We zero the O output area directly (will accumulate into it)
     mov     eax, tileRow
-    shl     eax, 6                          ; × TILE_M
+    shl     eax, 6                          ; ? TILE_M
     movsxd  rax, eax
     movsxd  rbx, headDim
     imul    rax, rbx
@@ -446,8 +446,8 @@ FlashAttention_Forward PROC FRAME
     lock inc g_FlashAttnTiles
 
     ; ================================================================
-    ; Step 1: Compute S = Q_tile · K_tile^T × scale
-    ;         S[TILE_M × TILE_N] stored in scratchS
+    ; Step 1: Compute S = Q_tile ? K_tile^T ? scale
+    ;         S[TILE_M ? TILE_N] stored in scratchS
     ; ================================================================
 
     ; Q_tile base: R12 + tileRow * TILE_M * headDim * 4
@@ -505,7 +505,7 @@ FlashAttention_Forward PROC FRAME
     cmp     eax, seqN
     jge     @@fa_s_pad_col
 
-    ; ---- Dot product: Q[i,:] · K[j,:] ----
+    ; ---- Dot product: Q[i,:] ? K[j,:] ----
     ; Accumulate in zmm0 using vfmadd231ps (fused multiply-add)
     vxorps  zmm0, zmm0, zmm0               ; Accumulator = 0
 
@@ -534,7 +534,7 @@ FlashAttention_Forward PROC FRAME
     dec     r11
     jnz     @@fa_dot
 
-    ; Horizontal sum of zmm0 → scalar in xmm0
+    ; Horizontal sum of zmm0 ? scalar in xmm0
     vextractf32x8 ymm1, zmm0, 1
     vaddps  ymm0, ymm0, ymm1
     vextractf128 xmm1, ymm0, 1
@@ -548,7 +548,7 @@ FlashAttention_Forward PROC FRAME
     mov     rax, scaleVec
     vmulss  xmm0, xmm0, dword ptr [rax]
 
-    ; Apply causal mask: if col_global > row_global → -inf
+    ; Apply causal mask: if col_global > row_global ? -inf
     cmp     isCausal, 1
     jne     @@fa_s_store
 
@@ -619,10 +619,10 @@ FlashAttention_Forward PROC FRAME
     jmp     @@fa_s_row
 
 @@fa_s_done:
-    ; S tile is now in scratchS[TILE_M × TILE_N]
+    ; S tile is now in scratchS[TILE_M ? TILE_N]
 
     ; ================================================================
-    ; Step 2: Online softmax — row max and exponentiation
+    ; Step 2: Online softmax ? row max and exponentiation
     ;   m_new[i] = max(m_old[i], max_j(S[i][j]))
     ;   P[i][j]  = exp(S[i][j] - m_new[i])
     ;   l_new[i] = exp(m_old[i] - m_new[i]) * l_old[i] + sum_j(P[i][j])
@@ -669,11 +669,11 @@ FlashAttention_Forward PROC FRAME
     vmaxss  xmm11, xmm10, xmm0             ; xmm11 = m_new
 
     ; Compute correction factor: exp(m_old - m_new)
-    vsubss  xmm12, xmm10, xmm11            ; m_old - m_new (≤ 0)
+    vsubss  xmm12, xmm10, xmm11            ; m_old - m_new (? 0)
     ; Approximate exp using vexp2ps (AVX-512ER) if available, or polynomial
     ; For portability, use x87 FPU exp or polynomial approx
     ; We'll use a fast exp approximation suitable for softmax:
-    ;   exp(x) ≈ (1 + x/256)^256 via repeated squaring
+    ;   exp(x) ? (1 + x/256)^256 via repeated squaring
     ; But for production accuracy, we use the SSE exp trick:
     ;   exp(x) = 2^(x * log2(e))
 
@@ -696,7 +696,7 @@ FlashAttention_Forward PROC FRAME
     vsubps  zmm3, zmm3, zmm11
 
     ; ---- Fast vectorized exp approximation ----
-    ; exp(x) ≈ 2^(x * 1.4426950f)
+    ; exp(x) ? 2^(x * 1.4426950f)
     ; Using Schraudolph's trick: reinterpret as integer
     ; float_bits = int(x * (2^23 / ln2) + (127 * 2^23 - 366000))
     ;
@@ -708,7 +708,7 @@ FlashAttention_Forward PROC FRAME
     ; We'll store the exp results back into S (reuse as P)
     ; For each ZMM chunk:
 
-    mov     r10d, 012102203h                 ; A ≈ 2^23/ln2 (as int for vmulps trick)
+    mov     r10d, 012102203h                 ; A ? 2^23/ln2 (as int for vmulps trick)
     ; Actually, we need proper float constant. Use 1.4426950408f * 2^23
     ; Let's use a simpler approach: polynomial exp
 
@@ -729,8 +729,8 @@ FlashAttention_Forward PROC FRAME
     vbroadcastss zmm21, xmm21
 
     ; Actually for Schraudolph: bits = int(x * (2^23/ln2)) + (127 << 23)
-    ; float(bits) ≈ exp(x)
-    ; The magic constant for the add is 1065353216 = 0x3F800000 as int,
+    ; float(bits) ? exp(x)
+    ; The magic constant for the add is 1065353216 = 03F800000h as int,
     ; which is 127 << 23. As a float constant for integer add trick,
     ; we work directly in integer domain.
 
@@ -784,7 +784,7 @@ FlashAttention_Forward PROC FRAME
     vsubps  zmm7, zmm7, zmm17
 
     ; Polynomial approx of 2^f for f in [0,1):
-    ; 2^f ≈ 1 + f*(0.6931472 + f*(0.2402265 + f*0.0558011))
+    ; 2^f ? 1 + f*(0.6931472 + f*(0.2402265 + f*0.0558011))
     mov     eax, 03D6356EBh                  ; 0.0558011f
     vmovd   xmm26, eax
     vbroadcastss zmm26, xmm26
@@ -806,7 +806,7 @@ FlashAttention_Forward PROC FRAME
     ; Need to reload constants per chunk or use separate regs
     ; Let's process one chunk at a time to conserve registers
 
-    ; --- Chunk 0 (zmm0 → zmm4=f, zmm8=n) ---
+    ; --- Chunk 0 (zmm0 ? zmm4=f, zmm8=n) ---
     mov     eax, 03D6356EBh
     vmovd   xmm18, eax
     vbroadcastss zmm18, xmm18              ; c2 = 0.0558011
@@ -882,8 +882,8 @@ FlashAttention_Forward PROC FRAME
     ; It was NOT clobbered: vectorized exp used zmm0-9, zmm16-29 only.
     ; Compute scalar exp(xmm12) via Schraudolph integer reinterpret trick.
 
-    ; exp(x) ≈ as_float(int(x * 2^23/ln2) + 127*2^23)
-    ; Constant: 2^23 / ln(2) = 12102203.17 ≈ 0x4B00F8B1 as float
+    ; exp(x) ? as_float(int(x * 2^23/ln2) + 127*2^23)
+    ; Constant: 2^23 / ln(2) = 12102203.17 ? 04B00F8B1h as float
     mov     eax, 04B00F8B1h                  ; 12102203.0f
     vmovd   xmm15, eax
     vmulss  xmm13, xmm12, xmm15             ; x * (2^23 / ln2)
@@ -892,9 +892,9 @@ FlashAttention_Forward PROC FRAME
     ; Clamp to prevent negative or overflow float reinterpret
     cmp     eax, 0
     jge     @@fa_corr_clamp_ok
-    xor     eax, eax                        ; underflow → 0.0
+    xor     eax, eax                        ; underflow ? 0.0
 @@fa_corr_clamp_ok:
-    vmovd   xmm13, eax                      ; xmm13 ≈ exp(m_old - m_new)
+    vmovd   xmm13, eax                      ; xmm13 ? exp(m_old - m_new)
 
     ; l_new = correction * l_old + row_sum
     vmovss  xmm14, dword ptr [r8 + rcx*4]   ; l_old
@@ -903,8 +903,8 @@ FlashAttention_Forward PROC FRAME
     vmovss  dword ptr [r8 + rcx*4], xmm14   ; store l_new
 
     ; ================================================================
-    ; Step 3: Update output O[i,:] += correction * O_old + P[i,:] · V_tile
-    ; O_new[i][d] = exp(m_old - m_new) * O_old[i][d] + Σ_j P[i][j] * V[j][d]
+    ; Step 3: Update output O[i,:] += correction * O_old + P[i,:] ? V_tile
+    ; O_new[i][d] = exp(m_old - m_new) * O_old[i][d] + ?_j P[i][j] * V[j][d]
     ; ================================================================
 
     ; First: scale existing O by correction factor
@@ -932,8 +932,8 @@ FlashAttention_Forward PROC FRAME
     dec     r11
     jnz     @@fa_scale_o
 
-    ; Now accumulate P[i,:] · V_tile into O[i,:]
-    ; O[i][d] += Σ_j P[i][j] * V[j][d]
+    ; Now accumulate P[i,:] ? V_tile into O[i,:]
+    ; O[i][d] += ?_j P[i][j] * V[j][d]
     ; V_tile base: R15 + tileCol * TILE_N * headDim * 4
     mov     eax, tileCol
     shl     eax, 6
@@ -1039,7 +1039,7 @@ FlashAttention_Forward PROC FRAME
     lea     rdi, [r13 + rax]
 
     ; O[i][:] *= 1/l_i
-    ; Use non-temporal stores (vmovntps) for final output — write-only,
+    ; Use non-temporal stores (vmovntps) for final output ? write-only,
     ; avoids polluting L2 cache for large sequence lengths.
     ; Requires 64-byte aligned destination (guaranteed by our O layout).
     movsxd  rbx, headDim
@@ -1092,3 +1092,4 @@ FlashAttention_Forward PROC FRAME
 FlashAttention_Forward ENDP
 
 END
+

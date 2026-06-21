@@ -1,5 +1,5 @@
 ; =============================================================================
-; vector_index_avx512.asm — AVX-512 Cosine Similarity Kernel for HNSW
+; vector_index_avx512.asm ? AVX-512 Cosine Similarity Kernel for HNSW
 ; =============================================================================
 ;
 ; High-performance vector operations for repository semantic indexing.
@@ -7,12 +7,12 @@
 ; AVX-512F + AVX-512BW. Falls back to AVX2 or scalar on older CPUs.
 ;
 ; Exports:
-;   VecIdx_CosineSimilarity    — single query vs single target
-;   VecIdx_BatchSimilarity     — query vs N targets (HNSW neighbor scan)
-;   VecIdx_L2Norm              — normalize a vector in-place
-;   VecIdx_DotProduct          — raw dot product (fp32)
-;   VecIdx_CheckCPU            — returns SIMD tier (3=AVX512, 2=AVX2, 1=SSE4)
-;   VecIdx_SearchTopK          — linear scan TopK over flat index
+;   VecIdx_CosineSimilarity    ? single query vs single target
+;   VecIdx_BatchSimilarity     ? query vs N targets (HNSW neighbor scan)
+;   VecIdx_L2Norm              ? normalize a vector in-place
+;   VecIdx_DotProduct          ? raw dot product (fp32)
+;   VecIdx_CheckCPU            ? returns SIMD tier (3=AVX512, 2=AVX2, 1=SSE4)
+;   VecIdx_SearchTopK          ? linear scan TopK over flat index
 ;
 ; Vector format: fp32 arrays, dimension D (16, 32, 64, 128, 256, 384, 768)
 ;   - D must be a multiple of 16 for AVX-512 paths (16 floats per ZMM)
@@ -21,7 +21,7 @@
 ; Performance (measured, D=384, Intel Xeon Scalable 3rd gen):
 ;   VecIdx_CosineSimilarity  : ~18 ns (vs ~85 ns C intrinsics)
 ;   VecIdx_BatchSimilarity   : ~8 ns/vector for 1024-vector batch
-;   VecIdx_SearchTopK K=10   : ~1.5 µs for 10,000-vector flat index
+;   VecIdx_SearchTopK K=10   : ~1.5 ?s for 10,000-vector flat index
 ;
 ; Build: ml64.exe /c /Zi /arch:AVX512 vector_index_avx512.asm
 ; Link:  Linked into RawrXD-Win32IDE with codebase_indexer.obj
@@ -162,7 +162,7 @@ VecIdx_DotProduct PROC FRAME
     je      @dp_avx2
 
 @dp_scalar:
-    ; Scalar fallback — correct for any dimension
+    ; Scalar fallback ? correct for any dimension
     vxorps  xmm0, xmm0, xmm0       ; accumulator
     xor     ebx, ebx
 @dp_sc_loop:
@@ -215,7 +215,7 @@ VecIdx_DotProduct PROC FRAME
     vxorps  zmm12, zmm12, zmm12    ; accumulator 3
     xor     ebx, ebx
 
-    ; Main loop: process 64 floats per iteration (4 × ZMM)
+    ; Main loop: process 64 floats per iteration (4 ? ZMM)
     mov     r9d, r8d
     and     r9d, NOT 63            ; floor to multiple of 64
 @dp_avx512_4x:
@@ -254,7 +254,7 @@ VecIdx_DotProduct PROC FRAME
     vaddps  zmm8, zmm8, zmm12
     vaddps  zmm0, zmm0, zmm8
 
-    ; Horizontal reduce zmm0 → xmm0
+    ; Horizontal reduce zmm0 ? xmm0
     vextractf32x8 ymm1, zmm0, 1
     vaddps  ymm0, ymm0, ymm1
     vextractf128  xmm1, ymm0, 1
@@ -284,12 +284,12 @@ VecIdx_DotProduct ENDP
 ; ---------------------------------------------------------------------------
 ;  VecIdx_L2Norm
 ;
-;  Computes ||v||₂ and returns it. Optionally normalizes in-place.
+;  Computes ||v||? and returns it. Optionally normalizes in-place.
 ;
 ;  IN:  RCX = float* v
 ;       R8D = dim
 ;       R9D = normalize (1 = divide v by norm, 0 = just return norm)
-;  OUT: XMM0 = ||v||₂ (fp32)
+;  OUT: XMM0 = ||v||? (fp32)
 ; ---------------------------------------------------------------------------
 VecIdx_L2Norm PROC FRAME
     .pushreg    rbx
@@ -308,12 +308,12 @@ VecIdx_L2Norm PROC FRAME
     ; r9d = normalize flag (saved across DotProduct call)
     push    r9
 
-    ; dot(v, v) — reuse DotProduct
+    ; dot(v, v) ? reuse DotProduct
     mov     rcx, r12
     mov     rdx, r12
     mov     r8d, r13d
     call    VecIdx_DotProduct
-    ; xmm0 = ||v||²
+    ; xmm0 = ||v||?
 
     ; sqrt
     vsqrtss xmm0, xmm0, xmm0
@@ -328,11 +328,11 @@ VecIdx_L2Norm PROC FRAME
     ; Normalize: v[i] /= norm
     vbroadcastss zmm1, xmm0        ; zmm1 = [norm, ..., norm]
     ; reciprocal (more precise than vdivps for this use case)
-    vrcp14ps zmm2, zmm1            ; zmm2 ≈ 1/norm (AVX-512F)
-    ; Newton-Raphson refinement: r ← r*(2 - norm*r)  [r = zmm2]
-    vmulps  zmm3, zmm1, zmm2       ; zmm3 = norm * inv ≈ 1
+    vrcp14ps zmm2, zmm1            ; zmm2 ? 1/norm (AVX-512F)
+    ; Newton-Raphson refinement: r ? r*(2 - norm*r)  [r = zmm2]
+    vmulps  zmm3, zmm1, zmm2       ; zmm3 = norm * inv ? 1
     vbroadcastss zmm4, [g_fltOne]  ; zmm4 = [2.0 - ...] work via negate
-    ; two_minus = 2 - (norm*inv)  →  use: vfnmadd231ps: dest = -(norm * inv) + 2
+    ; two_minus = 2 - (norm*inv)  ?  use: vfnmadd231ps: dest = -(norm * inv) + 2
     vbroadcastss zmm5, [g_fltOne]  ; zmm5 = 1.0; we add twice = 2.0
     vaddps  zmm5, zmm5, zmm5       ; zmm5 = 2.0
     vsubps  zmm5, zmm5, zmm3       ; zmm5 = 2 - norm*inv
@@ -351,7 +351,7 @@ VecIdx_L2Norm PROC FRAME
     jmp     @norm_loop
 
 @norm_tail:
-    ; Scalar tail — use xmm0 (scalar reciprocal) as normalizer
+    ; Scalar tail ? use xmm0 (scalar reciprocal) as normalizer
     vrcpss  xmm5, xmm0, xmm0      ; xmm5 = 1/norm
 @norm_tail_loop:
     cmp     ebx, r13d
@@ -382,7 +382,7 @@ VecIdx_L2Norm ENDP
 ;  IN:  RCX = float* a        (may be unnormalized)
 ;       RDX = float* b        (may be unnormalized)
 ;       R8D = dim
-;  OUT: XMM0 = cosine similarity ∈ [-1.0, 1.0]
+;  OUT: XMM0 = cosine similarity ? [-1.0, 1.0]
 ; ---------------------------------------------------------------------------
 VecIdx_CosineSimilarity PROC FRAME
     .pushreg    rbx
@@ -448,7 +448,7 @@ VecIdx_CosineSimilarity ENDP
 ;  Stores scores into float* outScores. Used during HNSW neighbor scan.
 ;
 ;  IN:  RCX = float* query        (pre-normalized, fp32)
-;       RDX = float* candidates   (N × dim, row-major, pre-normalized)
+;       RDX = float* candidates   (N ? dim, row-major, pre-normalized)
 ;       R8D = dim
 ;       R9D = N (candidate count)
 ;       [rsp+28+32] = float* outScores   (N floats, caller allocated)
@@ -456,7 +456,7 @@ VecIdx_CosineSimilarity ENDP
 ;  OUT: EAX = N (number of scores written)
 ;
 ;  Since vectors are pre-normalized, cos(a,b) = dot(a,b).
-;  This reduces to N independent dot products — all AVX-512.
+;  This reduces to N independent dot products ? all AVX-512.
 ; ---------------------------------------------------------------------------
 VecIdx_BatchSimilarity PROC FRAME
     .pushreg    rbx
@@ -521,10 +521,10 @@ VecIdx_BatchSimilarity PROC FRAME
 VecIdx_BatchSimilarity ENDP
 
 ; ---------------------------------------------------------------------------
-;  TOPK_ENTRY — internal struct for heap
+;  TOPK_ENTRY ? internal struct for heap
 ; ---------------------------------------------------------------------------
 ; Smallest-heap to maintain top K during linear scan
-; Not using full struct syntax — stored as {float score, int32 index} pairs
+; Not using full struct syntax ? stored as {float score, int32 index} pairs
 TOPK_SCORE_OFFSET   EQU 0
 TOPK_INDEX_OFFSET   EQU 4
 TOPK_ENTRY_SIZE     EQU 8
@@ -533,10 +533,10 @@ TOPK_ENTRY_SIZE     EQU 8
 ;  VecIdx_SearchTopK
 ;
 ;  Linear scan of a flat index, returning top K by cosine similarity.
-;  Uses a min-heap of size K for O(N log K) total.
+;  Uses a min-heap of m_size K for O(N log K) total.
 ;
 ;  IN:  RCX = float* query        (pre-normalized)
-;       RDX = float* indexVectors (N × dim, row-major, pre-normalized)
+;       RDX = float* indexVectors (N ? dim, row-major, pre-normalized)
 ;       R8D = dim
 ;       R9D = N (total vectors in flat index)
 ;       [rsp+28+32] = K           (DWORD, top K to return)
@@ -613,9 +613,9 @@ VecIdx_SearchTopK PROC FRAME
     push    r10
     push    r11
     push    rbx
-    mov     ecx, r10d               ; heap size = K (full)
+    mov     ecx, r10d               ; heap m_size = K (full)
     lea     rcx, [rdi]              ; heap base
-    mov     edx, r10d               ; heap size
+    mov     edx, r10d               ; heap m_size
     xor     r8d, r8d                ; start at root (0)
     call    VecIdx_SiftDown
     pop     rbx
@@ -662,7 +662,7 @@ VecIdx_SearchTopK PROC FRAME
     jmp     @topk_main_loop
 
 @topk_done:
-    ; Return min(r10d, K) — actual results written
+    ; Return min(r10d, K) ? actual results written
     cmp     r10d, ebx
     cmovg   r10d, ebx
     mov     eax, r10d
@@ -680,12 +680,12 @@ VecIdx_SearchTopK PROC FRAME
 VecIdx_SearchTopK ENDP
 
 ; ---------------------------------------------------------------------------
-;  VecIdx_SiftDown (internal — min-heap maintenance)
+;  VecIdx_SiftDown (internal ? min-heap maintenance)
 ;
 ;  Sifts down the element at position R8D in a min-heap.
 ;
 ;  IN:  RCX = TOPK_ENTRY* heap
-;       EDX = heap size
+;       EDX = heap m_size
 ;       R8D = root index to sift from
 ; ---------------------------------------------------------------------------
 VecIdx_SiftDown PROC FRAME
@@ -701,7 +701,7 @@ VecIdx_SiftDown PROC FRAME
     push    r13
 
     mov     r12, rcx            ; heap base
-    mov     r13d, edx           ; heap size
+    mov     r13d, edx           ; heap m_size
     mov     ebx, r8d            ; current index
 
 @sift_loop:
@@ -759,3 +759,4 @@ VecIdx_SiftDown PROC FRAME
 VecIdx_SiftDown ENDP
 
 END
+

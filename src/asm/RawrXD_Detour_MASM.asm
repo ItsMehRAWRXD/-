@@ -51,7 +51,7 @@ RawrXD_GenerateRelativeJump_MASM ENDP
 ; -----------------------------------------------------------------------------
 ; RawrXD_Sentinel_CalculateHash_MASM
 ; Input:  RCX = Address to hash
-;         RDX = Size (in bytes)
+;         RDX = m_size (in bytes)
 ; Result: RAX = Simple 64-bit checksum (for integrity checks)
 ; -----------------------------------------------------------------------------
 RawrXD_Sentinel_CalculateHash_MASM PROC
@@ -73,3 +73,4 @@ Hash_End:
 RawrXD_Sentinel_CalculateHash_MASM ENDP
 
 END
+

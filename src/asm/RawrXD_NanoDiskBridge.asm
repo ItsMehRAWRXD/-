@@ -1,13 +1,13 @@
 ; =============================================================================
 ; RawrXD_NanoDiskBridge.asm
-; Zero-copy async tensor loader: DiskKernel I/O → NanoQuant decompression
-; Universal Model Loader — async pump directly into quantized tensors
+; Zero-copy async tensor loader: DiskKernel I/O ? NanoQuant decompression
+; Universal Model Loader ? async pump directly into quantized tensors
 ;
 ; Links DiskKernel.dll ordinals with NanoQuant engine and AgentToolExecutor.
 ; Eliminates Win32 CreateFile overhead via DiskKernel direct sector I/O.
 ;
 ; Build (as library kernel linked into RawrXD-Shell):
-;   Included in CMakeLists.txt ASM_KERNEL_SOURCES — exports C-callable procs.
+;   Included in CMakeLists.txt ASM_KERNEL_SOURCES ? exports C-callable procs.
 ;
 ; Build (standalone):
 ;   ml64.exe /c /Zi /Zd RawrXD_NanoDiskBridge.asm
@@ -92,7 +92,7 @@ SECTOR_SIZE_512              equ 512
 SECTOR_SIZE_4K               equ 4096
 
 ; GGUF header offsets (v3 format)
-GGUF_OFF_MAGIC               equ 0         ; uint32 "GGUF" = 0x46554747
+GGUF_OFF_MAGIC               equ 0         ; uint32 "GGUF" = 046554747h
 GGUF_OFF_VERSION             equ 4         ; uint32 version (2 or 3)
 GGUF_OFF_N_TENSORS           equ 8         ; uint64 tensor count
 GGUF_OFF_N_KV                equ 16        ; uint64 metadata KV count
@@ -138,12 +138,12 @@ TENSOR_LOAD_NOTIFY_INTERVAL  equ 256
 ; Structures
 ; =============================================================================
 
-; NANO_ASYNC_LOAD_CTX — Full context for one async tensor load pipeline
+; NANO_ASYNC_LOAD_CTX ? Full context for one async tensor load pipeline
 NANO_ASYNC_LOAD_CTX STRUCT 8
     ; === Disk I/O ===
     hDevice              QWORD   ?       ; DiskKernel handle (drive context ptr)
     sectorLba            QWORD   ?       ; GGUF file start LBA on physical disk
-    sectorCount          DWORD   ?       ; File size in 512-byte sectors
+    sectorCount          DWORD   ?       ; File m_size in 512-byte sectors
     driveIndex           DWORD   ?       ; Physical drive number (0-63)
 
     ; === NanoQuant ===
@@ -160,12 +160,12 @@ NANO_ASYNC_LOAD_CTX STRUCT 8
     ; === Memory (DMA-aligned for NVMe/DMA transfer) ===
     dmaBufferRaw         QWORD   ?       ; Raw VirtualAlloc ptr (for VirtualFree)
     dmaBuffer            QWORD   ?       ; Aligned DMA scratch (4K aligned)
-    dmaBufferSize        QWORD   ?       ; Allocated size
+    dmaBufferSize        QWORD   ?       ; Allocated m_size
 
     ; === Tensor metadata (parsed from GGUF) ===
     tensorDims           DWORD   4 dup(?) ; [M, N, K, rank]
     tensorDataOffset     QWORD   ?       ; Byte offset of tensor data within GGUF
-    tensorDataSize       QWORD   ?       ; Byte size of tensor data
+    tensorDataSize       QWORD   ?       ; Byte m_size of tensor data
     tensorName           BYTE    64 dup(?) ; Null-terminated tensor name
 
     ; === GGUF header cache ===
@@ -185,7 +185,7 @@ NANO_ASYNC_LOAD_CTX STRUCT 8
     _pad0                DWORD   ?       ; Alignment
 NANO_ASYNC_LOAD_CTX ENDS
 
-; NANO_QUANTIZE_JOB — Background model compression job (AgentTool mode 19)
+; NANO_QUANTIZE_JOB ? Background model compression job (AgentTool mode 19)
 NANO_QUANTIZE_JOB STRUCT 8
     sourcePath           BYTE    260 dup(?) ; GGUF file path (UTF-8)
     targetRank           DWORD   ?       ; Compression rank (1-8)
@@ -203,7 +203,7 @@ NANO_QUANTIZE_JOB STRUCT 8
 NANO_QUANTIZE_JOB ENDS
 
 ; =============================================================================
-; .data — Static strings and global state
+; .data ? Static strings and global state
 ; =============================================================================
 .data
 
@@ -258,7 +258,7 @@ NANO_QUANTIZE_JOB ENDS
     FmtBuf               db 256 dup(0)
 
 ; =============================================================================
-; .data? — Uninitialized data
+; .data? ? Uninitialized data
 ; =============================================================================
 .data?
 
@@ -287,7 +287,7 @@ NANO_QUANTIZE_JOB ENDS
 .code
 
 ; =============================================================================
-; ConsolePrint — Write a null-terminated string to stdout
+; ConsolePrint ? Write a null-terminated string to stdout
 ; RCX = ptr to string
 ; Clobbers: RAX, RCX, RDX, R8, R9
 ; =============================================================================
@@ -326,7 +326,7 @@ cp_done:
 ConsolePrint ENDP
 
 ; =============================================================================
-; PrintU64 — Print a QWORD as decimal string to console
+; PrintU64 ? Print a QWORD as decimal string to console
 ; RCX = value
 ; Clobbers: RAX, RCX, RDX, R8, R9
 ; =============================================================================
@@ -374,8 +374,8 @@ pu64_print:
 PrintU64 ENDP
 
 ; =============================================================================
-; AllocDmaBuffer — Allocate a DMA-aligned buffer via VirtualAlloc
-; RCX = requested size (will be rounded up + alignment overhead)
+; AllocDmaBuffer ? Allocate a DMA-aligned buffer via VirtualAlloc
+; RCX = requested m_size (will be rounded up + alignment overhead)
 ; Returns: RAX = aligned ptr, RDX = raw ptr (for VirtualFree)
 ;          RAX = 0 on failure
 ; =============================================================================
@@ -384,10 +384,10 @@ AllocDmaBuffer PROC
     push rsi
     sub  rsp, 32
 
-    mov  rbx, rcx             ; Requested size
+    mov  rbx, rcx             ; Requested m_size
     add  rbx, DMA_ALIGNMENT   ; Over-allocate for alignment
 
-    ; VirtualAlloc(NULL, size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+    ; VirtualAlloc(NULL, m_size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
     xor  ecx, ecx
     mov  rdx, rbx
     mov  r8d, MEM_COMMIT or MEM_RESERVE
@@ -417,7 +417,7 @@ adb_exit:
 AllocDmaBuffer ENDP
 
 ; =============================================================================
-; FreeDmaBuffer — Release a DMA buffer previously allocated by AllocDmaBuffer
+; FreeDmaBuffer ? Release a DMA buffer previously allocated by AllocDmaBuffer
 ; RCX = raw ptr (from RDX of AllocDmaBuffer)
 ; =============================================================================
 FreeDmaBuffer PROC
@@ -434,7 +434,7 @@ FreeDmaBuffer PROC
 FreeDmaBuffer ENDP
 
 ; =============================================================================
-; AllocAsyncLoadCtx — Grab a free NANO_ASYNC_LOAD_CTX from the global pool
+; AllocAsyncLoadCtx ? Grab a free NANO_ASYNC_LOAD_CTX from the global pool
 ; Returns: RAX = ptr to context, or 0 if pool exhausted
 ; =============================================================================
 AllocAsyncLoadCtx PROC
@@ -498,7 +498,7 @@ alloc_unlock:
 AllocAsyncLoadCtx ENDP
 
 ; =============================================================================
-; ReleaseAsyncLoadCtx — Return a context to the pool
+; ReleaseAsyncLoadCtx ? Return a context to the pool
 ; RCX = ptr to NANO_ASYNC_LOAD_CTX
 ; =============================================================================
 ReleaseAsyncLoadCtx PROC
@@ -525,7 +525,7 @@ rlc_no_dma:
 ReleaseAsyncLoadCtx ENDP
 
 ; =============================================================================
-; ValidateGgufHeader — Parse and validate GGUF magic + version from DMA buffer
+; ValidateGgufHeader ? Parse and validate GGUF magic + version from DMA buffer
 ; RCX = ptr to DMA buffer (must have at least GGUF_HEADER_MIN_SIZE bytes)
 ; RDX = ptr to NANO_ASYNC_LOAD_CTX (output: ggufVersion, ggufTensorCount, etc.)
 ; Returns: RAX = 0 success, RAX = NTSTATUS on error, RDX = detail string
@@ -538,7 +538,7 @@ ValidateGgufHeader PROC
     mov  rbx, rcx             ; DMA buffer
     mov  rsi, rdx             ; Load context
 
-    ; Check GGUF magic: 0x46554747 = 'GGUF'
+    ; Check GGUF magic: 046554747h = 'GGUF'
     mov  eax, dword ptr [rbx + GGUF_OFF_MAGIC]
     cmp  eax, GGUF_MAGIC
     jne  vgh_bad_magic
@@ -597,11 +597,11 @@ vgh_exit:
 ValidateGgufHeader ENDP
 
 ; =============================================================================
-; LocateTensorData — Walk GGUF KV pairs and tensor info to find tensor offset
+; LocateTensorData ? Walk GGUF KV pairs and tensor info to find tensor offset
 ; (Simplified: assumes first tensor, or walks by name if tensorName is set)
 ; RCX = ptr to DMA buffer (full GGUF file section)
 ; RDX = ptr to NANO_ASYNC_LOAD_CTX
-; Returns: RAX = 0 success (tensorDataOffset/Size filled), nonzero on error
+; Returns: RAX = 0 success (tensorDataOffset/m_size filled), nonzero on error
 ; =============================================================================
 LocateTensorData PROC
     push rbx
@@ -616,14 +616,14 @@ LocateTensorData PROC
     ; Start parsing after the fixed header (24 bytes)
     lea  rdi, [rbx + GGUF_HEADER_MIN_SIZE]
 
-    ; Skip KV metadata pairs: each entry is [string key][type][value]
+    ; Skip KV metadata pairs: each entry is [string key][m_type][value]
     ; For production use we'd walk every KV entry properly.
     ; Here we use a linear scan for the tensor info array.
     mov  r12, (NANO_ASYNC_LOAD_CTX ptr [rsi]).ggufKvCount
 
     ; Walk KV pairs
     ; GGUF v3 string format: uint64 length + bytes (no null term in file)
-    ; GGUF v3 value types: uint32 type + payload
+    ; GGUF v3 value types: uint32 m_type + payload
     test r12, r12
     jz   ltd_tensor_info
 
@@ -636,16 +636,16 @@ ltd_kv_loop:
     add  rdi, 8
     add  rdi, rax              ; Skip key string bytes
 
-    ; Read value type (uint32)
+    ; Read value m_type (uint32)
     mov  eax, dword ptr [rdi]
     add  rdi, 4
 
-    ; Skip value based on type
-    ; Type 0: uint8 (1), 1: int8 (1), 2: uint16 (2), 3: int16 (2),
-    ; Type 4: uint32 (4), 5: int32 (4), 6: float32 (4),
-    ; Type 7: bool (1), 8: string (uint64 len + bytes),
-    ; Type 9: array (uint32 type + uint64 count + elements)
-    ; Type 10: uint64 (8), 11: int64 (8), 12: float64 (8)
+    ; Skip value based on m_type
+    ; m_type 0: uint8 (1), 1: int8 (1), 2: uint16 (2), 3: int16 (2),
+    ; m_type 4: uint32 (4), 5: int32 (4), 6: float32 (4),
+    ; m_type 7: bool (1), 8: string (uint64 len + bytes),
+    ; m_type 9: array (uint32 m_type + uint64 count + elements)
+    ; m_type 10: uint64 (8), 11: int64 (8), 12: float64 (8)
     cmp  eax, 0                ; uint8
     je   ltd_skip_1
     cmp  eax, 1                ; int8
@@ -673,7 +673,7 @@ ltd_kv_loop:
     cmp  eax, 9                ; array
     je   ltd_skip_array
 
-    ; Unknown type — bail
+    ; Unknown m_type ? bail
     jmp  ltd_not_found
 
 ltd_skip_1:
@@ -697,12 +697,12 @@ ltd_skip_string:
 
 ltd_skip_array:
     ; uint32 element_type + uint64 count + count * element_size
-    mov  eax, dword ptr [rdi]  ; Element type
+    mov  eax, dword ptr [rdi]  ; Element m_type
     add  rdi, 4
     mov  rcx, qword ptr [rdi]  ; Count
     add  rdi, 8
 
-    ; Determine element size (simplified: fixed-size types only)
+    ; Determine element m_size (simplified: fixed-m_size types only)
     push rcx
     cmp  eax, 0                ; uint8
     je   ltd_arr_1
@@ -756,7 +756,7 @@ ltd_kv_next:
 
 ltd_tensor_info:
     ; Now at tensor info array
-    ; Each tensor: string name, uint32 n_dims, uint64[n_dims] dims, uint32 type, uint64 offset
+    ; Each tensor: string name, uint32 n_dims, uint64[n_dims] dims, uint32 m_type, uint64 offset
     ; Use first tensor (index 0) if tensorName not set, else search by name
 
     mov  r12, (NANO_ASYNC_LOAD_CTX ptr [rsi]).ggufTensorCount
@@ -797,12 +797,12 @@ ltd_skip_dim:
     jmp  ltd_read_dims
 
 ltd_dims_done:
-    ; Read type (uint32)
+    ; Read m_type (uint32)
     mov  eax, dword ptr [rdi]
     mov  (NANO_ASYNC_LOAD_CTX ptr [rsi]).quantType, eax
     add  rdi, 4
 
-    ; Read offset (uint64) — byte offset of tensor data from start of file
+    ; Read offset (uint64) ? byte offset of tensor data from start of file
     mov  rax, qword ptr [rdi]
     add  rdi, 8
 
@@ -813,11 +813,11 @@ ltd_dims_done:
     test ecx, ecx
     jnz  ltd_tensor_next
 
-    ; Found target tensor — store offset and compute size
+    ; Found target tensor ? store offset and compute m_size
     mov  (NANO_ASYNC_LOAD_CTX ptr [rsi]).tensorDataOffset, rax
 
-    ; Compute tensor size from dims and type
-    ; For simplicity: size = prod(dims) * type_size
+    ; Compute tensor m_size from dims and m_type
+    ; For simplicity: m_size = prod(dims) * type_size
     ; This is a rough estimate; actual GGUF has alignment padding
     mov  eax, (NANO_ASYNC_LOAD_CTX ptr [rsi]).tensorDims[0]
     test eax, eax
@@ -827,7 +827,7 @@ ltd_dims_done:
     jz   ltd_single_dim
     imul eax, r8d
 ltd_single_dim:
-    ; Multiply by element type size (approximate: 4 bytes for f32, 2 for f16, etc.)
+    ; Multiply by element m_type m_size (approximate: 4 bytes for f32, 2 for f16, etc.)
     shl  eax, 2                ; Assume f32 (4 bytes) as conservative estimate
     mov  (NANO_ASYNC_LOAD_CTX ptr [rsi]).tensorDataSize, rax
     jmp  ltd_found
@@ -860,7 +860,7 @@ LocateTensorData ENDP
 
 ; =============================================================================
 ; NanoDisk_LoadQuantizedTensor
-; Async entry point: Queues disk read → GGUF parse → NanoQuant pipeline
+; Async entry point: Queues disk read ? GGUF parse ? NanoQuant pipeline
 ; RCX = ptr to NANO_ASYNC_LOAD_CTX (pre-filled by caller)
 ; Returns: RAX = 0 async pending, NTSTATUS on immediate error
 ;          RDX = detail string on error
@@ -938,7 +938,7 @@ NanoDisk_LoadQuantizedTensor PROC
     lea  rcx, szNewLine
     call ConsolePrint
 
-    ; Return async pending (success — caller waits for callback)
+    ; Return async pending (success ? caller waits for callback)
     xor  eax, eax
     xor  edx, edx
     jmp  nlqt_exit
@@ -992,8 +992,8 @@ NanoDisk_LoadQuantizedTensor ENDP
 
 ; =============================================================================
 ; NanoDisk_Callback
-; Completion handler: Disk I/O done → Validate GGUF → Locate tensor →
-;   NanoQuant compress/decompress → Fire agent callback
+; Completion handler: Disk I/O done ? Validate GGUF ? Locate tensor ?
+;   NanoQuant compress/decompress ? Fire agent callback
 ; RCX = ptr to NANO_ASYNC_LOAD_CTX (passed as UserData from DiskKernel)
 ; RDX = status (0=success, nonzero=error)
 ; R8  = bytesTransferred
@@ -1162,7 +1162,7 @@ ndc_done:
 NanoDisk_Callback ENDP
 
 ; =============================================================================
-; QuantizeWorkerThread — Background thread proc for model compression
+; QuantizeWorkerThread ? Background thread proc for model compression
 ; lpParameter = ptr to NANO_QUANTIZE_JOB
 ; Returns: 0 (DWORD)
 ; =============================================================================
@@ -1340,7 +1340,7 @@ atqm_path_ok:
     ;   1) Volume mount point resolution (DeviceIoControl IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS)
     ;   2) NTFS MFT lookup (DiskKernel NTFS_ReadMftRecord)
     ;   3) FAT32 cluster walk (DiskKernel FAT32_ReadCluster)
-    ; For now: set drive 0, LBA 0 — caller must pre-resolve or use DiskExplorer API
+    ; For now: set drive 0, LBA 0 ? caller must pre-resolve or use DiskExplorer API
 
     mov  (NANO_ASYNC_LOAD_CTX ptr [rbx]).driveIndex, 0
 
@@ -1423,7 +1423,7 @@ atqm_exit:
 AgentTool_QuantizeModel ENDP
 
 ; =============================================================================
-; NanoDisk_Init — Initialize the bridge (call once at startup)
+; NanoDisk_Init ? Initialize the bridge (call once at startup)
 ; Returns: RAX = 0 success
 ; =============================================================================
 PUBLIC NanoDisk_Init
@@ -1461,7 +1461,7 @@ NanoDisk_Init PROC
 NanoDisk_Init ENDP
 
 ; =============================================================================
-; NanoDisk_Shutdown — Cleanup bridge resources
+; NanoDisk_Shutdown ? Cleanup bridge resources
 ; Returns: RAX = 0 success
 ; =============================================================================
 PUBLIC NanoDisk_Shutdown
@@ -1519,7 +1519,7 @@ nds_pool_done:
 NanoDisk_Shutdown ENDP
 
 ; =============================================================================
-; NanoDisk_GetJobStatus — Query a quantize job's state
+; NanoDisk_GetJobStatus ? Query a quantize job's state
 ; RCX = ptr to NANO_QUANTIZE_JOB (or NULL for global)
 ; Returns: EAX = NANODISK_STATE_*, EDX = progressPct (0-100)
 ; =============================================================================
@@ -1535,7 +1535,7 @@ ngjs_have_ptr:
 NanoDisk_GetJobStatus ENDP
 
 ; =============================================================================
-; NanoDisk_GetJobResult — Get completed job's output matrix and ratio
+; NanoDisk_GetJobResult ? Get completed job's output matrix and ratio
 ; RCX = ptr to NANO_QUANTIZE_JOB (or NULL for global)
 ; RDX = ptr to receive output matrix (QWORD*)
 ; R8  = ptr to receive compression ratio (QWORD*)
@@ -1573,7 +1573,7 @@ ngjr_not_ready:
 NanoDisk_GetJobResult ENDP
 
 ; =============================================================================
-; NanoDisk_AbortJob — Request abort of active quantize job
+; NanoDisk_AbortJob ? Request abort of active quantize job
 ; RCX = ptr to NANO_QUANTIZE_JOB (or NULL for global)
 ; =============================================================================
 PUBLIC NanoDisk_AbortJob
@@ -1600,3 +1600,4 @@ PUBLIC NanoDisk_GetJobResult
 PUBLIC NanoDisk_AbortJob
 
 END
+

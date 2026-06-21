@@ -116,6 +116,8 @@ EXTERNDEF lstrlenA:PROC
 EXTERNDEF GetTickCount:PROC
 EXTERNDEF GetLastError:PROC
 EXTERNDEF SetFilePointerEx:PROC
+EXTERNDEF CreateMutexA:PROC
+EXTERNDEF SetThreadDescription:PROC
 
 ; shell32
 EXTERNDEF ShellExecuteA:PROC

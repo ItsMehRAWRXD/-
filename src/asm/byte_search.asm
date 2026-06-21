@@ -1,13 +1,13 @@
 ; =============================================================================
-; byte_search.asm — Byte-Level Search ASM Kernel
+; byte_search.asm ? Byte-Level Search ASM Kernel
 ; =============================================================================
 ; SIMD-accelerated pattern search for Layer 2 byte-level hotpatching.
 ; Used by byte_level_hotpatcher.cpp for GGUF binary modification.
 ;
 ; Exports:
-;   find_pattern_asm     — Linear byte pattern search (baseline)
-;   asm_byte_search      — SIMD-accelerated pattern search (SSE2)
-;   asm_boyer_moore_search — Boyer-Moore with precomputed skip table
+;   find_pattern_asm     ? Linear byte pattern search (baseline)
+;   asm_byte_search      ? SIMD-accelerated pattern search (SSE2)
+;   asm_boyer_moore_search ? Boyer-Moore with precomputed skip table
 ;
 ; Architecture: x64 MASM | Windows ABI | No exceptions | No CRT
 ; Build: ml64.exe /c /Zi /Zd /Fo byte_search.obj byte_search.asm
@@ -337,7 +337,7 @@ asm_boyer_moore_search PROC FRAME
 @@bm_cmp:
     cmp     r15, 0
     jl      @@bm_found          ; All bytes matched (r15 went below 0 = signed)
-    ; Actually need to check if we matched all — use unsigned
+    ; Actually need to check if we matched all ? use unsigned
     ; r15 counts down from needle_len-1 to 0
     mov     rax, rbx
     sub     rax, r13
@@ -388,3 +388,4 @@ asm_boyer_moore_search PROC FRAME
 asm_boyer_moore_search ENDP
 
 END
+

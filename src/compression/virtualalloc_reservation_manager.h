@@ -66,6 +66,18 @@ public:
     // Returns bytes freed, 0 if none available
     uint64_t EvictLRU();
 
+    // NUMA preference constants
+    static constexpr int kPreferredNumaNodeAuto = -1;
+    static constexpr int kPreferredNumaNode0 = 0;
+    static constexpr int kPreferredNumaNode1 = 1;
+
+    // Get preferred NUMA node for allocation (stub)
+    int GetPreferredNumaNode() const
+    {
+        // No-op stub - NUMA preference not available
+        return kPreferredNumaNodeAuto;
+    }
+
 private:
     VirtualAllocReservationManager();
     ~VirtualAllocReservationManager();

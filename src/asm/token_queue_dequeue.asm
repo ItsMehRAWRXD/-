@@ -8,7 +8,7 @@
 ; Ring buffer layout (must match TokenQueueFast in token_queue_fast.h):
 ;   +0   : head      (DWORD, consumer read pointer, 64-byte-aligned cache line)
 ;   +64  : tail      (DWORD, producer write pointer, 64-byte-aligned cache line)
-;   +128 : capacity  (DWORD, power-of-2 ring size)
+;   +128 : capacity  (DWORD, power-of-2 ring m_size)
 ;   +192 : tokens[]  (int32_t ring data, capacity elements)
 ;
 ; ABI: Microsoft x64
@@ -173,3 +173,4 @@ IC_TokenBatchDequeue PROC FRAME
 IC_TokenBatchDequeue ENDP
 
 END
+

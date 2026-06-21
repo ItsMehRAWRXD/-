@@ -1,4 +1,4 @@
-// rawrxd_text_engine.h — Stub for build compatibility
+// rawrxd_text_engine.h — Text engine definitions for line strip editor
 #pragma once
 #include <cstdint>
 #include <string>
@@ -12,11 +12,20 @@ struct SyntaxColorRun {
     uint32_t start = 0;
     uint32_t length = 0;
     COLORREF color = 0;
+    uint32_t byteOffset = 0;
 };
 
 struct DocumentLine {
     std::string text;
     uint32_t lineNumber = 0;
+    const char* rawBufferStart = nullptr;
+    uint32_t lengthBytes = 0;
+    uint32_t lineVersion = 0;
+};
+
+struct TextLineSpan {
+    const char* textStart = nullptr;
+    uint32_t length = 0;
 };
 
 struct TextLayoutViewport {
@@ -24,18 +33,36 @@ struct TextLayoutViewport {
     int32_t visibleLineCount = 0;
     int32_t charWidth = 0;
     int32_t lineHeight = 0;
+    RECT renderBounds = {};
+    int32_t scrollOffsetY = 0;
+    int32_t scrollOffsetX = 0;
+    int32_t lastVisibleLine = 0;
 };
 
 struct RenderBufferWorkspace {
     std::vector<DocumentLine> lines;
+    uint32_t poolCount = 0;
+    TextLineSpan* visibleLinesPool = nullptr;
 };
 
 struct LineStreamWorkspace {
+    int cellWidth = 0;
+    int cellHeight = 0;
     void initialize() {}
 };
 
+struct LineStripCacheWorkspace {
+    void* workspacePtr = nullptr;
+};
+
 struct SovereignWorkspaceController {
-    void initialize() {}
+    bool initialize(uint8_t* arena, size_t arenaSize, uint32_t width, uint32_t height) { return true; }
+    bool initialize(uint8_t* arena, size_t arenaSize, uint32_t lines, uint32_t cellW, uint32_t cellH, uint32_t charsPerLine) { return true; }
+    void shutdown() {}
+    void invalidateLineStructure(uint32_t lineIndex, uint32_t version) {}
+    static uint32_t calculateRequiredArenaBytes(uint32_t lines, uint32_t cellW, uint32_t cellH, uint32_t charsPerLine) { return 16 * 1024 * 1024; }
+    void synchronizeDirtyStrips(LineStreamWorkspace* stream, DocumentLine* lines, uint32_t lineCount, SyntaxColorRun* const* runTable, uint32_t* runCounts, bool fullSync) {}
+    LineStripCacheWorkspace workspaceProxy() const { return LineStripCacheWorkspace{}; }
 };
 
 struct AgentVirtualCursor {
@@ -46,6 +73,63 @@ struct AgentVirtualCursor {
 struct TextEngine {
     void initialize() {}
 };
+
+// Line render batch for syntax highlighting
+struct LineRenderBatch {
+    std::vector<SyntaxColorRun> runs;
+    uint32_t lineIndex = 0;
+};
+
+// Helper function - inline definition
+inline std::uint32_t packColorRef(COLORREF rgb) {
+    return (0xFF000000u) | ((std::uint32_t)GetRValue(rgb) << 16) | ((std::uint32_t)GetGValue(rgb) << 8) | (std::uint32_t)GetBValue(rgb);
+}
+
+// Stub functions - inline definitions
+inline bool softwareBlitRasterEnabled() { return true; }
+inline bool lineStripCacheEnabled() { return true; }
+
+struct SoftwareRasterWorkspace;
+struct SoftwareSurface;
+
+// Build line stream workspace from software atlas
+inline bool buildLineStreamWorkspaceFromSoftwareAtlas(SoftwareRasterWorkspace* atlas, LineStreamWorkspace* workspace) {
+    if (!workspace) return false;
+    workspace->cellWidth = 8;
+    workspace->cellHeight = 16;
+    return true;
+}
+
+// Fill line render batch from Win32 tokens
+inline bool fillLineRenderBatchFromWin32Tokens(LineRenderBatch* batch, const std::string& text, int offset,
+                                                const void* tokens, size_t tokenCount, size_t tokenSize) {
+    if (!batch) return false;
+    batch->runs.clear();
+    // Add a single run for the entire line
+    SyntaxColorRun run;
+    run.start = 0;
+    run.length = static_cast<uint32_t>(text.length());
+    run.color = RGB(220, 220, 220);
+    batch->runs.push_back(run);
+    return true;
+}
+
+// Export batch to syntax color runs - returns void, fills outCount
+inline void exportBatchToSyntaxColorRuns(LineRenderBatch& batch, SyntaxColorRun* outRuns, uint32_t* outCount) {
+    if (!outRuns || !outCount) return;
+    *outCount = 0;
+    for (size_t i = 0; i < batch.runs.size() && i < 64; ++i) {
+        outRuns[i] = batch.runs[i];
+        (*outCount)++;
+    }
+}
+
+// Render viewport line strips
+inline void renderViewportLineStrips(void* surface, const LineStripCacheWorkspace* workspace,
+                                      const uint32_t* visibleLines, uint32_t visibleCount,
+                                      int horzScroll, int viewportStartY, bool useCache) {
+    // Stub implementation
+}
 
 } // namespace ui
 } // namespace rawrxd

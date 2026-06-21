@@ -1,10 +1,10 @@
 ; =============================================================================
-; feature_dispatch_bridge.asm — x64 MASM Feature Dispatch Hot-Path
+; feature_dispatch_bridge.asm ? x64 MASM Feature Dispatch Hot-Path
 ; =============================================================================
 ; Architecture: x64 MASM, Windows ABI
 ; Provides high-performance routing from MASM callers into the C++ shared
 ; feature dispatch system. Used by inference loops, hotpatch paths, and
-; any MASM code that needs to invoke IDE/CLI features.
+; any MASM code that needs to call IDE/CLI features.
 ; =============================================================================
 
 .code
@@ -29,7 +29,7 @@ masm_dispatch_feature PROC
     mov     rbp, rsp
     sub     rsp, 32                  ; Shadow space for callee
 
-    ; Parameters already in RCX, RDX, R8 — Windows x64 calling convention
+    ; Parameters already in RCX, RDX, R8 ? Windows x64 calling convention
     ; RCX = featureId, RDX = args, R8 = idePtr
     call    rawrxd_dispatch_feature
 
@@ -194,3 +194,4 @@ _validate_done:
 masm_validate_feature ENDP
 
 END
+

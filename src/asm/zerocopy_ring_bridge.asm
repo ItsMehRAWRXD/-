@@ -1,5 +1,5 @@
 ; =============================================================================
-; zerocopy_ring_bridge.asm — Zero-Copy Ring Buffer Producer for Tool→GPU Bridge
+; zerocopy_ring_bridge.asm ? Zero-Copy Ring Buffer Producer for Tool?GPU Bridge
 ; =============================================================================
 ; Lock-free SPSC (Single-Producer Single-Consumer) ring buffer that writes
 ; tool output / context JSON directly into a pre-mapped host-visible buffer
@@ -7,16 +7,16 @@
 ;
 ; Memory layout (64-byte header + data region):
 ;
-;   Offset  Size   Field
-;   ──────  ─────  ──────────────────────────────────────────
-;   0x00    8      write_pos   (producer, atomic store-release)
-;   0x08    8      read_pos    (consumer, atomic store-release)
-;   0x10    8      capacity    (immutable after init — power of 2)
-;   0x18    8      wrap_mask   (capacity - 1, for branchless mod)
-;   0x20    8      drop_count  (producer increments on full)
-;   0x28    8      total_bytes (lifetime bytes written)
-;   0x30    16     reserved
-;   0x40    N      data[]      (N = capacity bytes, page-aligned)
+;   Offset  m_size   Field
+;   ??????  ?????  ??????????????????????????????????????????
+;   000h    8      write_pos   (producer, atomic store-release)
+;   008h    8      read_pos    (consumer, atomic store-release)
+;   010h    8      capacity    (immutable after init ? power of 2)
+;   018h    8      wrap_mask   (capacity - 1, for branchless mod)
+;   020h    8      drop_count  (producer increments on full)
+;   028h    8      total_bytes (lifetime bytes written)
+;   030h    16     reserved
+;   040h    N      data[]      (N = capacity bytes, page-aligned)
 ;
 ; The buffer is designed to sit in a VkBuffer with
 ; VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -55,7 +55,7 @@ g_RingBridge_Drops    QWORD 0       ; telemetry: drops due to full ring
 ;   rcx = pointer to pre-allocated buffer (header + data)
 ;   rdx = capacity in bytes (MUST be power of 2, minimum 4096)
 ;
-; Initializes the ring header.  Does NOT allocate memory — caller provides
+; Initializes the ring header.  Does NOT allocate memory ? caller provides
 ; the buffer (from VirtualAlloc, VkMapMemory, or section mapping).
 ;
 ; Returns: EAX=1 on success, 0 on invalid args.
@@ -145,7 +145,7 @@ RawrXD_Ring_Produce PROC FRAME
     sub     r11, r10                    ; free
 
     cmp     r12, r11
-    ja      @@p_drop                    ; not enough room → drop
+    ja      @@p_drop                    ; not enough room ? drop
 
     ; Compute first segment length
     mov     rdi, rax
@@ -163,7 +163,7 @@ RawrXD_Ring_Produce PROC FRAME
     cmp     r12, r10
     jbe     @@p_single
 
-    ; ── Split copy ──
+    ; ?? Split copy ??
     ; First chunk: r10 bytes
     mov     rcx, r10
     rep movsb                           ; rsi advances, rdi advances
@@ -176,7 +176,7 @@ RawrXD_Ring_Produce PROC FRAME
     jmp     @@p_fence
 
 @@p_single:
-    ; ── Single copy (no wrap) ──
+    ; ?? Single copy (no wrap) ??
     mov     rcx, r12
     rep movsb
 
@@ -184,7 +184,7 @@ RawrXD_Ring_Produce PROC FRAME
     ; Store fence: make data visible before advancing write_pos
     sfence
 
-    ; Advance write_pos atomically (single writer — plain store is fine for SPSC,
+    ; Advance write_pos atomically (single writer ? plain store is fine for SPSC,
     ; but we use xadd for visibility guarantee on HOST_COHERENT memory)
     mov     rax, QWORD PTR [rbx + RING_OFF_WRITE]
     add     rax, r12
@@ -304,3 +304,4 @@ RawrXD_Ring_Reset PROC
 RawrXD_Ring_Reset ENDP
 
 END
+

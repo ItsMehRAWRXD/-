@@ -4,7 +4,7 @@
 ; Zero dependencies, pure MASM x64
 
 
-; ─── Cross-module symbol resolution ───
+; ??? Cross-module symbol resolution ???
 INCLUDE rawrxd_master.inc
 
 .code
@@ -13,7 +13,7 @@ ALIGN 16
 ; TerraFormer Kernel Entry Point
 ; RCX = AST root pointer
 ; RDX = output binary buffer
-; R8  = buffer size
+; R8  = buffer m_size
 ; R9  = emission flags
 TerraFormer_EmitBinary PROC FRAME
     push rbp
@@ -32,7 +32,7 @@ TerraFormer_EmitBinary PROC FRAME
     ; Initialize emission context
     mov rsi, rcx        ; AST root
     mov rdi, rdx        ; output buffer
-    mov rbx, r8         ; buffer size
+    mov rbx, r8         ; buffer m_size
     mov r10, r9         ; flags
 
     ; Emit ELF/PE header based on target
@@ -83,8 +83,8 @@ TraverseAST_Emit PROC
     cmp rcx, 0
     je done_traverse
 
-    ; Check node type
-    mov eax, [rcx]      ; node->type
+    ; Check node m_type
+    mov eax, [rcx]      ; node->m_type
     cmp eax, 1          ; function
     je emit_function
     cmp eax, 2          ; variable
@@ -152,8 +152,8 @@ EmitFunctionPrologue ENDP
 
 EmitVariableDeclaration PROC
     ; Emit variable allocation on stack
-    ; rdx = output buffer, r8 = variable size (bytes)
-    ; Emits: sub rsp, <size> (48 83 EC xx for small, 48 81 EC for large)
+    ; rdx = output buffer, r8 = variable m_size (bytes)
+    ; Emits: sub rsp, <m_size> (48 83 EC xx for small, 48 81 EC for large)
     cmp r8, 128
     ja @@large_var
     
@@ -176,9 +176,9 @@ EmitVariableDeclaration PROC
 EmitVariableDeclaration ENDP
 
 EmitStatementCode PROC
-    ; Emit statement opcodes based on statement type
-    ; rcx = statement type, rdx = output buffer
-    ; Type 0 = NOP, Type 1 = RET, Type 2 = INT3
+    ; Emit statement opcodes based on statement m_type
+    ; rcx = statement m_type, rdx = output buffer
+    ; m_type 0 = NOP, m_type 1 = RET, m_type 2 = INT3
     cmp ecx, 0
     jne @@not_nop
     mov byte ptr [rdx], 90h         ; NOP
@@ -226,7 +226,7 @@ FinalizeBinary PROC
     add rsi, 4
     
 @@no_symbols:
-    ; Update total size in header
+    ; Update total m_size in header
     mov dword ptr [rbx + 50h], esi  ; SizeOfImage (approximate)
     
     add rsp, 32

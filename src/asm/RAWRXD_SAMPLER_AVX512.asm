@@ -5,7 +5,6 @@
 OPTION CASEMAP:NONE
 
 .DATA
-align 64
 g_exp_poly_coeffs   REAL4 1.0, 1.0, 0.5, 0.16666667, 0.041666667, 0.0083333333, 0.0013888889, 0.0001984127
 g_one_over_log2     REAL4 1.44269504
 
@@ -164,23 +163,23 @@ Sampler_SoftMax_TopK_Fused PROC
     ; We treat ZMM0 as logits and ZMM1 as indices
     ; vcmpps produces a mask of where [current] > [next]
     
-    ; For a full Top-K, we maintain a min-heap of size K in registers
+    ; For a full Top-K, we maintain a min-heap of blockSize K in registers
     ; but for N >> K, we use a vectorized tournament/selection pass.
     
     vmovups zmm2, [rcx + 64]
     vmovdqu32 zmm3, [rdx + 64]
     
-    vcmpf32 k1, zmm0, zmm2, 14 ; CC=GT (Greater Than)
+    vcmpps k1, zmm0, zmm2, 14 ; CC=GT (Greater Than)
     
     ; Swap logits
     vmovaps zmm4, zmm0
-    vblendmpd zmm0, k1, zmm2, zmm0 ; zmm0 = max(zmm0, zmm2)
-    vblendmpd zmm2, k1, zmm4, zmm2 ; zmm2 = min(zmm0, zmm2)
+    vblendmps zmm0 {k1}, zmm2, zmm0 ; zmm0 = max(zmm0, zmm2)
+    vblendmps zmm2 {k1}, zmm4, zmm2 ; zmm2 = min(zmm0, zmm2)
     
     ; Swap indices in sync
     vmovdqa32 zmm5, zmm1
-    vblendmpd zmm1, k1, zmm3, zmm1
-    vblendmpd zmm3, k1, zmm5, zmm3
+    vblendmps zmm1 {k1}, zmm3, zmm1
+    vblendmps zmm3 {k1}, zmm5, zmm3
     
     ; advance
     add rcx, 64
@@ -200,3 +199,4 @@ Sampler_SoftMax_TopK_Fused PROC
 Sampler_SoftMax_TopK_Fused ENDP
 
 END
+

@@ -124,19 +124,7 @@ std::uint32_t packedColorForByte(std::uint32_t byteIndex, const SyntaxColorRun* 
     return packColorRef(fallback);
 }
 
-}  // namespace
-
-std::uint32_t packColorRef(COLORREF color)
-{
-    return 0xFF000000u | (static_cast<std::uint32_t>(GetRValue(color)) << 16) |
-           (static_cast<std::uint32_t>(GetGValue(color)) << 8) | static_cast<std::uint32_t>(GetBValue(color));
-}
-
-bool softwareBlitRasterEnabled()
-{
-    const char* value = std::getenv("RAWRXD_SOFTWARE_BLIT_RASTER");
-    return value != nullptr && value[0] == '1' && value[1] == '\0';
-}
+} // anonymous namespace
 
 bool initializeSoftwareRaster(HDC referenceDc, HFONT fontHandle, SoftwareRasterWorkspace* raster,
                               SoftwareRenderSurface* surface, std::uint32_t surfaceWidth, std::uint32_t surfaceHeight)
@@ -552,4 +540,4 @@ void presentSoftwareSurfaceRect(HDC destinationDc, const SoftwareRenderSurface* 
            SRCCOPY);
 }
 
-}  // namespace rawrxd::ui
+} // namespace rawrxd::ui

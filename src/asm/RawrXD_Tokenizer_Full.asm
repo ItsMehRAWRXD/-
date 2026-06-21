@@ -137,7 +137,7 @@ MERGE_SIZEOF            EQU 16
 
 align 16
 tokenizer_state LABEL BYTE
-    DWORD TOKENIZER_BPE             ; type
+    DWORD TOKENIZER_BPE             ; memType
     DWORD 0                         ; vocab_size
     DWORD 0                         ; merges_size
     DWORD 0                         ; special_size
@@ -221,21 +221,21 @@ piece_lengths WORD 16384 DUP(?)
 
 ; -----------------------------------------------------------------------------
 ; Tokenizer_Create
-; Initialize tokenizer with type
-;   RCX = tokenizer type (BPE/SentencePiece/Tiktoken)
+; Initialize tokenizer with memType
+;   RCX = tokenizer memType (BPE/SentencePiece/Tiktoken)
 ; Returns: RAX = 0 (success)
 ; -----------------------------------------------------------------------------
 Tokenizer_Create PROC
     push    rbx
     push    rdi
 
-    mov     [rel tokenizer_state + TSTATE_TYPE], ecx
-    mov     dword ptr [rel tokenizer_state + TSTATE_VOCAB_SIZE], 0
-    mov     dword ptr [rel tokenizer_state + TSTATE_MERGES_SIZE], 0
-    mov     dword ptr [rel tokenizer_state + TSTATE_SPECIAL_SIZE], 0
+    mov dword ptr [tokenizer_state + TSTATE_TYPE], ecx
+    mov     dword ptr [tokenizer_state + TSTATE_VOCAB_SIZE], 0
+    mov     dword ptr [tokenizer_state + TSTATE_MERGES_SIZE], 0
+    mov     dword ptr [tokenizer_state + TSTATE_SPECIAL_SIZE], 0
 
     ; Initialize byte-to-unicode mapping
-    lea     rdi, [rel byte_to_unicode]
+    lea     rdi, [byte_to_unicode]
     xor     ecx, ecx
 @@init_b2u:
     cmp     ecx, 256
@@ -273,8 +273,8 @@ Tokenizer_Create ENDP
 ; Free tokenizer resources
 ; -----------------------------------------------------------------------------
 Tokenizer_Destroy PROC
-    mov     qword ptr [rel tokenizer_state + TSTATE_VOCAB_DATA], 0
-    mov     qword ptr [rel tokenizer_state + TSTATE_MERGE_DATA], 0
+    mov     qword ptr [tokenizer_state + TSTATE_VOCAB_DATA], 0
+    mov     qword ptr [tokenizer_state + TSTATE_MERGE_DATA], 0
     xor     eax, eax
     ret
 Tokenizer_Destroy ENDP
@@ -303,16 +303,16 @@ Tokenizer_Encode PROC
     xor     r13d, r13d                  ; output count
 
     ; Check for add_bos
-    cmp     dword ptr [rel tokenizer_state + TSTATE_ADD_BOS], 0
+    cmp     dword ptr [tokenizer_state + TSTATE_ADD_BOS], 0
     je      @@no_bos
-    mov     eax, [rel tokenizer_state + TSTATE_BOS_ID]
+    mov eax, dword ptr [tokenizer_state + TSTATE_BOS_ID]
     mov     [rdi], eax
     add     rdi, 4
     inc     r13d
 @@no_bos:
 
-    ; Dispatch based on tokenizer type
-    mov     eax, [rel tokenizer_state + TSTATE_TYPE]
+    ; Dispatch based on tokenizer memType
+    mov eax, dword ptr [tokenizer_state + TSTATE_TYPE]
     cmp     eax, TOKENIZER_BPE
     je      @@encode_bpe
     cmp     eax, TOKENIZER_SENTENCEPIECE
@@ -342,15 +342,15 @@ Tokenizer_Encode PROC
 
 @@encode_done:
     ; Check for add_eos
-    cmp     dword ptr [rel tokenizer_state + TSTATE_ADD_EOS], 0
+    cmp     dword ptr [tokenizer_state + TSTATE_ADD_EOS], 0
     je      @@no_eos
     cmp     r13d, r12d
     jge     @@no_eos
-    mov     eax, [rel tokenizer_state + TSTATE_EOS_ID]
+    mov eax, dword ptr [tokenizer_state + TSTATE_EOS_ID]
     mov     eax, r13d
     shl     eax, 2
     lea     rbx, [rdi]
-    mov     ecx, [rel tokenizer_state + TSTATE_EOS_ID]
+    mov ecx, dword ptr [tokenizer_state + TSTATE_EOS_ID]
     mov     [rbx + rax], ecx
     inc     r13d
 @@no_eos:
@@ -374,7 +374,7 @@ Tokenizer_Encode ENDP
 ;   RCX = input tokens (DWORD array)
 ;   RDX = token count
 ;   R8  = output buffer
-;   R9  = buffer size
+;   R9  = buffer blockSize
 ; Returns: RAX = bytes written (excluding null)
 ; -----------------------------------------------------------------------------
 Tokenizer_Decode PROC
@@ -404,20 +404,20 @@ Tokenizer_Decode PROC
     dec     r12d
 
     ; Skip special tokens (BOS, EOS, PAD, UNK)
-    cmp     eax, [rel tokenizer_state + TSTATE_BOS_ID]
+    cmp eax, dword ptr [tokenizer_state + TSTATE_BOS_ID]
     je      @@decode_loop
-    cmp     eax, [rel tokenizer_state + TSTATE_EOS_ID]
+    cmp eax, dword ptr [tokenizer_state + TSTATE_EOS_ID]
     je      @@decode_loop
-    cmp     eax, [rel tokenizer_state + TSTATE_PAD_ID]
+    cmp eax, dword ptr [tokenizer_state + TSTATE_PAD_ID]
     je      @@decode_loop
 
     ; Look up token string
-    cmp     eax, [rel tokenizer_state + TSTATE_VOCAB_SIZE]
+    cmp eax, dword ptr [tokenizer_state + TSTATE_VOCAB_SIZE]
     jge     @@unknown_token
 
     ; Get vocab entry
     imul    ebx, eax, VOCAB_SIZEOF
-    lea     rcx, [rel vocab_table]
+    lea     rcx, [vocab_table]
     add     rcx, rbx
 
     ; Get string offset and length
@@ -425,7 +425,7 @@ Tokenizer_Decode PROC
     movzx   r8d, word ptr [rcx + VOCAB_STRING_LEN]
 
     ; Copy string
-    lea     rcx, [rel vocab_strings]
+    lea     rcx, [vocab_strings]
     add     rcx, rbx
 
 @@copy_token_str:
@@ -482,7 +482,7 @@ Tokenizer_Decode ENDP
 ; Initialize BPE tokenizer
 ; -----------------------------------------------------------------------------
 BPE_Init PROC
-    mov     dword ptr [rel tokenizer_state + TSTATE_TYPE], TOKENIZER_BPE
+    mov     dword ptr [tokenizer_state + TSTATE_TYPE], TOKENIZER_BPE
     xor     eax, eax
     ret
 BPE_Init ENDP
@@ -504,8 +504,8 @@ BPE_LoadVocab PROC
 
     mov     rsi, rcx                    ; input data
     mov     r12d, edx                   ; count
-    lea     rdi, [rel vocab_table]
-    lea     r13, [rel vocab_strings]
+    lea     rdi, [vocab_table]
+    lea     r13, [vocab_strings]
     xor     r14d, r14d                  ; string pool offset
 
     xor     ecx, ecx                    ; token index
@@ -538,7 +538,7 @@ BPE_LoadVocab PROC
     jmp     @@load_vocab_loop
 
 @@load_vocab_done:
-    mov     [rel tokenizer_state + TSTATE_VOCAB_SIZE], r12d
+    mov dword ptr [tokenizer_state + TSTATE_VOCAB_SIZE], r12d
     mov     eax, r12d
 
     pop     r14
@@ -563,7 +563,7 @@ BPE_LoadMerges PROC
 
     mov     rsi, rcx
     mov     ecx, edx
-    lea     rdi, [rel merge_table]
+    lea     rdi, [merge_table]
 
     ; Copy merge data
     imul    edx, ecx, MERGE_SIZEOF
@@ -573,7 +573,7 @@ BPE_LoadMerges PROC
     rep movsq
     pop     rcx
 
-    mov     [rel tokenizer_state + TSTATE_MERGES_SIZE], ecx
+    mov dword ptr [tokenizer_state + TSTATE_MERGES_SIZE], ecx
     mov     eax, ecx
 
     pop     rdi
@@ -605,7 +605,7 @@ BPE_Encode PROC
 
     ; Step 1: Convert string to initial token sequence
     ; Each byte/character becomes initial token
-    lea     rdi, [rel encode_buffer]
+    lea     rdi, [encode_buffer]
     xor     r13d, r13d                  ; token count
 
 @@initial_pass:
@@ -637,7 +637,7 @@ BPE_Encode PROC
 
 @@initial_done:
     ; Step 2: Apply BPE merges iteratively
-    mov     r14d, [rel tokenizer_state + TSTATE_MERGES_SIZE]
+    mov r14d, dword ptr [tokenizer_state + TSTATE_MERGES_SIZE]
     test    r14d, r14d
     jz      @@copy_output
 
@@ -661,7 +661,7 @@ BPE_Encode PROC
 @@copy_output:
     ; Copy tokens to output
     mov     rdi, [rsp]
-    lea     rsi, [rel encode_buffer]
+    lea     rsi, [encode_buffer]
     xor     ecx, ecx
 @@copy_tokens:
     cmp     ecx, r13d
@@ -706,8 +706,8 @@ BPE_FindBestMerge PROC
 
     mov     rsi, rcx                    ; tokens
     mov     r12d, edx                   ; count
-    lea     rdi, [rel merge_table]
-    mov     r13d, [rel tokenizer_state + TSTATE_MERGES_SIZE]
+    lea     rdi, [merge_table]
+    mov r13d, dword ptr [tokenizer_state + TSTATE_MERGES_SIZE]
 
     mov     r14d, -1                    ; best position
     mov     r15d, 7FFFFFFFh             ; best priority (lower = better)
@@ -792,8 +792,8 @@ BPE_ApplyMerge PROC
     mov     edx, [rsi + rbx*4 + 4]
 
     ; Find result token
-    lea     rdi, [rel merge_table]
-    mov     r8d, [rel tokenizer_state + TSTATE_MERGES_SIZE]
+    lea     rdi, [merge_table]
+    mov r8d, dword ptr [tokenizer_state + TSTATE_MERGES_SIZE]
     xor     eax, eax
 
 @@find_result:
@@ -860,7 +860,7 @@ BPE_ApplyMerge ENDP
 ; Initialize SentencePiece tokenizer
 ; -----------------------------------------------------------------------------
 SP_Init PROC
-    mov     dword ptr [rel tokenizer_state + TSTATE_TYPE], TOKENIZER_SENTENCEPIECE
+    mov     dword ptr [tokenizer_state + TSTATE_TYPE], TOKENIZER_SENTENCEPIECE
     xor     eax, eax
     ret
 SP_Init ENDP
@@ -909,7 +909,7 @@ SP_Encode PROC
 
     ; Copy result
     mov     rdi, [rsp]
-    lea     rsi, [rel encode_buffer]
+    lea     rsi, [encode_buffer]
     xor     ecx, ecx
 @@copy_sp:
     cmp     ecx, r14d
@@ -980,7 +980,7 @@ SP_Viterbi PROC
     je      @@next_pos
 
     ; Try all vocab entries starting at this position
-    mov     r15d, [rel tokenizer_state + TSTATE_VOCAB_SIZE]
+    mov r15d, dword ptr [tokenizer_state + TSTATE_VOCAB_SIZE]
     xor     ebx, ebx
 @@try_vocab:
     cmp     ebx, r15d
@@ -988,7 +988,7 @@ SP_Viterbi PROC
 
     ; Get vocab entry
     imul    ecx, ebx, VOCAB_SIZEOF
-    lea     r8, [rel vocab_table]
+    lea     r8, [vocab_table]
     add     r8, rcx
 
     ; Get token string
@@ -1002,7 +1002,7 @@ SP_Viterbi PROC
     jg      @@next_vocab
 
     ; Check if token matches
-    lea     r10, [rel vocab_strings]
+    lea     r10, [vocab_strings]
     add     r10, rcx
     lea     r11, [rsi + r14]
 
@@ -1050,7 +1050,7 @@ SP_Viterbi PROC
 
 @@backtrack:
     ; Backtrack to get tokens
-    lea     rdi, [rel encode_buffer]
+    lea     rdi, [encode_buffer]
     mov     r14d, r12d                  ; Start at end
     xor     r15d, r15d                  ; Token count
 
@@ -1065,7 +1065,7 @@ SP_Viterbi PROC
 
     ; Get token length and go back
     imul    ecx, eax, VOCAB_SIZEOF
-    lea     r8, [rel vocab_table]
+    lea     r8, [vocab_table]
     movzx   ecx, word ptr [r8 + rcx + VOCAB_STRING_LEN]
     sub     r14d, ecx
     jmp     @@backtrack_loop
@@ -1316,7 +1316,7 @@ SP_Decode PROC
 SP_Decode ENDP
 
 Tiktoken_Init PROC
-    mov     dword ptr [rel tokenizer_state + TSTATE_TYPE], TOKENIZER_TIKTOKEN
+    mov     dword ptr [tokenizer_state + TSTATE_TYPE], TOKENIZER_TIKTOKEN
     xor     eax, eax
     ret
 Tiktoken_Init ENDP
@@ -1385,23 +1385,23 @@ UTF8_Validate PROC
 UTF8_Validate ENDP
 
 Tokenizer_GetVocabSize PROC
-    mov     eax, [rel tokenizer_state + TSTATE_VOCAB_SIZE]
+    mov eax, dword ptr [tokenizer_state + TSTATE_VOCAB_SIZE]
     ret
 Tokenizer_GetVocabSize ENDP
 
 Tokenizer_TokenToStr PROC
     ; RCX = token_id, RDX = output buffer, R8 = buf_size
-    cmp     ecx, [rel tokenizer_state + TSTATE_VOCAB_SIZE]
+    cmp ecx, dword ptr [tokenizer_state + TSTATE_VOCAB_SIZE]
     jge     @@invalid
 
     imul    eax, ecx, VOCAB_SIZEOF
-    lea     r9, [rel vocab_table]
+    lea     r9, [vocab_table]
     add     r9, rax
 
     mov     eax, [r9 + VOCAB_STRING_OFF]
     movzx   ecx, word ptr [r9 + VOCAB_STRING_LEN]
 
-    lea     r10, [rel vocab_strings]
+    lea     r10, [vocab_strings]
     add     r10, rax
 
     ; Copy string
@@ -1451,7 +1451,7 @@ Tokenizer_StrToToken PROC
     jmp     @@len_scan
 
 @@len_ready:
-    mov     ebx, [rel tokenizer_state + TSTATE_VOCAB_SIZE]
+    mov ebx, dword ptr [tokenizer_state + TSTATE_VOCAB_SIZE]
     xor     edi, edi
 
 @@tok_loop:
@@ -1459,7 +1459,7 @@ Tokenizer_StrToToken PROC
     jae     @@no_match
 
     imul    eax, edi, VOCAB_SIZEOF
-    lea     rsi, [rel vocab_table]
+    lea     rsi, [vocab_table]
     add     rsi, rax
 
     mov     eax, [rsi + VOCAB_STRING_OFF]
@@ -1467,7 +1467,7 @@ Tokenizer_StrToToken PROC
     cmp     edx, r13d
     jne     @@next_tok
 
-    lea     r12, [rel vocab_strings]
+    lea     r12, [vocab_strings]
     add     r12, rax
     mov     r14, r10
     mov     rcx, r13
@@ -1509,3 +1509,4 @@ Tokenizer_StrToToken PROC
 Tokenizer_StrToToken ENDP
 
 END
+

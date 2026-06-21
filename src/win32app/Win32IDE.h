@@ -29,6 +29,16 @@
 #define WM_AI_BACKEND_STATUS (WM_USER + 0x500)  // wParam: 1=connected 0=offline
 #endif
 
+// Voice Assistant async response message (from VoiceAssistantWorker)
+#ifndef WM_USER_VOICE_RESPONSE_READY
+#define WM_USER_VOICE_RESPONSE_READY (WM_USER + 0x601)  // lParam: std::string* JSON result
+#endif
+
+// Telemetry flush timer message
+#ifndef WM_TELEMETRY_FLUSH
+#define WM_TELEMETRY_FLUSH (WM_USER + 0x602)  // Periodic telemetry buffer flush
+#endif
+
 #ifndef _Return_type_success_
 #define _Return_type_success_(expr)
 #endif
@@ -127,6 +137,8 @@ class IDEFeatures;
 
 #include "Win32IDE_DownloadsPanel.h"
 #include "Win32IDE_ExtensionPanel.h"
+#include "VoiceAssistantWorker.hpp"
+#include "../core/voice_assistant_manager.hpp"
 
 // Posted from AgenticChatSession worker thread; UI thread finalizes markdown + `m_chatHistory` + disk.
 struct Win32IDEAgenticCopilotFinalEnvelope
@@ -311,6 +323,24 @@ struct RefactoringOption
 {
     std::string name;
     std::string description;
+};
+
+// Phase 4: Reference Graph Node Structure
+struct GraphNode {
+    std::string id;
+    std::string label;
+    std::string type;       // "function", "class", "variable", "file"
+    std::string filePath;
+    int lineNumber;
+    double confidence;
+    int x, y;              // Screen coordinates
+    int layer;            // Dependency layer (0 = root, 1+ = dependents)
+    std::vector<std::string> connections;  // Connected node IDs
+    bool isSelected;
+    bool isExpanded;
+    
+    GraphNode() : lineNumber(0), confidence(0.0), x(0), y(0), 
+                  layer(0), isSelected(false), isExpanded(false) {}
 };
 
 // Forward declaration for D2D syntax bridge friend access
@@ -1499,7 +1529,7 @@ class Win32IDE
     std::vector<rawrxd::ui::DocumentLine> m_lineStripDocLines;
     std::vector<std::uint32_t> m_lineStripLineVersions;
     std::vector<rawrxd::ui::SyntaxColorRun> m_lineStripRuns;
-    std::vector<const rawrxd::ui::SyntaxColorRun*> m_lineStripRunTable;
+    std::vector<rawrxd::ui::SyntaxColorRun*> m_lineStripRunTable;
     std::vector<std::uint32_t> m_lineStripRunCounts;
     HDC m_lineStripBakeDc = nullptr;
     HBITMAP m_lineStripBakeBitmap = nullptr;
@@ -5667,6 +5697,7 @@ class Win32IDE
 #define IDM_QW_ALERT_DISMISS_ALL 9822
 #define IDM_QW_ALERT_RESOURCE_STATUS 9823
 #define IDM_QW_SLO_DASHBOARD 9830
+#define IDM_TOOLS_KILL_BUILD_LOCKS 9840
 
     // Hotpatch command handlers (implemented in Win32IDE_HotpatchPanel.cpp)
     void initHotpatchUI();
@@ -5952,6 +5983,81 @@ class Win32IDE
     // State
     bool m_voicePanelVisible = false;
     bool m_voiceChatInitialized = false;
+
+    // ========================================================================
+    // PHASE 34: VOICE ASSISTANT — Siri/Alexa-Style Integration
+    // ========================================================================
+    // Lifecycle
+    void initVoiceAssistantPanel();
+    void shutdownVoiceAssistantPanel();
+
+    // UI creation
+    HWND createVoiceAssistantPanel(HWND hwndParent);
+    void layoutVoiceAssistantPanel(int panelWidth, int panelHeight);
+
+    // Command handlers (IDM_VOICE_ASSISTANT_* range, 12100-12199)
+    void handleVoiceAssistantCommand(int commandId);
+    void handleRAGSemanticCommand(int commandId);  // Phase 3: RAG semantic queries
+    void handleRAGSemanticResult(const nlohmann::json& result);  // Phase 3: RAG result display
+    void processVoiceInput(const std::string& input);
+    void finalizeVoiceAssistantResult(const std::string& input, const nlohmann::json& result);
+    void dispatchVoiceAssistantIDEAction(IntentType intent, const nlohmann::json& entities);
+    void routeVoiceAssistantToIDECommand(IntentType intent, const std::unordered_map<std::string, std::string>& entities);
+    void dispatchRAGQuery(IntentType intent, const std::unordered_map<std::string, std::string>& entities);
+    void displayVoiceResponse(const nlohmann::json& result);
+    void addToVoiceHistory(const std::string& input, const nlohmann::json& result);
+    void setVoiceAssistantMode(const std::string& mode);
+    void updateVoiceStatus(const std::string& status);
+    void showVoiceAssistantPanel();
+    void showVoiceAssistantSettings();
+    void showVoiceHistory();
+    void clearVoiceHistory();
+
+    // Window procedure handler
+    LRESULT handleVoiceAssistantMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    static LRESULT CALLBACK VoiceAssistantPanelProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+    // Button handlers
+    void handleSendButton();
+    void handleClearButton();
+    void handleMicButton();
+    void handleHistorySelection();
+    void handleVoiceAssistantTimer();
+
+    // Micro-model chain integration
+    void connectVoiceToMicroModelChain();
+
+    // Phase 4: Reference Graph Visualization
+    void initReferenceGraphPanel();
+    HWND createReferenceGraphPanel(HWND hwndParent);
+    void displayRAGResultsInGraph(const nlohmann::json& ragResult);
+    void buildGraphFromRAGResults(const nlohmann::json& ragResult);
+    void buildSymbolConnections();
+    void applyHierarchyLayout();
+    void applyForceDirectedLayout();
+    void updateSymbolList();
+    void invalidateGraphCanvas();
+    void updateGraphStatus();
+    void renderGraphNode(HDC hdc, const GraphNode& node);
+    void renderGraphConnections(HDC hdc);
+    LRESULT handleReferenceGraphMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    void handleGraphNodeSelection();
+    void handleGraphCanvasClick(int x, int y);
+    void updateGraphDetailView(const GraphNode& node);
+    void handleGraphZoomIn();
+    void handleGraphZoomOut();
+    void showReferenceGraphPanel();
+    void hideReferenceGraphPanel();
+    void toggleReferenceGraphPanel();
+    void routeRAGResultToGraph(const nlohmann::json& ragResult);
+    void cleanupReferenceGraph();
+
+    // Cleanup
+    void cleanupVoiceAssistant();
+
+    // State
+    bool m_voiceAssistantInitialized = false;
+    std::unique_ptr<class VoiceAssistantWorker> m_voiceAssistantWorker;
 
     // ========================================================================
     // PHASE 33: QUICK-WIN PORTS — Shortcuts, Backups, Alerts, SLO

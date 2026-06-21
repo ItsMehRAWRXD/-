@@ -1,20 +1,20 @@
 ; =============================================================================
-; terminal_pipe_engine.asm — Sovereign Terminal Execution with Anonymous Pipes
+; terminal_pipe_engine.asm ? Sovereign Terminal Execution with Anonymous Pipes
 ; =============================================================================
 ;
 ; Native Win32 anonymous pipes feeding stdout/stderr directly into the
 ; circular chat buffer. No ConPTY dependency, no external libraries.
 ;
 ; Architecture:
-;   TermPipe_Spawn   — CreatePipe + CreateProcess + capture thread
-;   TermPipe_Read    — Drain read-pipe into TERM_PIPE_CTX.outputBuf ring
-;   TermPipe_Kill    — TerminateProcess + handle cleanup
-;   TermPipe_GetLine — Pull one line from the ring buffer (caller render)
+;   TermPipe_Spawn   ? CreatePipe + CreateProcess + capture thread
+;   TermPipe_Read    ? Drain read-pipe into TERM_PIPE_CTX.outputBuf ring
+;   TermPipe_Kill    ? TerminateProcess + handle cleanup
+;   TermPipe_GetLine ? Pull one line from the ring buffer (caller render)
 ;
 ; Pipe topology (per session):
 ;
-;   [Parent]   hStdoutRd ←————————————— hStdoutWr ← child stdout
-;   [Parent]   hStdinWr  ————————————→  hStdinRd  → child stdin
+;   [Parent]   hStdoutRd ?????????????? hStdoutWr ? child stdout
+;   [Parent]   hStdinWr  ?????????????  hStdinRd  ? child stdin
 ;
 ; The ring buffer (TERM_RING) uses a 64 KB power-of-2 wrapping scheme.
 ; Reader cursor (g_termRdCursor) and writer cursor (g_termWrCursor) are
@@ -23,7 +23,7 @@
 ; Concurrency:
 ;   - Main thread calls TermPipe_Spawn / TermPipe_GetLine
 ;   - Capture thread (TermPipe_CaptureThread) drains hStdoutRd continuously
-;   - No locks needed — single-producer (capture) / single-consumer (UI)
+;   - No locks needed ? single-producer (capture) / single-consumer (UI)
 ;     ring is safe on x64 with sequentially-consistent load/store
 ;
 ; Build: ml64.exe /c /Zi terminal_pipe_engine.asm
@@ -52,7 +52,7 @@ TERM_FLAG_OVERFLOW  EQU 02h             ; Ring wrapped (data lost)
 TERM_FLAG_COMPLETE  EQU 04h             ; Process exited cleanly
 TERM_FLAG_STDIN_EOF EQU 08h             ; Stdin pipe closed
 
-; Security attribute — inheritable handles
+; Security attribute ? inheritable handles
 SECURITY_ATTRIBUTES STRUCT
     nLength                 DD ?
     lpSecurityDescriptor    DQ ?
@@ -61,7 +61,7 @@ SECURITY_ATTRIBUTES STRUCT
 SECURITY_ATTRIBUTES ENDS
 
 ; ---------------------------------------------------------------------------
-;  TERM_PIPE_CTX — per-session state (512 bytes aligned)
+;  TERM_PIPE_CTX ? per-session state (512 bytes aligned)
 ; ---------------------------------------------------------------------------
 TERM_PIPE_CTX STRUCT
     hProcess        DQ ?        ; Child process handle
@@ -399,7 +399,7 @@ TermPipe_CaptureThread PROC FRAME
     jz      @cap_loop                   ; EOF but no error yet
 
     ; Copy from stack scratch into ring
-    ; Overflow check: if (wrCursor - rdCursor) + bytesRead > RING_SIZE → overflow
+    ; Overflow check: if (wrCursor - rdCursor) + bytesRead > RING_SIZE ? overflow
     mov     eax, [rbx + TERM_PIPE_CTX.wrCursor]
     mov     edx, [rbx + TERM_PIPE_CTX.rdCursor]
     sub     eax, edx                    ; eax = used bytes
@@ -511,7 +511,7 @@ TermPipe_GetLine PROC FRAME
     cmp     eax, [rbx + TERM_PIPE_CTX.rdCursor]
     jne     @getline_consume
 
-    ; No data yet — spin briefly (yield if not alive)
+    ; No data yet ? spin briefly (yield if not alive)
     test    dword ptr [rbx + TERM_PIPE_CTX.flags], TERM_FLAG_ALIVE
     jz      @getline_done              ; session dead, no more data
 
@@ -545,7 +545,7 @@ TermPipe_GetLine PROC FRAME
     cmp     edx, [rbx + TERM_PIPE_CTX.rdCursor]
     ja      @getline_consume
 
-    ; No more data in this call — return what we have
+    ; No more data in this call ? return what we have
 @getline_done:
     ; NUL-terminate
     cmp     ecx, r14d
@@ -797,3 +797,4 @@ TermPipe_Read PROC FRAME
 TermPipe_Read ENDP
 
 END
+

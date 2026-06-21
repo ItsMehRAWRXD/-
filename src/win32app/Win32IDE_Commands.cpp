@@ -654,17 +654,30 @@ bool Win32IDE::routeCommand(int commandId)
         handleHotpatchCommand(commandId);
         return true;
     }
-    else if (commandId >= 12000 && commandId < 12100)
-    {
-        // Tier 1: Critical Cosmetics
-        return handleTier1Command(commandId);
-    }
     else if (commandId >= 11700 && commandId < 11800)
     {
         // Tier 2: Daily friction cosmetics (#11–#19: git diff, terminal tabs, hover, outline, refs, CodeLens, inlay)
         return handleTier2Command(commandId);
     }
-    else if (commandId >= 12100 && commandId < 12200)
+    else if (commandId >= 12000 && commandId < 12100)
+    {
+        // Phase 34: Voice Assistant Panel commands (12000-12099)
+        handleVoiceAssistantCommand(commandId);
+        return true;
+    }
+    else if (commandId >= 12100 && commandId < 12110)
+    {
+        // Phase 34: Voice Assistant menu commands (12100-12109)
+        handleVoiceAssistantCommand(commandId);
+        return true;
+    }
+    else if (commandId >= 12110 && commandId < 12120)
+    {
+        // Phase 3: RAG Semantic Query commands (12110-12119)
+        handleRAGSemanticCommand(commandId);
+        return true;
+    }
+    else if (commandId >= 12110 && commandId < 12200)
     {
         // Tier 3: Cosmetics (#20–#30, e.g. bracket pairs, zen, fold, lightbulb)
         return handleTier3CosmeticsCommand(commandId);

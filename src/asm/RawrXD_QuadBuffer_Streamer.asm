@@ -9,7 +9,7 @@
 ;
 ; Production-Ready: Full tensor indexing, block management, LRU eviction,
 ;                   quad-buffer state machine, critical section locking,
-;                   VRAM budget enforcement — ZERO stubs.
+;                   VRAM budget enforcement ? ZERO stubs.
 ;
 ; Build: ml64.exe /c /Zi /Zd /FoQuadBuffer.obj RawrXD_QuadBuffer_Streamer.asm
 ; Link:  link /DLL /OUT:QuadBuffer.dll QuadBuffer.obj kernel32.lib ntdll.lib
@@ -113,11 +113,11 @@ QB_TENSOR_INFO          STRUCT  8
     NameHash            DQ      ?           ; FNV1a64 hash of tensor name
     NameOffset          DQ      ?           ; Offset to name string in mapped file
     DataOffset          DQ      ?           ; Offset in file to tensor data
-    DataSize            DQ      ?           ; Size on disk (compressed/quantized)
-    UncompressedSize    DQ      ?           ; Size when dequantized to working precision
+    DataSize            DQ      ?           ; m_size on disk (compressed/quantized)
+    UncompressedSize    DQ      ?           ; m_size when dequantized to working precision
     Dimensions          DQ      4 DUP(?)    ; Up to 4D tensor shapes
     NumDims             DD      ?           ; Number of active dimensions
-    QuantType           DD      ?           ; GGML type or 0xFFFFFFFF for raw
+    QuantType           DD      ?           ; GGML m_type or 0FFFFFFFFh for raw
     BlockIndex          DD      ?           ; Current resident block (-1 = none)
     RefCount            DD      ?           ; Active reference count
     Flags               DD      ?           ; Pinned, Prefetch priority, etc.
@@ -130,12 +130,12 @@ QB_BLOCK                STRUCT  8
     RefCount            DD      ?           ; Active tensor references
     LastAccessTick      DQ      ?           ; Global tick for LRU eviction
     FileOffset          DQ      ?           ; Source location in mapped file
-    CompressedSize      DQ      ?           ; Size in compressed form
-    UncompressedSize    DQ      ?           ; Full decompressed size
+    CompressedSize      DQ      ?           ; m_size in compressed form
+    UncompressedSize    DQ      ?           ; Full decompressed m_size
     HostPtr             DQ      ?           ; System RAM ptr (VirtualAlloc)
     DevicePtr           DQ      ?           ; VRAM ptr (GPU mapped region)
     hFileMapping        DQ      ?           ; Handle for mapped view (if applicable)
-    FormatType          DD      ?           ; Source format type
+    FormatType          DD      ?           ; Source format m_type
     CompressionAlgo     DD      ?           ; Compression algorithm ID
     OwnerTensor         DD      ?           ; Index into tensor table
     _pad1               DD      ?           ; Alignment padding
@@ -163,7 +163,7 @@ QB_CONTEXT              STRUCT  8
     ; File mapping
     hModelFile          DQ      ?           ; File HANDLE
     hModelMapping       DQ      ?           ; File mapping HANDLE
-    FileSize            DQ      ?           ; Total file size in bytes
+    FileSize            DQ      ?           ; Total file m_size in bytes
     pFileView           DQ      ?           ; Memory-mapped base pointer
 
     ; Synchronization
@@ -228,7 +228,7 @@ g_EngineDescriptor:
     DQ      OFFSET szEngineDesc             ; +8:  Description ptr
     DQ      OFFSET szEngineVersion          ; +16: Version ptr
     DD      QB_ENGINE_CAPS                  ; +24: Capability flags
-    DD      120                             ; +28: Max model size (billions params)
+    DD      120                             ; +28: Max model m_size (billions params)
     DQ      17179869184                     ; +32: Min VRAM (16GB)
     DQ      68719476736                     ; +40: Max RAM target (64GB)
     DQ      OFFSET QB_Init                  ; +48: Init function ptr
@@ -253,7 +253,7 @@ s_GGUF_Magic            DB      "GGUF",0,0,0,0
 .code
 
 ; =============================================================================
-; QB_GetEngineDescriptor — Returns pointer to engine descriptor for C++ registry
+; QB_GetEngineDescriptor ? Returns pointer to engine descriptor for C++ registry
 ; Returns: RAX = pointer to g_EngineDescriptor
 ; =============================================================================
 QB_GetEngineDescriptor PROC FRAME
@@ -309,7 +309,7 @@ QB_CopyNonTemporal PROC FRAME
     mov     rdi, rcx
     mov     rsi, rdx
 
-    ; ── Runtime AVX-512 gate ────────────────────────────────────────────
+    ; ?? Runtime AVX-512 gate ????????????????????????????????????????????
     ; If AVX-512 is not available, fall through to the rep movsb path.
     ; This prevents #UD on Zen 2/3 or any CPU lacking AVX-512 XSTATE.
     cmp     g_HasAVX512F, 1
@@ -336,7 +336,7 @@ QB_CopyNonTemporal PROC FRAME
     sfence                                  ; Ensure global visibility of NT stores
 
 @nt_remainder:
-    ; Handle remaining bytes (total & 0x3F) with byte copy
+    ; Handle remaining bytes (total & 03Fh) with byte copy
     mov     rcx, r8
     and     rcx, 63
     jz      @nt_done
@@ -363,12 +363,12 @@ QB_CopyNonTemporal ENDP
 ; =============================================================================
 
 ; -----------------------------------------------------------------------------
-; GGUF v3 Parser — Full tensor index extraction
+; GGUF v3 Parser ? Full tensor index extraction
 ; Parses all metadata KV pairs, aligns to tensor info section, extracts
 ; name hashes, dimensions, data offsets, and quantization types into the
 ; tensor table for hash-based O(1) lookup during inference.
 ;
-; RCX = mapped file base, RDX = file size, R8 = pContext (QB_CONTEXT*)
+; RCX = mapped file base, RDX = file m_size, R8 = pContext (QB_CONTEXT*)
 ; Returns: RAX = QB_OK or negative error code
 ; -----------------------------------------------------------------------------
 GGUF_LoadIndex PROC FRAME
@@ -383,7 +383,7 @@ GGUF_LoadIndex PROC FRAME
     push    r15
 
     mov     rsi, rcx                    ; File base
-    mov     r15, rdx                    ; File size
+    mov     r15, rdx                    ; File m_size
     mov     rbp, r8                     ; Context
 
     ; Verify magic "GGUF" = 46554747h little-endian
@@ -425,11 +425,11 @@ GGUF_LoadIndex PROC FRAME
     add     rdi, 8
     add     rdi, rbx                    ; Skip key characters
 
-    ; Value type (uint32)
+    ; Value m_type (uint32)
     mov     eax, DWORD PTR [rdi]
     add     rdi, 4
 
-    ; Skip value based on GGUF value type
+    ; Skip value based on GGUF value m_type
     cmp     eax, 0                      ; UINT8
     je      @gguf_skip_1
     cmp     eax, 1                      ; INT8
@@ -471,7 +471,7 @@ GGUF_LoadIndex PROC FRAME
     jmp     @gguf_next_kv
 @gguf_skip_array:
     ; Array value: element_type (uint32) + count (uint64) + elements
-    mov     ebx, DWORD PTR [rdi]        ; Element type
+    mov     ebx, DWORD PTR [rdi]        ; Element m_type
     add     rdi, 4
     mov     r14, QWORD PTR [rdi]        ; Element count
     add     rdi, 8
@@ -500,7 +500,7 @@ GGUF_LoadIndex PROC FRAME
     jae     @gguf_tensors_done
 
     ; Tensor info layout: name (string), n_dims (uint32), dims (uint64[n_dims]),
-    ;                     type (uint32), offset (uint64)
+    ;                     m_type (uint32), offset (uint64)
 
     ; Name: length (uint64) + characters
     mov     rcx, QWORD PTR [rdi]        ; Name length
@@ -551,7 +551,7 @@ GGUF_LoadIndex PROC FRAME
     jmp     @gguf_read_dims
 @gguf_dims_done:
 
-    ; Quantization type (uint32)
+    ; Quantization m_type (uint32)
     mov     eax, DWORD PTR [rdi]
     mov     [rbx].QB_TENSOR_INFO.QuantType, eax
     add     rdi, 4
@@ -595,7 +595,7 @@ GGUF_LoadIndex ENDP
 ; Full JSON tensor extraction is deferred to the C++ layer (nlohmann::json)
 ; which reads from the established memory mapping.
 ;
-; RCX = file base, RDX = file size, R8 = pContext (QB_CONTEXT*)
+; RCX = file base, RDX = file m_size, R8 = pContext (QB_CONTEXT*)
 ; Returns: RAX = QB_OK or negative error
 ; -----------------------------------------------------------------------------
 Safetensors_LoadIndex PROC FRAME
@@ -605,7 +605,7 @@ Safetensors_LoadIndex PROC FRAME
     push    rdi
 
     mov     rsi, rcx                    ; File base
-    mov     rdi, rdx                    ; File size
+    mov     rdi, rdx                    ; File m_size
     mov     rbx, r8                     ; Context
 
     ; Read header length (first 8 bytes, uint64 LE)
@@ -613,7 +613,7 @@ Safetensors_LoadIndex PROC FRAME
     lea     rdx, [rsi+8]                ; Start of JSON header
     add     rcx, rdx                    ; End of JSON header
 
-    ; Bounds check: header must not exceed file size
+    ; Bounds check: header must not exceed file m_size
     mov     rax, rcx
     sub     rax, rsi
     cmp     rax, rdi
@@ -640,9 +640,9 @@ Safetensors_LoadIndex PROC FRAME
 Safetensors_LoadIndex ENDP
 
 ; -----------------------------------------------------------------------------
-; Raw Blob Loader — Treats entire file as a single unnamed tensor
+; Raw Blob Loader ? Treats entire file as a single unnamed tensor
 ;
-; RCX = file base, RDX = file size, R8 = pContext (QB_CONTEXT*)
+; RCX = file base, RDX = file m_size, R8 = pContext (QB_CONTEXT*)
 ; Returns: RAX = 1 (one tensor) or negative error
 ; -----------------------------------------------------------------------------
 Blob_LoadIndex PROC FRAME
@@ -687,11 +687,11 @@ Blob_LoadIndex PROC FRAME
 Blob_LoadIndex ENDP
 
 ; =============================================================================
-; Block Management — 131,072 trackable blocks with full state machine
+; Block Management ? 131,072 trackable blocks with full state machine
 ; =============================================================================
 
 ; -----------------------------------------------------------------------------
-; BlockManager_Acquire — Find free block or evict LRU to make room
+; BlockManager_Acquire ? Find free block or evict LRU to make room
 ; RCX = pContext (QB_CONTEXT*), RDX = RequiredBytes
 ; Returns: RAX = Block index or -1 if no memory available
 ; -----------------------------------------------------------------------------
@@ -733,7 +733,7 @@ BlockManager_Acquire PROC FRAME
     jmp     @acq_exit
 
 @acq_try_evict:
-    ; No free blocks — evict oldest VRAM block to make room
+    ; No free blocks ? evict oldest VRAM block to make room
     mov     rcx, r12
     call    BlockManager_EvictLRU
     cmp     rax, -1
@@ -759,7 +759,7 @@ BlockManager_Acquire PROC FRAME
 BlockManager_Acquire ENDP
 
 ; -----------------------------------------------------------------------------
-; BlockManager_EvictLRU — Evict oldest unreferenced VRAM block to HOT (RAM)
+; BlockManager_EvictLRU ? Evict oldest unreferenced VRAM block to HOT (RAM)
 ; Scans all blocks for STATE_VRAM with RefCount=0, picks oldest by tick.
 ;
 ; RCX = pContext (QB_CONTEXT*)
@@ -842,7 +842,7 @@ BlockManager_EvictLRU ENDP
 ; =============================================================================
 
 ; -----------------------------------------------------------------------------
-; QB_Init — Initialize Quad-Buffer system with VRAM/RAM budgets
+; QB_Init ? Initialize Quad-Buffer system with VRAM/RAM budgets
 ; Allocates context, tensor table (16384 entries), block table (131072 entries),
 ; and initializes the critical section for thread safety.
 ;
@@ -944,7 +944,7 @@ QB_Init PROC FRAME
 QB_Init ENDP
 
 ; -----------------------------------------------------------------------------
-; QB_LoadModel — Open model file, create memory mapping, detect format,
+; QB_LoadModel ? Open model file, create memory mapping, detect format,
 ;                dispatch to format-specific index builder.
 ;
 ; RCX = pWidePath (LPCWSTR), RDX = FormatHint (0=auto, 1=GGUF, 2=Safe, 3=Blob)
@@ -979,7 +979,7 @@ QB_LoadModel PROC FRAME
     mov     [r14].QB_CONTEXT.hModelFile, rax
     mov     r15, rax                    ; Save file handle
 
-    ; --- Get file size ---
+    ; --- Get file m_size ---
     lea     rdx, [r14].QB_CONTEXT.FileSize
     mov     rcx, r15
     call    GetFileSizeEx
@@ -1027,7 +1027,7 @@ QB_LoadModel PROC FRAME
 
 @load_format_known:
     ; --- Dispatch to format-specific index builder ---
-    ; All loaders: RCX=file base, RDX=file size, R8=pContext
+    ; All loaders: RCX=file base, RDX=file m_size, R8=pContext
     mov     rcx, [r14].QB_CONTEXT.pFileView
     mov     rdx, [r14].QB_CONTEXT.FileSize
     mov     r8, r14
@@ -1070,14 +1070,14 @@ QB_LoadModel PROC FRAME
 QB_LoadModel ENDP
 
 ; -----------------------------------------------------------------------------
-; QB_StreamTensor — Main API: Demand-page tensor data through quad-buffer
+; QB_StreamTensor ? Main API: Demand-page tensor data through quad-buffer
 ;
 ; Implements the full state machine:
 ;   1. Lock critical section (thread safety)
 ;   2. Hash-based tensor lookup in O(1) average
-;   3. Check if tensor block is already in VRAM (cache hit → return immediately)
-;   4. If HOT (in RAM) but not VRAM → upload to destination via DMA
-;   5. If COLD (on disk only) → load from mapped file to HOT RAM, then upload
+;   3. Check if tensor block is already in VRAM (cache hit ? return immediately)
+;   4. If HOT (in RAM) but not VRAM ? upload to destination via DMA
+;   5. If COLD (on disk only) ? load from mapped file to HOT RAM, then upload
 ;   6. Enforce VRAM budget via LRU eviction before uploads
 ;   7. Use AVX-512 non-temporal DMA for transfers > 4KB to avoid cache pollution
 ;   8. Update statistics (hits, misses, bytes streamed, tick counters)
@@ -1132,7 +1132,7 @@ QB_StreamTensor PROC FRAME
     test    ebx, ebx
     js      @stream_load_new            ; -1 = not resident in any block
 
-    ; Block exists — get block pointer
+    ; Block exists ? get block pointer
     mov     rax, [rdi].QB_CONTEXT.pBlockTable
     mov     edx, ebx
     imul    edx, SIZEOF QB_BLOCK
@@ -1143,7 +1143,7 @@ QB_StreamTensor PROC FRAME
     cmp     DWORD PTR [rbx].QB_BLOCK.State, STATE_VRAM
     je      @stream_already_vram
 
-    ; In RAM (HOT) but not VRAM — need to upload
+    ; In RAM (HOT) but not VRAM ? need to upload
     jmp     @stream_upload_block
 
 @stream_load_new:
@@ -1166,7 +1166,7 @@ QB_StreamTensor PROC FRAME
     mov     rcx, [rsi].QB_TENSOR_INFO.UncompressedSize
     test    rcx, rcx
     jnz     @stream_has_uncomp_size
-    mov     rcx, rbp                    ; Fallback to requested size
+    mov     rcx, rbp                    ; Fallback to requested m_size
 @stream_has_uncomp_size:
     add     rcx, 4095
     and     rcx, -4096                  ; Round up to page boundary
@@ -1179,11 +1179,11 @@ QB_StreamTensor PROC FRAME
 
     mov     [rbx].QB_BLOCK.HostPtr, rax
 
-    ; Set block's uncompressed size
+    ; Set block's uncompressed m_size
     mov     rax, [rsi].QB_TENSOR_INFO.UncompressedSize
     test    rax, rax
     jnz     @stream_set_blk_size
-    mov     rax, rbp                    ; Use request size as fallback
+    mov     rax, rbp                    ; Use request m_size as fallback
 @stream_set_blk_size:
     mov     [rbx].QB_BLOCK.UncompressedSize, rax
 
@@ -1191,7 +1191,7 @@ QB_StreamTensor PROC FRAME
     mov     r8, [rsi].QB_TENSOR_INFO.DataSize
     test    r8, r8
     jnz     @stream_has_data_size
-    mov     r8, rbp                     ; Use requested size if DataSize not set
+    mov     r8, rbp                     ; Use requested m_size if DataSize not set
 @stream_has_data_size:
     cmp     r8, rbp
     cmova   r8, rbp                     ; Clamp to max requested bytes
@@ -1200,7 +1200,7 @@ QB_StreamTensor PROC FRAME
     mov     rdx, [rdi].QB_CONTEXT.pFileView      ; base
     add     rdx, [rsi].QB_TENSOR_INFO.DataOffset ; + tensor offset
 
-    ; Select copy method based on transfer size
+    ; Select copy method based on transfer m_size
     cmp     r8, 65536
     jb      @stream_small_cold_copy
     call    QB_CopyNonTemporal          ; AVX-512 path for large transfers
@@ -1253,7 +1253,7 @@ QB_StreamTensor PROC FRAME
     jmp     @stream_unlock_exit
 
 @stream_already_vram:
-    ; Cache hit — tensor already in VRAM, update LRU timestamp only
+    ; Cache hit ? tensor already in VRAM, update LRU timestamp only
     mov     rax, [rdi].QB_CONTEXT.GlobalTick
     mov     [rbx].QB_BLOCK.LastAccessTick, rax
     inc     QWORD PTR [rdi].QB_CONTEXT.GlobalTick
@@ -1265,7 +1265,7 @@ QB_StreamTensor PROC FRAME
     jmp     @stream_unlock_exit
 
 @stream_need_eviction:
-    ; VRAM over budget — evict LRU block and retry upload
+    ; VRAM over budget ? evict LRU block and retry upload
     mov     rcx, rdi
     call    BlockManager_EvictLRU
     cmp     eax, -1
@@ -1308,7 +1308,7 @@ QB_StreamTensor PROC FRAME
 QB_StreamTensor ENDP
 
 ; -----------------------------------------------------------------------------
-; QB_ReleaseTensor — Decrement tensor reference count, allow eviction
+; QB_ReleaseTensor ? Decrement tensor reference count, allow eviction
 ; Saves the hash in RBX before locking to avoid clobbering by CRIT_SECTION call.
 ;
 ; RCX = TensorNameHash (uint64)
@@ -1367,7 +1367,7 @@ QB_ReleaseTensor PROC FRAME
 QB_ReleaseTensor ENDP
 
 ; -----------------------------------------------------------------------------
-; QB_GetStats — Fill stats buffer with current engine statistics
+; QB_GetStats ? Fill m_stats buffer with current engine statistics
 ;
 ; RCX = pStatsOut (8 QWORDs: UsedVRAM, UsedRAM, CacheHits, CacheMisses,
 ;                  EvictionCount, TotalStreamed, TensorCount, BlockCount)
@@ -1393,7 +1393,7 @@ QB_GetStats PROC FRAME
     mov     r8, [rax].QB_CONTEXT.TotalBytesStreamed
     mov     [rcx+40], r8
 
-    ; TensorCount is DWORD, zero-extend to QWORD for stats output
+    ; TensorCount is DWORD, zero-extend to QWORD for m_stats output
     xor     r8d, r8d
     mov     r8d, [rax].QB_CONTEXT.TensorCount
     mov     [rcx+48], r8
@@ -1412,7 +1412,7 @@ QB_GetStats PROC FRAME
 QB_GetStats ENDP
 
 ; -----------------------------------------------------------------------------
-; QB_ForceEviction — Emergency memory freeing via iterative LRU eviction
+; QB_ForceEviction ? Emergency memory freeing via iterative LRU eviction
 ; Evicts VRAM blocks until TargetBytesToFree is met or no more evictable blocks.
 ;
 ; RCX = TargetBytesToFree
@@ -1441,7 +1441,7 @@ QB_ForceEviction PROC FRAME
     cmp     eax, -1
     je      @force_done                 ; No more evictable blocks
 
-    ; Add freed size from evicted block
+    ; Add freed m_size from evicted block
     mov     rdx, [rbx].QB_CONTEXT.pBlockTable
     imul    eax, SIZEOF QB_BLOCK
     add     rdx, rax
@@ -1458,7 +1458,7 @@ QB_ForceEviction PROC FRAME
 QB_ForceEviction ENDP
 
 ; -----------------------------------------------------------------------------
-; QB_SetVRAMLimit — Adjust VRAM budget at runtime, trigger eviction if over
+; QB_SetVRAMLimit ? Adjust VRAM budget at runtime, trigger eviction if over
 ;
 ; RCX = NewLimitBytes
 ; Returns: RAX = QB_OK or QB_ERR_NOT_FOUND
@@ -1479,7 +1479,7 @@ QB_SetVRAMLimit PROC FRAME
     cmp     rax, rcx
     jbe     @vram_ok
 
-    ; Over budget — evict excess
+    ; Over budget ? evict excess
     sub     rax, rcx
     mov     rcx, rax
     call    QB_ForceEviction
@@ -1498,7 +1498,7 @@ QB_SetVRAMLimit PROC FRAME
 QB_SetVRAMLimit ENDP
 
 ; -----------------------------------------------------------------------------
-; QB_Shutdown — Full cleanup: unmap files, free tables, destroy sync primitives
+; QB_Shutdown ? Full cleanup: unmap files, free tables, destroy sync primitives
 ;
 ; No params (uses global context)
 ; Returns: RAX = QB_OK
@@ -1576,3 +1576,4 @@ QB_Shutdown ENDP
 ; End
 ; =============================================================================
 END
+

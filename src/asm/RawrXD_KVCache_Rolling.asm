@@ -53,7 +53,7 @@ PUBLIC kvcache_cells
 
 ; Cache configuration
 MAX_SEQ_ID          EQU 32      ; Max concurrent sequences
-MAX_BATCH_SIZE      EQU 2048    ; Max batch size
+MAX_BATCH_SIZE      EQU 2048    ; Max batch m_size
 CELL_FLAG_USED      EQU 1
 CELL_FLAG_SHIFTED   EQU 2
 
@@ -72,7 +72,7 @@ STATE_N_LAYERS      EQU 12      ; 4 bytes: number of layers
 STATE_N_HEADS       EQU 16      ; 4 bytes: number of heads
 STATE_HEAD_DIM      EQU 20      ; 4 bytes: head dimension
 STATE_N_SEQ         EQU 24      ; 4 bytes: number of sequences
-STATE_SLIDING_WIN   EQU 28      ; 4 bytes: sliding window size (0=disabled)
+STATE_SLIDING_WIN   EQU 28      ; 4 bytes: sliding window m_size (0=disabled)
 STATE_K_DATA        EQU 32      ; 8 bytes: K cache data pointer
 STATE_V_DATA        EQU 40      ; 8 bytes: V cache data pointer
 STATE_CELLS         EQU 48      ; 8 bytes: cell metadata pointer
@@ -91,7 +91,7 @@ F16_SIZE            EQU 2
 align 16
 ; Global cache state (one cache per context in production)
 kvcache_state LABEL BYTE
-    DWORD 0                         ; size
+    DWORD 0                         ; m_size
     DWORD 0                         ; used
     DWORD 0                         ; head
     DWORD 0                         ; n_layers
@@ -159,8 +159,8 @@ KVCache_Create PROC
     mov     dword ptr [kvcache_state + STATE_N_SEQ], 0
     mov     dword ptr [kvcache_state + STATE_SLIDING_WIN], 0
 
-    ; Calculate K/V cache size
-    ; Size = n_layers * max_size * n_heads * head_dim * sizeof(float)
+    ; Calculate K/V cache m_size
+    ; m_size = n_layers * max_size * n_heads * head_dim * sizeof(float)
     mov     eax, ecx                    ; max_size
     imul    eax, edx                    ; * n_layers
     imul    eax, r8d                    ; * n_heads
@@ -1066,8 +1066,8 @@ KVCache_GetUsed ENDP
 
 ; -----------------------------------------------------------------------------
 ; KVCache_GetSize
-; Get total cache size
-; Returns: RAX = size
+; Get total cache m_size
+; Returns: RAX = m_size
 ; -----------------------------------------------------------------------------
 KVCache_GetSize PROC
     mov     eax, dword ptr [kvcache_state + STATE_SIZE]
@@ -1191,3 +1191,4 @@ KVCache_SeqDiv PROC
 KVCache_SeqDiv ENDP
 
 END
+

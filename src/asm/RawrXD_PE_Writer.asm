@@ -9,15 +9,15 @@
 .code
 
 ; --- Minimal DOS Header (64 bytes) ---
-; MZ \0\0 ... @ 0x40 -> PE Offset
-db 4Dh, 5Ah, 90h, 00h, 03h, 00h, 00h, 00h, 04h, 00h, 00h, 00h, FFh, FFh, 00h, 00h
-db B8h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 40h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
+; MZ \0\0 ... @ 040h -> PE Offset
+db 4Dh, 5Ah, 90h, 00h, 03h, 00h, 00h, 00h, 04h, 00h, 00h, 00h, 0FFh, 0FFh, 00h, 00h
+db 0B8h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 40h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 db 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
 db 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 00h, 80h, 00h, 00h, 00h
 
 ; --- DOS Stub ---
 ; "This program cannot be run in DOS mode."
-db 0Eh, 1Fh, BAh, 0Eh, 00h, B4h, 09h, CDh, 21h, B8h, 01h, 4Ch, CDh, 21h, 54h, 68h
+db 0Eh, 1Fh, 0BAh, 0Eh, 00h, 0B4h, 09h, 0CDh, 21h, 0B8h, 01h, 4Ch, 0CDh, 21h, 54h, 68h
 db 69h, 73h, 20h, 70h, 72h, 6Fh, 67h, 72h, 61h, 6Dh, 20h, 63h, 61h, 6Eh, 6Eh, 6Fh
 db 74h, 20h, 62h, 65h, 20h, 72h, 75h, 6Eh, 20h, 69h, 6Eh, 20h, 44h, 4Fh, 53h, 20h
 db 6Dh, 6Fh, 64h, 65h, 2Eh, 0Dh, 0Dh, 0Ah, 24h, 00h, 00h, 00h, 00h, 00h, 00h, 00h
@@ -36,7 +36,7 @@ dw 0022h               ; Characteristics: EXECUTABLE_IMAGE | LARGE_ADDRESS_AWARE
 
 ; --- Optional Header (PE32+) ---
 dw 020Bh               ; Magic: PE32+
-db 02h, 1Eh             ; Major/Minor Linker Version
+db 02h, 1Eh            ; Major/Minor Linker Version
 dd 00001000h           ; SizeOfCode
 dd 00001000h           ; SizeOfInitializedData
 dd 00000000h           ; SizeOfUninitializedData
@@ -45,9 +45,9 @@ dd 00001000h           ; BaseOfCode
 dq 0000000140000000h   ; ImageBase (Standard x64)
 dd 00001000h           ; SectionAlignment
 dd 00000200h           ; FileAlignment
-dw 0006h, 0000h         ; Major/Minor OS Version
-dw 0000h, 0000h         ; Major/Minor Image Version
-dw 0006h, 0000h         ; Major/Minor Subsystem Version
+dw 0006h, 0000h        ; Major/Minor OS Version
+dw 0000h, 0000h        ; Major/Minor Image Version
+dw 0006h, 0000h        ; Major/Minor Subsystem Version
 dd 00000000h           ; Win32VersionValue
 dd 00004000h           ; SizeOfImage
 dd 00000400h           ; SizeOfHeaders
@@ -108,15 +108,27 @@ dd 00000200h
 dd 00000800h
 dd 0, 0
 dw 0, 0
-dd C0000040h           ; Char: INITIALIZED | READ | WRITE
+dd 0C0000040h          ; Char: INITIALIZED | READ | WRITE
 
 ; =============================================================================
 ; Emit_FunctionEpilogue - Standard x64 stack frame teardown
 ; =============================================================================
-Emit_FunctionEpilogue proc
+; Windows x64 ABI compliant function epilogue
+; Input: None
+; Output: None
+; Destroys: RBP (restored), RSP (adjusted)
+; =============================================================================
+Emit_FunctionEpilogue proc frame
+    push rbp
+    .pushreg rbp
+    mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
+    
     add rsp, 20h        ; Shadow space reclaim
     pop rbp             ; Restore frame pointer
     ret                 ; Return to caller
 Emit_FunctionEpilogue endp
 
 end
+

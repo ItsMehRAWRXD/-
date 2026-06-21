@@ -162,8 +162,8 @@
      .pushreg rbx
      push rdi
      .pushreg rdi
-     sub rsp, 0x30
-     .allocstack 0x30
+     sub rsp, 030h
+     .allocstack 030h
      .endprolog
 
      mov rbx, rcx
@@ -198,7 +198,7 @@
 
  cleanup_devices:
      add rsp, 80h
-     add rsp, 0x30
+     add rsp, 030h
      pop rdi
      pop rbx
      ret
@@ -215,7 +215,7 @@
      mov rbx, rcx
 
      ; DeviceQueueCreateInfo
-     lea rdi, [rsp+0x30]
+     lea rdi, [rsp+030h]
      mov dword ptr [rdi], VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO
      mov qword ptr [rdi+8], 0
      mov dword ptr [rdi+16], 0
@@ -396,12 +396,12 @@
      mov dword ptr [rdi+24], VK_COMMAND_BUFFER_LEVEL_PRIMARY
      mov dword ptr [rdi+28], 1
 
-     lea r8, [rsp+0x30]
+     lea r8, [rsp+030h]
      mov rdx, rdi
      mov rcx, [rbx+VKC_DEVICE]
      call vkAllocateCommandBuffers
 
-     mov rax, [rsp+0x30]
+     mov rax, [rsp+030h]
      
      add rsp, 40h
      pop rbx
@@ -409,3 +409,4 @@
  VulkanCompute_AcquireCommandBuffer ENDP
 
  END
+

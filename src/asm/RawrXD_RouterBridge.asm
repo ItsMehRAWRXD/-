@@ -1,14 +1,14 @@
 ; =============================================================================
-; RawrXD_RouterBridge.asm — Phase 30: MASM Fast-Path Accelerator Router Bridge
+; RawrXD_RouterBridge.asm ? Phase 30: MASM Fast-Path Accelerator Router Bridge
 ; =============================================================================
 ; Hot-loop inference fast path: bypasses C++ vtable dispatch for the
-; router's most critical path (submit inference task → get result).
+; router's most critical path (submit inference task ? get result).
 ;
 ; This bridge provides:
 ;   1. Zero-overhead C calling convention entry points
 ;   2. Register-based parameter passing for hot-loop dispatch
 ;   3. Atomic backend selection cache (avoids mutex on every submit)
-;   4. Fast backend type validation (lookup table, no branches)
+;   4. Fast backend m_type validation (lookup table, no branches)
 ;
 ; Build: ml64 /c /Fo RawrXD_RouterBridge.obj RawrXD_RouterBridge.asm
 ; Link:  Automatically linked via CMakeLists.txt MASM_OBJECTS
@@ -31,7 +31,7 @@ EXTERN AccelRouter_IsBackendAvailable:PROC
 EXTERN AccelRouter_GetStatsJson:PROC
 
 ; =============================================================================
-; Constants — Backend Type IDs (must match RouterBackendType enum)
+; Constants ? Backend m_type IDs (must match RouterBackendType enum)
 ; =============================================================================
 BACKEND_NONE         EQU 0
 BACKEND_AMD_XDNA     EQU 1
@@ -55,7 +55,7 @@ g_routerHandle    DQ 0
 g_cachedBackend   DD BACKEND_NONE
 
 ; Backend validity lookup table (1 = valid, 0 = invalid)
-; Index by backend type for O(1) validation
+; Index by backend m_type for O(1) validation
 ALIGN 16
 g_backendValid    DB 0    ; 0 = None (invalid for dispatch)
                   DB 1    ; 1 = AMD_XDNA
@@ -66,7 +66,7 @@ g_backendValid    DB 0    ; 0 = None (invalid for dispatch)
                   DB 1    ; 6 = CPU_Fallback
                   DB 0    ; 7 = padding
 
-; Stats: dispatch counter (64-bit atomic)
+; m_stats: dispatch counter (64-bit atomic)
 g_fastPathDispatches DQ 0
 
 ; =============================================================================
@@ -75,7 +75,7 @@ g_fastPathDispatches DQ 0
 .code
 
 ; =============================================================================
-; Router_FastInit — One-time initialization of the fast-path bridge
+; Router_FastInit ? One-time initialization of the fast-path bridge
 ; =============================================================================
 ; Returns: RAX = router handle (void*), or 0 on failure
 ; Clobbers: RCX, RDX, R8, R9
@@ -109,7 +109,7 @@ Router_FastInit PROC
     ret
 
 @init_failed:
-    ; Init failed — clear handle
+    ; Init failed ? clear handle
     xor     rax, rax
     mov     QWORD PTR [g_routerHandle], rax
     add     rsp, 28h
@@ -121,12 +121,12 @@ Router_FastInit PROC
     ret
 
 @already_init:
-    ; Already initialized — return cached handle
+    ; Already initialized ? return cached handle
     ret
 Router_FastInit ENDP
 
 ; =============================================================================
-; Router_FastShutdown — Shutdown the router and clear cached state
+; Router_FastShutdown ? Shutdown the router and clear cached state
 ; =============================================================================
 ; Returns: void
 ; =============================================================================
@@ -149,7 +149,7 @@ Router_FastShutdown PROC
 Router_FastShutdown ENDP
 
 ; =============================================================================
-; Router_FastSubmit — Hot-path inference dispatch
+; Router_FastSubmit ? Hot-path inference dispatch
 ; =============================================================================
 ; RCX = pointer to RouterInferenceTask
 ; RDX = pointer to RouterResult (output)
@@ -186,7 +186,7 @@ Router_FastSubmit PROC
 
     ; Update cached backend from result
     ; RouterResult.executedOn is at offset 16 (after success:1 + pad:3 + detail:8 + errorCode:4)
-    ; Actually offset depends on struct layout — use the C bridge instead
+    ; Actually offset depends on struct layout ? use the C bridge instead
     mov     rcx, QWORD PTR [g_routerHandle]
     push    rax                 ; save return code
     call    AccelRouter_GetActiveBackend
@@ -215,9 +215,9 @@ Router_FastSubmit PROC
 Router_FastSubmit ENDP
 
 ; =============================================================================
-; Router_FastGetBackend — Get cached active backend (no mutex, no call overhead)
+; Router_FastGetBackend ? Get cached active backend (no mutex, no call overhead)
 ; =============================================================================
-; Returns: EAX = backend type (RouterBackendType)
+; Returns: EAX = backend m_type (RouterBackendType)
 ; =============================================================================
 Router_FastGetBackend PROC
     mov     eax, DWORD PTR [g_cachedBackend]
@@ -225,13 +225,13 @@ Router_FastGetBackend PROC
 Router_FastGetBackend ENDP
 
 ; =============================================================================
-; Router_FastForceBackend — Force a specific backend via fast path
+; Router_FastForceBackend ? Force a specific backend via fast path
 ; =============================================================================
-; ECX = backend type (RouterBackendType)
+; ECX = backend m_type (RouterBackendType)
 ; Returns: void
 ; =============================================================================
 Router_FastForceBackend PROC
-    ; Validate backend type
+    ; Validate backend m_type
     cmp     ecx, BACKEND_MAX
     jae     @invalid_backend
 
@@ -251,7 +251,7 @@ Router_FastForceBackend PROC
     test    rcx, rcx
     jz      @no_handle
 
-    pop     rdx                 ; backend type (was pushed RCX)
+    pop     rdx                 ; backend m_type (was pushed RCX)
     push    rdx                 ; re-push for cleanup
     ; AccelRouter_ForceBackend(handle, backendType)
     ; RCX = handle (already set)
@@ -268,9 +268,9 @@ Router_FastForceBackend PROC
 Router_FastForceBackend ENDP
 
 ; =============================================================================
-; Router_FastIsAvailable — O(1) backend availability check
+; Router_FastIsAvailable ? O(1) backend availability check
 ; =============================================================================
-; ECX = backend type
+; ECX = backend m_type
 ; Returns: EAX = 1 if available, 0 if not
 ; =============================================================================
 Router_FastIsAvailable PROC
@@ -279,7 +279,7 @@ Router_FastIsAvailable PROC
 
     ; Quick check via C bridge
     sub     rsp, 28h
-    mov     rdx, rcx            ; backend type → RDX (second param)
+    mov     rdx, rcx            ; backend m_type ? RDX (second param)
     mov     rcx, QWORD PTR [g_routerHandle]
     test    rcx, rcx
     jz      @no_handle_avail
@@ -299,7 +299,7 @@ Router_FastIsAvailable PROC
 Router_FastIsAvailable ENDP
 
 ; =============================================================================
-; Router_FastGetDispatchCount — Get total fast-path dispatch count
+; Router_FastGetDispatchCount ? Get total fast-path dispatch count
 ; =============================================================================
 ; Returns: RAX = 64-bit dispatch count
 ; =============================================================================
@@ -309,3 +309,4 @@ Router_FastGetDispatchCount PROC
 Router_FastGetDispatchCount ENDP
 
 END
+

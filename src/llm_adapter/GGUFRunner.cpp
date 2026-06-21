@@ -2204,3 +2204,27 @@ float GGUFRunner::getCompressionRatio() const
 {
     return QuantBackend::instance().getCompressionRatio();
 }
+
+// ============================================================================
+// Callback methods - stub implementations
+// ============================================================================
+
+void GGUFRunner::tokenChunkGenerated(const std::string& chunk) {
+    // Callback: Token chunk generated during inference
+    // TODO: Implement streaming callback to UI
+}
+
+void GGUFRunner::inferenceComplete(bool success) {
+    // Callback: Inference completed
+    // TODO: Implement completion callback to UI
+}
+
+void GGUFRunner::modelLoaded(const std::string& path, int64_t sizeBytes) {
+    // Callback: Model loaded successfully
+    // TODO: Implement load completion callback to UI
+}
+
+void GGUFRunner::loadingProgress(int percent) {
+    // Callback: Loading progress update
+    // TODO: Implement progress callback to UI
+}

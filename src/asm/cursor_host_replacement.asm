@@ -1,31 +1,23 @@
 ; =============================================================================
-; RawrXD Extension Host v1.0 - Replaces cursor.webpack.config → main.ts
-; Reverse-engineered from: anysphere/cursor extension host
-; Handles: Ripgrep IPC, Protobuf AI server config, Extension loading
-; Zero Node.js dependencies - Pure Win64 ABI
+; RawrXD Extension Host v1.0 - Pure MASM64 Implementation
 ; =============================================================================
 OPTION CASEMAP:NONE
-; OPTION WIN64:3  ; UASM-only, not needed for ml64
 
 include masm64_compat.inc
 include rawrxd_win64.inc
 
 ; ============= EQUATES =============
-HOST_PIPE_NAME      equ 0
-HOST_MAILSLOT       equ 1
 EXT_MSG_LOAD        equ 1
 EXT_MSG_UNLOAD      equ 2
 EXT_MSG_RPC         equ 3
-EXT_MSG_RIPGREP     equ 4      ; @vscode/ripgrep external
-EXT_MSG_PROTO       equ 5      ; aiserver/v1 proto fallback
+EXT_MSG_RIPGREP     equ 4
+EXT_MSG_PROTO       equ 5
 
-RIPGREP_TIMEOUT     equ 30000   ; 30s search timeout
+RIPGREP_TIMEOUT     equ 30000
 PROTO_BUF_SIZE      equ 65536
-
-; Extension API ABI
 EXT_API_ABI_VERSION equ 1
 
-; Permission bitmask (host-mediated requests)
+; Permissions
 PERM_FILESYSTEM_READ  equ 1
 PERM_FILESYSTEM_WRITE equ 2
 PERM_NETWORK          equ 4
@@ -37,11 +29,11 @@ PERM_DEBUG            equ 128
 ExtensionHostCtx struct
     hPipe           dq ?
     hMailSlot       dq ?
-    hRipgrepProc    dq ?        ; External ripgrep handle
-    hProtoPipe      dq ?        ; AI server config pipe
+    hRipgrepProc    dq ?
+    hProtoPipe      dq ?
     activeExts      dd ?
     maxExts         dd ?
-    extTable        dq ?        ; Pointer to extension table
+    extTable        dq ?
 ExtensionHostCtx ends
 
 RipgrepRequest struct
@@ -78,20 +70,14 @@ RawrXD_ExtActivationCtx ends
 .data
 szPipeName          db '\\.\pipe\RawrXD_ExtHost',0
 szMailSlotName      db '\\.\mailslot\RawrXD_HostEvents',0
-szRipgrepExe        db 'rg.exe',0           ; @vscode/ripgrep binary
+szRipgrepExe        db 'rg.exe',0
 szRipgrepFallback   db 'C:\Program Files\RawrXD\bin\rg.exe',0
 szRipgrepCmdLine    db 'rg.exe --json --stdin',0
 szProtoPipe         db '\\.\pipe\RawrXD_AIServer',0
-
-szEvtExtensionLoad  db 'EXTENSION_LOAD',0
-szEvtExtensionRpc   db 'EXTENSION_RPC',0
-szEvtRipgrepStart   db 'RIPGREP_SPAWN',0
-szEvtProtoRecv      db 'PROTO_RECV',0
-
 szExtActivate       db 'ExtensionActivate',0
-szExtDeactivate     db 'ExtensionDeactivate',0
 szExtActivateLegacy db 'activate',0
-szExtDeactivateLegacy db 'deactivate',0
+szLogRipgrepNotFound db '[EXT_HOST] Ripgrep not found',0
+szLogRipgrepFailed  db '[EXT_HOST] Failed to spawn ripgrep',0
 
 g_HostCtx           ExtensionHostCtx <>
 g_ExtApi            RawrXD_ExtensionApi <>
@@ -102,89 +88,98 @@ g_Running           dd 1
 .code
 
 ; -----------------------------------------------------------------------------
-; Entry Point - Replaces main.ts bundled output
+; Entry Point
 ; -----------------------------------------------------------------------------
-RawrXD_ExtensionHost proc
+RawrXD_ExtensionHost proc FRAME
+    push rbx
+    .pushreg rbx
     sub rsp, 28h
+    .allocstack 28h
+    .endprolog
 
-    ; Initialize host context
     call InitHostContext
     test eax, eax
-    jz @@init_failed
+    jz init_failed
 
-    ; Start ripgrep watcher (external process)
     call InitRipgrepExternal
-
-    ; Start AI server proto handler
     call InitProtoHandler
-
-    ; Main event loop (replaces Node.js event loop)
     call HostEventLoop
-
-    ; Cleanup
     call CleanupHost
 
     xor eax, eax
     add rsp, 28h
+    pop rbx
     ret
 
-@@init_failed:
+init_failed:
     mov eax, 1
     add rsp, 28h
+    pop rbx
     ret
 RawrXD_ExtensionHost endp
 
 ; -----------------------------------------------------------------------------
-; Initialize Host IPC (replaces webpack externals resolution)
+; Initialize Host IPC
 ; -----------------------------------------------------------------------------
-InitHostContext proc
-    sub rsp, 28h
+InitHostContext proc FRAME
+    push rbx
+    .pushreg rbx
+    sub rsp, 68h
+    .allocstack 68h
+    .endprolog
 
-    ; Create named pipe for extension communication
-    sub rsp, 60h
-    mov qword ptr [rsp+56], 0
-    mov qword ptr [rsp+48], 0
-    mov qword ptr [rsp+40], 65536
-    mov qword ptr [rsp+32], 65536
-    mov r9, PIPE_UNLIMITED_INSTANCES
-    mov r8, PIPE_TYPE_MESSAGE or PIPE_READMODE_MESSAGE or PIPE_WAIT
-    mov rdx, PIPE_ACCESS_DUPLEX
-    mov rcx, OFFSET szPipeName
+    ; Create named pipe
+    mov qword ptr [rsp+60h], 0
+    mov qword ptr [rsp+58h], 0
+    mov qword ptr [rsp+50h], 65536
+    mov qword ptr [rsp+48h], 65536
+    mov r9d, PIPE_UNLIMITED_INSTANCES
+    mov r8d, PIPE_TYPE_MESSAGE or PIPE_READMODE_MESSAGE or PIPE_WAIT
+    mov edx, PIPE_ACCESS_DUPLEX
+    lea rcx, szPipeName
     call CreateNamedPipeA
-    add rsp, 60h
     mov g_HostCtx.hPipe, rax
 
     cmp rax, INVALID_HANDLE_VALUE
-    je @@failed
+    je failed
 
-    ; Create mailslot for event broadcasting
-    invoke CreateMailslotA, OFFSET szMailSlotName, 0, MAILSLOT_WAIT_FOREVER, 0
+    ; Create mailslot
+    lea rcx, szMailSlotName
+    xor rdx, rdx
+    mov r8d, MAILSLOT_WAIT_FOREVER
+    xor r9d, r9d
+    mov qword ptr [rsp+28h], 0
+    call CreateMailslotA
     mov g_HostCtx.hMailSlot, rax
 
-    ; Allocate extension table (256 extensions max)
+    ; Allocate extension table
     call GetProcessHeap
-    invoke HeapAlloc, rax, HEAP_ZERO_MEMORY, 256 * 8
+    mov rcx, rax
+    mov edx, HEAP_ZERO_MEMORY
+    mov r8, 2048
+    call HeapAlloc
     mov g_HostCtx.extTable, rax
     mov g_HostCtx.maxExts, 256
 
-    ; Build dispatch table for extension-facing host API.
     call InitExtensionApi
 
     mov eax, 1
-    jmp @@done
+    jmp done
 
-@@failed:
+failed:
     xor eax, eax
 
-@@done:
-    add rsp, 28h
+done:
+    add rsp, 68h
+    pop rbx
     ret
 InitHostContext endp
 
 ; -----------------------------------------------------------------------------
-; Build host API dispatch table (passed to extension activation context)
+; Build host API dispatch table
 ; -----------------------------------------------------------------------------
-InitExtensionApi proc
+InitExtensionApi proc FRAME
+    .endprolog
     mov g_ExtApi.structSize, SIZEOF RawrXD_ExtensionApi
     mov g_ExtApi.abiVersion, EXT_API_ABI_VERSION
 
@@ -204,274 +199,237 @@ InitExtensionApi proc
 InitExtensionApi endp
 
 ; -----------------------------------------------------------------------------
-; Ripgrep External Handler (@vscode/ripgrep replacement)
-; Spawns rg.exe with JSON output format, streams results via pipe
+; Ripgrep External Handler
 ; -----------------------------------------------------------------------------
-InitRipgrepExternal proc
+InitRipgrepExternal proc FRAME
+    push rbx
+    .pushreg rbx
+    push rsi
+    .pushreg rsi
     sub rsp, 188h
+    .allocstack 188h
+    .endprolog
 
-    ; Security attributes for pipe inheritance
-    lea rcx, [rsp+20h]
-    mov dword ptr [rcx], 12
-    mov qword ptr [rcx+8], 0
-    mov dword ptr [rcx+16], 1
+    ; Find ripgrep binary
+    lea rcx, szRipgrepExe
+    call GetFileAttributesA
+    cmp eax, INVALID_FILE_ATTRIBUTES
+    jne found_ripgrep
 
-    ; Create stdout pipe for ripgrep
-    lea r8, [rsp+40h]    ; hRead
-    lea rdx, [rsp+48h]   ; hWrite
-    mov r9d, 0
+    lea rcx, szRipgrepFallback
+    call GetFileAttributesA
+    cmp eax, INVALID_FILE_ATTRIBUTES
+    jne found_ripgrep
+
+    lea rcx, szLogRipgrepNotFound
+    call OutputDebugStringA
+    jmp done
+
+found_ripgrep:
+    ; Create pipe for ripgrep output
+    lea r8, [rsp+40h]
+    lea rdx, [rsp+48h]
+    xor r9d, r9d
     call CreatePipe
 
-    ; Ensure read handle not inherited
     mov rcx, [rsp+40h]
     mov edx, 1
     xor r8d, r8d
     call SetHandleInformation
 
-    ; Find ripgrep binary
-    lea rsi, szRipgrepExe
-    call FindRipgrep
-    test rax, rax
-    jz @@no_ripgrep
-    mov rsi, rax
+    ; Store handle
+    mov rbx, [rsp+48h]
 
-    ; Setup process
-    lea rdi, [rsp+50h]   ; STARTUPINFO
-    mov rcx, rdi
-    xor edx, edx
-    mov r8d, SIZEOF STARTUPINFOA
-    call memset
-
-    mov dword ptr [rdi], SIZEOF STARTUPINFOA
-    mov dword ptr [rdi+44], STARTF_USESTDHANDLES
-    mov rax, [rsp+48h]
-    mov [rdi+56], rax    ; hStdOutput
-    mov [rdi+64], rax    ; hStdError
-
-    ; Command line: rg --json --stdin
-    lea rbx, szRipgrepCmdLine
-
-    lea r12, [rsp+0C0h]  ; PROCESS_INFORMATION
-
-    sub rsp, 60h
-    mov qword ptr [rsp+56], r12
-    mov qword ptr [rsp+48], rdi
-    mov qword ptr [rsp+40], 0
-    mov qword ptr [rsp+32], 0
-    mov r9, CREATE_NO_WINDOW
-    mov r8, TRUE
-    xor rdx, rdx
-    mov rdx, rbx
-    mov rcx, rsi
-    call CreateProcessA
-    add rsp, 60h
-
-    test eax, eax
-    jz @@failed
-
-    ; Store handle for later IPC
-    mov rax, [r12]
-    mov g_HostCtx.hRipgrepProc, rax
-
-    ; Close thread handle, keep process handle
-    mov rcx, [r12+8]
-    call CloseHandle
-
-    ; Close our copy of write handle
-    mov rcx, [rsp+48h]
-    call CloseHandle
-
-    ; Start ripgrep output reader thread
+    ; Start ripgrep reader thread
     xor ecx, ecx
     lea rdx, RipgrepReaderThread
-    xor r8, r8
-    mov r9, [rsp+40h]    ; Pass read handle as param
-    push 0
-    push 0
+    xor r8d, r8d
+    mov r9, [rsp+40h]
+    mov qword ptr [rsp+28h], 0
+    mov qword ptr [rsp+20h], 0
     call CreateThread
-    ; Handle stored implicitly in thread, could save if needed
 
-    jmp @@done
-
-@@no_ripgrep:
-    ; Log fallback to built-in search (slower but functional)
-    invoke OutputDebugStringA, cstr("[EXT_HOST] Ripgrep not found, using fallback")
-    jmp @@done
-
-@@failed:
-    invoke OutputDebugStringA, cstr("[EXT_HOST] Failed to spawn ripgrep")
-
-@@done:
-    add rsp, 88h
+done:
+    add rsp, 188h
+    pop rsi
+    pop rbx
     ret
 InitRipgrepExternal endp
 
 ; -----------------------------------------------------------------------------
-; Proto Handler (aiserver/v1/server_config_connect fallback)
-; Handles protobuf messages over named pipe instead of WebConnect
+; Proto Handler
 ; -----------------------------------------------------------------------------
-InitProtoHandler proc
-    sub rsp, 28h
+InitProtoHandler proc FRAME
+    sub rsp, 68h
+    .allocstack 68h
+    .endprolog
 
-    ; Create pipe for AI server proto communication
-    sub rsp, 60h
-    mov qword ptr [rsp+56], 0
-    mov qword ptr [rsp+48], 0
-    mov qword ptr [rsp+40], 65536
-    mov qword ptr [rsp+32], 65536
-    mov r9, 1
-    mov r8, PIPE_TYPE_MESSAGE or PIPE_READMODE_MESSAGE or PIPE_WAIT
-    mov rdx, PIPE_ACCESS_DUPLEX
-    mov rcx, OFFSET szProtoPipe
+    mov qword ptr [rsp+60h], 0
+    mov qword ptr [rsp+58h], 0
+    mov qword ptr [rsp+50h], 65536
+    mov qword ptr [rsp+48h], 65536
+    mov r9d, 1
+    mov r8d, PIPE_TYPE_MESSAGE or PIPE_READMODE_MESSAGE or PIPE_WAIT
+    mov edx, PIPE_ACCESS_DUPLEX
+    lea rcx, szProtoPipe
     call CreateNamedPipeA
-    add rsp, 60h
     mov g_HostCtx.hProtoPipe, rax
 
-    ; Start proto handler thread
     xor ecx, ecx
     lea rdx, ProtoHandlerThread
-    xor r8, r8
-    xor r9, r9
-    push 0
-    push 0
+    xor r8d, r8d
+    xor r9d, r9d
+    mov qword ptr [rsp+28h], 0
+    mov qword ptr [rsp+20h], 0
     call CreateThread
 
-    add rsp, 28h
+    add rsp, 68h
     ret
 InitProtoHandler endp
 
 ; -----------------------------------------------------------------------------
-; Main Event Loop (replaces Node.js libuv loop)
+; Main Event Loop
 ; -----------------------------------------------------------------------------
-HostEventLoop proc
+HostEventLoop proc FRAME
+    push r12
+    .pushreg r12
     sub rsp, 48h
+    .allocstack 48h
+    .endprolog
 
-@@loop:
+loop_top:
     cmp g_Running, 0
-    je @@done
+    je loop_done
 
-    ; Wait for pipe connection (blocking - extensions connecting)
-    invoke ConnectNamedPipe, g_HostCtx.hPipe, 0
+    mov rcx, g_HostCtx.hPipe
+    xor rdx, rdx
+    call ConnectNamedPipe
 
-    ; Read message header
-    lea r12, [rsp+20h]   ; Message buffer
+    lea r12, [rsp+20h]
     lea r9, [rsp+40h]
-    invoke ReadFile, g_HostCtx.hPipe, r12, 16, r9, 0
+    mov r8, 16
+    mov rdx, r12
+    mov rcx, g_HostCtx.hPipe
+    call ReadFile
 
-    cmp eax, 0
-    je @@disconnect
+    test eax, eax
+    jz disconnect
 
-    ; Route by message type
-    mov eax, dword ptr [r12]     ; msgType
+    mov eax, dword ptr [r12]
 
     cmp eax, EXT_MSG_LOAD
-    je @@handle_load
+    je handle_load
     cmp eax, EXT_MSG_UNLOAD
-    je @@handle_unload
+    je handle_unload
     cmp eax, EXT_MSG_RPC
-    je @@handle_rpc
+    je handle_rpc
     cmp eax, EXT_MSG_RIPGREP
-    je @@handle_ripgrep
+    je handle_ripgrep
     cmp eax, EXT_MSG_PROTO
-    je @@handle_proto
-    jmp @@unknown
+    je handle_proto
+    jmp unknown
 
-@@handle_load:
+handle_load:
     lea rcx, [r12+8]
     call HandleExtensionLoad
-    jmp @@respond
+    jmp respond
 
-@@handle_unload:
+handle_unload:
     lea rcx, [r12+8]
     call HandleExtensionUnload
-    jmp @@respond
+    jmp respond
 
-@@handle_rpc:
+handle_rpc:
     lea rcx, [r12+8]
     mov rdx, [rsp+40h]
     sub rdx, 8
     call HandleExtensionRPC
-    jmp @@respond
+    jmp respond
 
-@@handle_ripgrep:
+handle_ripgrep:
     lea rcx, [r12+8]
     call HandleRipgrepRequest
-    jmp @@respond
+    jmp respond
 
-@@handle_proto:
+handle_proto:
     lea rcx, [r12+8]
     call HandleProtoMessage
-    jmp @@respond
+    jmp respond
 
-@@unknown:
-    mov eax, 400    ; Bad request
+unknown:
+    mov eax, 400
 
-@@respond:
-    ; Send response
+respond:
     mov [rsp+30h], rax
-    lea rdx, [rsp+30h]
     lea r9, [rsp+40h]
-    invoke WriteFile, g_HostCtx.hPipe, rdx, 8, r9, 0
-    invoke FlushFileBuffers, g_HostCtx.hPipe
+    mov r8, 8
+    lea rdx, [rsp+30h]
+    mov rcx, g_HostCtx.hPipe
+    call WriteFile
+    mov rcx, g_HostCtx.hPipe
+    call FlushFileBuffers
 
-@@disconnect:
-    invoke DisconnectNamedPipe, g_HostCtx.hPipe
-    jmp @@loop
+disconnect:
+    mov rcx, g_HostCtx.hPipe
+    call DisconnectNamedPipe
+    jmp loop_top
 
-@@done:
+loop_done:
     add rsp, 48h
+    pop r12
     ret
 HostEventLoop endp
 
 ; -----------------------------------------------------------------------------
-; Extension Loading (replaces webpack entry resolution)
+; Extension Loading
 ; -----------------------------------------------------------------------------
-HandleExtensionLoad proc
+HandleExtensionLoad proc FRAME
+    push rsi
+    .pushreg rsi
+    push rdi
+    .pushreg rdi
+    push rbx
+    .pushreg rbx
     sub rsp, 28h
+    .allocstack 28h
+    .endprolog
 
-    ; rcx = extension path (UTF-8)
     mov rsi, rcx
-
-    ; Find free slot
     mov rdi, g_HostCtx.extTable
     xor ebx, ebx
 
-@@find_slot:
+find_slot:
     cmp qword ptr [rdi+rbx*8], 0
-    je @@found_slot
+    je found_slot
     inc ebx
     cmp ebx, g_HostCtx.maxExts
-    jb @@find_slot
+    jb find_slot
 
-    ; No slots
-    mov rax, 507
-    jmp @@done
+    mov eax, 507
+    jmp done
 
-@@found_slot:
-    ; Load extension DLL (raw MASM64 extension)
-    invoke LoadLibraryA, rsi
+found_slot:
+    mov rcx, rsi
+    call LoadLibraryA
     test rax, rax
-    jz @@load_failed
+    jz load_failed
 
     mov [rdi+rbx*8], rax
 
-    ; Resolve extension activation export (modern name first).
     mov rcx, rax
     lea rdx, szExtActivate
     call GetProcAddress
 
     test rax, rax
-    jnz @@have_activate
+    jnz have_activate
 
-    ; Legacy compatibility export.
     mov rcx, [rdi+rbx*8]
     lea rdx, szExtActivateLegacy
     call GetProcAddress
     test rax, rax
-    jz @@no_activate
+    jz no_activate
 
-@@have_activate:
-    ; Populate activation context and dispatch table pointer.
+have_activate:
     lea rcx, g_HostCtx
     mov g_ExtActCtx.pHostCtx, rcx
     lea rcx, g_ExtApi
@@ -480,32 +438,42 @@ HandleExtensionLoad proc
     xor rcx, rcx
     mov g_ExtActCtx.reserved, rcx
 
-    ; Call ExtensionActivate(activationCtx)
     lea rcx, g_ExtActCtx
     call rax
 
     inc g_HostCtx.activeExts
-    mov rax, 200    ; Success
-    jmp @@done
+    mov eax, 200
+    jmp done
 
-@@load_failed:
-    mov rax, 500
-    jmp @@done
+load_failed:
+    mov eax, 500
+    jmp done
 
-@@no_activate:
-    mov rax, 501
+no_activate:
+    mov eax, 501
 
-@@done:
+done:
     add rsp, 28h
+    pop rbx
+    pop rdi
+    pop rsi
     ret
 HandleExtensionLoad endp
 
 ; -----------------------------------------------------------------------------
-; Extension RPC (method calling between extensions)
+; Extension Unload
 ; -----------------------------------------------------------------------------
-HandleExtensionRPC proc
-    ; rcx = payload, rdx = size
-    ; Stub: Would deserialize JSON-RPC and dispatch
+HandleExtensionUnload proc FRAME
+    .endprolog
+    mov eax, 200
+    ret
+HandleExtensionUnload endp
+
+; -----------------------------------------------------------------------------
+; Extension RPC
+; -----------------------------------------------------------------------------
+HandleExtensionRPC proc FRAME
+    .endprolog
     mov rax, 200
     ret
 HandleExtensionRPC endp
@@ -513,290 +481,285 @@ HandleExtensionRPC endp
 ; -----------------------------------------------------------------------------
 ; Ripgrep Request Handler
 ; -----------------------------------------------------------------------------
-HandleRipgrepRequest proc
+HandleRipgrepRequest proc FRAME
+    push rsi
+    .pushreg rsi
     sub rsp, 48h
+    .allocstack 48h
+    .endprolog
 
-    ; rcx = RipgrepRequest*
     mov rsi, rcx
 
-    ; Check if ripgrep running
     cmp g_HostCtx.hRipgrepProc, 0
-    je @@no_rg
+    je no_rg
 
-    ; Write search params to ripgrep stdin
-    ; Format: cwd\nquery\ninclude\nexclude\n
     lea rdx, [rsi].RipgrepRequest.workingDir
     lea r9, [rsp+20h]
-    invoke WriteFile, g_HostCtx.hRipgrepProc, rdx, 260, r9, 0
+    mov r8, 260
+    mov rcx, g_HostCtx.hRipgrepProc
+    call WriteFile
 
-    mov rax, 202    ; Accepted (async)
-    jmp @@done
+    mov eax, 202
+    jmp done
 
-@@no_rg:
-    mov rax, 503    ; Service unavailable
+no_rg:
+    mov eax, 503
 
-@@done:
+done:
     add rsp, 48h
+    pop rsi
     ret
 HandleRipgrepRequest endp
 
 ; -----------------------------------------------------------------------------
-; Proto Message Handler (AI server config)
-; Replaces: aiserver/v1/server_config_connectweb.js fallback
+; Proto Message Handler
 ; -----------------------------------------------------------------------------
-HandleProtoMessage proc
+HandleProtoMessage proc FRAME
+    push rsi
+    .pushreg rsi
     sub rsp, 28h
+    .allocstack 28h
+    .endprolog
 
-    ; rcx = ProtoMessage*
     mov rsi, rcx
-
-    ; Route by msgType
     mov eax, (ProtoMessage ptr [rsi]).msgType
 
-    cmp eax, 1      ; ServerConfig_Get
-    je @@config_get
-    cmp eax, 2      ; ServerConfig_Set
-    je @@config_set
+    cmp eax, 1
+    je config_get
+    cmp eax, 2
+    je config_set
 
-    mov rax, 400
-    jmp @@done
+    mov eax, 400
+    jmp done
 
-@@config_get:
-    ; Return current AI server config
-    ; Stub: Would read from registry or config file
-    mov rax, 200
-    jmp @@done
+config_get:
+    mov eax, 200
+    jmp done
 
-@@config_set:
-    ; Update AI server config
-    ; Stub: Would validate and persist
-    mov rax, 200
+config_set:
+    mov eax, 200
 
-@@done:
+done:
     add rsp, 28h
+    pop rsi
     ret
 HandleProtoMessage endp
 
 ; -----------------------------------------------------------------------------
 ; Background Threads
 ; -----------------------------------------------------------------------------
-RipgrepReaderThread proc
+RipgrepReaderThread proc FRAME
+    push rbx
+    .pushreg rbx
     sub rsp, 1048h
+    .allocstack 1048h
+    .endprolog
 
-    mov rbx, rcx    ; Read handle passed as param
+    mov rbx, rcx
 
-@@read_loop:
+read_loop:
     lea r12, [rsp+20h]
     lea r9, [rsp+40h]
-    invoke ReadFile, rbx, r12, 4096, r9, 0
+    mov r8, 4096
+    mov rdx, r12
+    mov rcx, rbx
+    call ReadFile
 
     test eax, eax
-    jz @@eof
+    jz eof
 
-    ; Broadcast to mail slot (pub/sub for extensions)
     lea r9, [rsp+48h]
-    invoke WriteFile, g_HostCtx.hMailSlot, r12, [rsp+40h], r9, 0
+    mov r8, [rsp+40h]
+    mov rdx, r12
+    mov rcx, g_HostCtx.hMailSlot
+    call WriteFile
 
-    jmp @@read_loop
+    jmp read_loop
 
-@@eof:
+eof:
     add rsp, 1048h
+    pop rbx
     ret
 RipgrepReaderThread endp
 
-ProtoHandlerThread proc
+ProtoHandlerThread proc FRAME
+    push r12
+    .pushreg r12
     sub rsp, 10040h
+    .allocstack 10040h
+    .endprolog
 
-@@accept_loop:
-    invoke ConnectNamedPipe, g_HostCtx.hProtoPipe, 0
+accept_loop:
+    mov rcx, g_HostCtx.hProtoPipe
+    xor rdx, rdx
+    call ConnectNamedPipe
 
     lea r12, [rsp+20h]
     lea r9, [rsp+40h]
-    invoke ReadFile, g_HostCtx.hProtoPipe, r12, SIZEOF ProtoMessage, r9, 0
+    mov r8, SIZEOF ProtoMessage
+    mov rdx, r12
+    mov rcx, g_HostCtx.hProtoPipe
+    call ReadFile
 
-    ; Process proto message
     mov rcx, r12
     call HandleProtoMessage
 
-    ; Write response
     mov [rsp+30h], rax
-    lea rdx, [rsp+30h]
     lea r9, [rsp+40h]
-    invoke WriteFile, g_HostCtx.hProtoPipe, rdx, 8, r9, 0
-    invoke DisconnectNamedPipe, g_HostCtx.hProtoPipe
+    mov r8, 8
+    lea rdx, [rsp+30h]
+    mov rcx, g_HostCtx.hProtoPipe
+    call WriteFile
+    mov rcx, g_HostCtx.hProtoPipe
+    call DisconnectNamedPipe
 
-    jmp @@accept_loop
+    jmp accept_loop
 
     add rsp, 10040h
+    pop r12
     ret
 ProtoHandlerThread endp
 
 ; -----------------------------------------------------------------------------
-; Utilities
+; Host API Functions
 ; -----------------------------------------------------------------------------
-FindRipgrep proc
-    sub rsp, 28h
-
-    ; Try standard locations
-    lea rcx, szRipgrepExe
-    call FileExists
-    test eax, eax
-    jnz @@found_default
-
-    lea rcx, szRipgrepFallback
-    call FileExists
-    test eax, eax
-    jnz @@found_fallback
-
-    xor eax, eax
-    jmp @@done
-
-@@found_default:
-    lea rax, szRipgrepExe
-    jmp @@done
-
-@@found_fallback:
-    lea rax, szRipgrepFallback
-
-@@done:
-    add rsp, 28h
-    ret
-FindRipgrep endp
-
-HandleExtensionUnload proc
-    mov rax, 200
-    ret
-HandleExtensionUnload endp
-
-; -----------------------------------------------------------------------------
-; Extension-facing Host API (dispatch table targets)
-; -----------------------------------------------------------------------------
-; HostApi_Log(const char* msg)
-HostApi_Log proc
+HostApi_Log proc FRAME
+    .endprolog
     test rcx, rcx
-    jz @@done
-    invoke OutputDebugStringA, rcx
-@@done:
+    jz done
+    call OutputDebugStringA
+done:
     xor eax, eax
     ret
 HostApi_Log endp
 
-; HostApi_RequestPermission(uint64 requestedMask) -> eax {0 deny, 1 grant}
-HostApi_RequestPermission proc
+HostApi_RequestPermission proc FRAME
+    .endprolog
     mov rax, rcx
     and rax, (PERM_PROCESS or PERM_SHELL or PERM_DEBUG)
     test rax, rax
-    jnz @@deny
+    jnz deny
     mov eax, 1
     ret
-@@deny:
+deny:
     xor eax, eax
     ret
 HostApi_RequestPermission endp
 
-; HostApi_ReadFile(const char* path, void* outBuf, uint64 outCap) -> rax bytesRead or -1
-HostApi_ReadFile proc
-    sub rsp, 28h
+HostApi_ReadFile proc FRAME
+    push r10
+    .pushreg r10
+    push r11
+    .pushreg r11
+    sub rsp, 58h
+    .allocstack 58h
+    .endprolog
 
-    ; rcx=path, rdx=outBuf, r8=outCap
     mov r10, rdx
     mov r11, r8
 
-    sub rsp, 58h
-    mov qword ptr [rsp+48], 0
-    mov qword ptr [rsp+40], FILE_ATTRIBUTE_NORMAL
-    mov qword ptr [rsp+32], OPEN_EXISTING
+    mov qword ptr [rsp+50h], 0
+    mov qword ptr [rsp+48h], FILE_ATTRIBUTE_NORMAL
+    mov qword ptr [rsp+40h], OPEN_EXISTING
     xor r9d, r9d
-    mov r8, FILE_SHARE_READ
-    mov rdx, GENERIC_READ
+    mov r8d, FILE_SHARE_READ
+    mov edx, GENERIC_READ
     call CreateFileA
-    add rsp, 58h
+
     cmp rax, INVALID_HANDLE_VALUE
-    je @@fail
+    je fail_read
 
-    mov [rsp+18h], rax ; file handle
+    mov [rsp+18h], rax
 
-    ; clamp read count to DWORD for ReadFile
     mov eax, r11d
     mov r8d, eax
-    lea r9, [rsp+20h] ; bytes read output
-    invoke ReadFile, [rsp+18h], r10, r8, r9, 0
+    lea r9, [rsp+20h]
+    mov rdx, r10
+    mov rcx, [rsp+18h]
+    call ReadFile
+
     test eax, eax
-    jz @@close_fail
+    jz close_fail_read
 
     mov rcx, [rsp+18h]
     call CloseHandle
     mov eax, dword ptr [rsp+20h]
-    add rsp, 28h
+    add rsp, 58h
+    pop r11
+    pop r10
     ret
 
-@@close_fail:
+close_fail_read:
     mov rcx, [rsp+18h]
     call CloseHandle
-@@fail:
+fail_read:
     mov rax, -1
-    add rsp, 28h
+    add rsp, 58h
+    pop r11
+    pop r10
     ret
 HostApi_ReadFile endp
 
-; HostApi_WriteFile(const char* path, const void* buf, uint64 len) -> rax bytesWritten or -1
-HostApi_WriteFile proc
-    sub rsp, 28h
+HostApi_WriteFile proc FRAME
+    push r10
+    .pushreg r10
+    push r11
+    .pushreg r11
+    sub rsp, 58h
+    .allocstack 58h
+    .endprolog
 
-    ; rcx=path, rdx=buf, r8=len
     mov r10, rdx
     mov r11, r8
 
-    sub rsp, 58h
-    mov qword ptr [rsp+48], 0
-    mov qword ptr [rsp+40], FILE_ATTRIBUTE_NORMAL
-    mov qword ptr [rsp+32], CREATE_ALWAYS
+    mov qword ptr [rsp+50h], 0
+    mov qword ptr [rsp+48h], FILE_ATTRIBUTE_NORMAL
+    mov qword ptr [rsp+40h], CREATE_ALWAYS
     xor r9d, r9d
     xor r8d, r8d
-    mov rdx, GENERIC_WRITE
+    mov edx, GENERIC_WRITE
     call CreateFileA
-    add rsp, 58h
+
     cmp rax, INVALID_HANDLE_VALUE
-    je @@fail
+    je fail_write
 
-    mov [rsp+18h], rax ; file handle
+    mov [rsp+18h], rax
 
-    ; clamp write count to DWORD for WriteFile
     mov eax, r11d
     mov r8d, eax
-    lea r9, [rsp+20h] ; bytes written output
-    invoke WriteFile, [rsp+18h], r10, r8, r9, 0
+    lea r9, [rsp+20h]
+    mov rdx, r10
+    mov rcx, [rsp+18h]
+    call WriteFile
+
     test eax, eax
-    jz @@close_fail
+    jz close_fail_write
 
     mov rcx, [rsp+18h]
     call CloseHandle
     mov eax, dword ptr [rsp+20h]
-    add rsp, 28h
+    add rsp, 58h
+    pop r11
+    pop r10
     ret
 
-@@close_fail:
+close_fail_write:
     mov rcx, [rsp+18h]
     call CloseHandle
-@@fail:
+fail_write:
     mov rax, -1
-    add rsp, 28h
+    add rsp, 58h
+    pop r11
+    pop r10
     ret
 HostApi_WriteFile endp
 
-CleanupHost proc
+CleanupHost proc FRAME
+    .endprolog
     ret
 CleanupHost endp
-
-FileExists proc
-    invoke GetFileAttributesA, rcx
-    cmp eax, INVALID_FILE_ATTRIBUTES
-    setne al
-    movzx eax, al
-    ret
-FileExists endp
 
 ; ============= EXPORTS =============
 public RawrXD_ExtensionHost
 
-end
+END

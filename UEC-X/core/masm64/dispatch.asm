@@ -37,7 +37,8 @@ UEC_DISPATCH_TABLE_SIZE EQU 4096
 UEC_RING_BUFFER_SIZE    EQU 65536
 UEC_MAX_EXTENSIONS      EQU 256
 UEC_CACHE_LINE_SIZE     EQU 64
-UEC_PAGE_SIZE          EQU 4096
+UEC_PAGE_SIZE           EQU 4096
+INVALID_HANDLE_VALUE    EQU -1
 
 ; IPC Transport Types
 UEC_IPC_NAMED_PIPE     EQU 0
@@ -65,7 +66,6 @@ UEC_ERROR_PERMISSION    EQU 5
 ; Data Section
 ; =============================================================================
 .data
-ALIGN 64
 
 ; Global dispatch table - 4096 entries, each 8 bytes (function pointer)
 g_dispatch_table LABEL QWORD
@@ -96,8 +96,7 @@ g_ipc_transport LABEL BYTE
     g_ipc_buffer    DQ 0
     g_ipc_size      DQ 0
 
-; Statistics counters (cache-line aligned)
-ALIGN 64
+; Statistics counters
 g_stats_dispatch_count      DQ 0
 g_stats_dispatch_errors     DQ 0
 g_stats_ipc_bytes_sent      DQ 0

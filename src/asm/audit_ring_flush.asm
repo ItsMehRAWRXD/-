@@ -1,5 +1,5 @@
 ; ============================================================================
-; audit_ring_flush.asm — Atomic Audit Append & Hardware Flush (Batch 17)
+; audit_ring_flush.asm ? Atomic Audit Append & Hardware Flush (Batch 17)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -14,7 +14,7 @@
 ; Shield_AuditRingAppend
 ; RCX: Pointer to Current Entry Hash (32 bytes)
 ; RDX: Pointer to Raw Data
-; R8:  Data Size
+; R8:  Data m_size
 PUBLIC Shield_AuditRingAppend
 Shield_AuditRingAppend PROC FRAME
     push    rbp
@@ -47,7 +47,7 @@ Shield_AuditRingAppend PROC FRAME
 Shield_AuditRingAppend ENDP
 
 ; Shield_AuditRingHardwareFlush
-; Triggered by Batch 13 0xDEAD
+; Triggered by Batch 13 0DEADh
 PUBLIC Shield_AuditRingHardwareFlush
 Shield_AuditRingHardwareFlush PROC FRAME
     push    rbp
@@ -68,3 +68,4 @@ Shield_AuditRingHardwareFlush PROC FRAME
 Shield_AuditRingHardwareFlush ENDP
 
 END
+

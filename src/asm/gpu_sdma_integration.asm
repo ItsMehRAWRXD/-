@@ -14,7 +14,7 @@
 ; 
 ; Parameters:
 ;   RCX = GPU device handle (from Vulkan/D3D12)
-;   RDX = SDMA ring buffer size (bytes)
+;   RDX = SDMA ring buffer m_size (bytes)
 ; 
 ; Returns:
 ;   RAX = SDMA context handle (0 on failure)
@@ -27,7 +27,7 @@ SDMAInitialize PROC
     ; This buffer is visible to both CPU and GPU
     
     mov     r12, rcx            ; GPU device
-    mov     ebx, edx          ; Buffer size
+    mov     ebx, edx          ; Buffer m_size
     
     ; Allocate GPU-visible memory
     ; Using Vulkan: vkAllocateMemory with VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
@@ -53,7 +53,7 @@ SDMAInitialize ENDP
 ;   RCX = SDMA context
 ;   RDX = Host source pointer
 ;   R8  = GPU destination pointer (device address)
-;   R9  = Size in bytes
+;   R9  = m_size in bytes
 ; 
 ; Returns:
 ;   RAX = 0 on success, error code on failure
@@ -67,7 +67,7 @@ SDMACopyHostToDevice PROC
     mov     r12, rcx            ; SDMA context
     mov     r13, rdx            ; Source
     mov     r14, r8             ; Destination
-    mov     rbx, r9             ; Size
+    mov     rbx, r9             ; m_size
     
     ; Build SDMA packet
     ; Packet format depends on GPU vendor:
@@ -76,7 +76,7 @@ SDMACopyHostToDevice PROC
     
     ; For AMD RDNA3:
     ; SDMA_PACKET_HEADER (2 DW)
-    ;   [31:16] = opcode (0x40 = COPY)
+    ;   [31:16] = opcode (040h = COPY)
     ;   [15:0]  = sub-opcode
     ; SDMA_COPY_PACKET
     ;   SRC_ADDR_LO, SRC_ADDR_HI
@@ -160,6 +160,7 @@ SDMASubmitTransformerBlock PROC FRAME
     .pushreg r14
     .pushreg r15
     
+    .ENDPROLOG
     sub     rsp, 64
     .allocstack 64
     
@@ -237,7 +238,7 @@ SDMASubmitComputeShader PROC
     mov     rax, [rcx]          ; Ring buffer
     
     ; DISPATCH_DIRECT packet
-    mov     DWORD PTR [rax], 15000015h    ; Type 3, DISPATCH_DIRECT
+    mov     DWORD PTR [rax], 15000015h    ; m_type 3, DISPATCH_DIRECT
     add     rax, 4
     
     ; Thread group dimensions
@@ -284,7 +285,7 @@ SDMASubmitGEMM PROC
     ; Build dispatch packet
     mov     rax, [rcx]
     
-    ; DISPATCH_DIRECT with workgroup size
+    ; DISPATCH_DIRECT with workgroup m_size
     mov     DWORD PTR [rax], 15000015h
     add     rax, 4
     
@@ -361,7 +362,7 @@ SDMAWaitForIdle ENDP
 ; 
 ; Parameters:
 ;   RCX = Memory base
-;   RDX = Size in bytes
+;   RDX = m_size in bytes
 ; ============================================================================
 SDMAFlushCache PROC
     ; CLFLUSH cache lines
@@ -373,7 +374,7 @@ SDMAFlushCache PROC
     jae     @@done
     
     clflush [rax]
-    add     rax, 64             ; Cache line size
+    add     rax, 64             ; Cache line m_size
     jmp     @@loop
     
 @@done:
@@ -398,3 +399,4 @@ PM4_TYPE2               EQU 2
 PM4_TYPE3               EQU 3
 
 END
+

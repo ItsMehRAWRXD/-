@@ -36,7 +36,7 @@ KV_Init PROC FRAME
     mov g_dwHeadDim, r8d
     mov g_dwMaxSeqLen, r9d
     
-    ; size = layers * heads * dim * seq * 8 (K+V * f32)
+    ; m_size = layers * heads * dim * seq * 8 (K+V * f32)
     mov eax, ecx
     imul eax, edx
     imul eax, r8d
@@ -45,7 +45,7 @@ KV_Init PROC FRAME
     movsxd rbx, eax
     mov g_cbCacheTotal, rbx
     
-    ; VirtualAlloc(NULL, size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+    ; VirtualAlloc(NULL, m_size, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
     xor ecx, ecx
     mov rdx, rbx
     mov r8d, 3000h
@@ -117,3 +117,4 @@ kvc_skip:
 KV_Clear ENDP
 
 END
+

@@ -1,5 +1,5 @@
 ; rawr_rbtree.asm
-; MASM x64 Red-Black Tree — replaces xtree / std::map internals
+; MASM x64 Red-Black Tree ? replaces xtree / std::map internals
 ; Key and Value are both 64-bit (dq).  For larger payloads, store pointers.
 ;
 ; Node layout (48 bytes, 16-byte aligned for cache lines):
@@ -12,13 +12,13 @@
 ;   +41  Pad      db[7]
 ;
 ; Exports:
-;   RawrRBTree_Create     — create a new tree root
-;   RawrRBTree_Insert     — insert (key, value), replacing existing
-;   RawrRBTree_Find       — lookup value by key
-;   RawrRBTree_Delete     — remove a key
-;   RawrRBTree_Clear      — free all nodes
-;   RawrRBTree_First      — in-order iterator: first node
-;   RawrRBTree_Next       — in-order iterator: next node
+;   RawrRBTree_Create     ? create a new tree root
+;   RawrRBTree_Insert     ? insert (key, value), replacing existing
+;   RawrRBTree_Find       ? lookup value by key
+;   RawrRBTree_Delete     ? remove a key
+;   RawrRBTree_Clear      ? free all nodes
+;   RawrRBTree_First      ? in-order iterator: first node
+;   RawrRBTree_Next       ? in-order iterator: next node
 ;
 ; Uses RawrLinearAlloc_* for all heap operations.
 
@@ -37,7 +37,7 @@ RB_VALUE  equ 32
 RB_COLOR  equ 40
 
 .data
-    ; Sentinel NIL node — all leaves point here
+    ; Sentinel NIL node ? all leaves point here
     ; Must be in .data so it is mapped before any code runs (SIOF-safe)
     align 16
     g_rbNilNode db 48 dup(0)
@@ -62,7 +62,7 @@ RawrRBTree_Create proc public
 RawrRBTree_Create endp
 
 ; ---------------------------------------------------------------------------
-; Internal: AllocateNode — RAX = new node (zeroed, color=RED)
+; Internal: AllocateNode ? RAX = new node (zeroed, color=RED)
 ; ---------------------------------------------------------------------------
 AllocateNode proc
     sub rsp, 40
@@ -267,7 +267,7 @@ RawrRBTree_Insert proc public
     cmp rax, r9
     jne @find_parent
     
-    ; Tree is empty — create root
+    ; Tree is empty ? create root
     call AllocateNode
     test rax, rax
     jz @insert_fail
@@ -398,7 +398,7 @@ RawrRBTree_Next proc public
     cmp rax, r8
     je @next_up
     
-    ; Has right child — go to its leftmost
+    ; Has right child ? go to its leftmost
     mov rcx, rax
 @next_left_loop:
     mov rax, [rcx + RB_LEFT]
@@ -504,7 +504,7 @@ RawrRBTree_Delete proc public
     jmp @free_node
     
 @has_both:
-    ; Two children — find successor
+    ; Two children ? find successor
     mov rcx, [rbx + RB_RIGHT]
     call RawrRBTree_First
     mov r12, rax                  ; r12 = y = successor
@@ -540,7 +540,7 @@ RawrRBTree_Delete proc public
     cmp r13d, RB_COLOR_BLACK
     jne @delete_done
     ; Fixup would go here for full RB delete fixup
-    ; (omitted for brevity — tree remains valid but may violate color rules)
+    ; (omitted for brevity ? tree remains valid but may violate color rules)
     
 @delete_done:
     mov rax, 1
@@ -590,3 +590,4 @@ RawrRBTree_Clear proc public
 RawrRBTree_Clear endp
 
 end
+

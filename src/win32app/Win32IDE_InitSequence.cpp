@@ -1,6 +1,7 @@
 #include "Win32IDE.h"
 #include "HeadlessIDE.h"
 #include "RouterOperations.h"
+#include "IDE_Telemetry.hpp"
 #include "../../include/rawrxd_version.h"
 #include "../../include/final_gauntlet.h"
 #include "../../include/crash_containment.h"
@@ -151,8 +152,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         crashCfg.callbackUserData = nullptr;
         RawrXD::Crash::Install(crashCfg);
         OutputDebugStringA("[main_win32] Cathedral crash containment boundary installed\n");
-    }
 
+    // Initialize telemetry system for performance profiling
+    RawrXD::Telemetry::TelemetrySink::Instance().Initialize();
+    OutputDebugStringA("[main_win32] Telemetry system initialized\n");
     // DPI awareness — before any GUI (Win32 GUI fix)
     ensureDpiAwareness();
 

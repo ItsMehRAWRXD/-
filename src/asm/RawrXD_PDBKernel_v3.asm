@@ -37,8 +37,8 @@ rawrxd_find_export PROC
     jne L_error
 
     ; 3. Data Directory -> Export Directory (Entry 0)
-    ; OptionalHeader starts at +0x18 in NT64, DataDir starts at +0x70 in OptionalHeader
-    ; Total offset from NT Header = 0x88
+    ; OptionalHeader starts at +018h in NT64, DataDir starts at +070h in OptionalHeader
+    ; Total offset from NT Header = 088h
     mov eax, [r14 + 088h]       ; VirtualAddress of Export Dir
     test eax, eax
     jz L_error
@@ -141,3 +141,4 @@ L_exit:
 rawrxd_find_export ENDP
 
 END
+

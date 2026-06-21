@@ -27,7 +27,7 @@ PUBLIC KQuant_Dispatch
 ; -----------------------------------------------------------------------------
 ; Constants
 ; -----------------------------------------------------------------------------
-QK_K                    EQU     256         ; Super-block size (all K-quants)
+QK_K                    EQU     256         ; Super-block m_size (all K-quants)
 BLOCK_Q4_K_SIZE         EQU     144         ; bytes per Q4_K super-block
 BLOCK_Q5_K_SIZE         EQU     176         ; bytes per Q5_K super-block
 BLOCK_Q6_K_SIZE         EQU     210         ; bytes per Q6_K super-block
@@ -64,7 +64,7 @@ mask_03:
     DB  03h, 03h, 03h, 03h, 03h, 03h, 03h, 03h
     DB  03h, 03h, 03h, 03h, 03h, 03h, 03h, 03h
 
-; Broadcast mask for 6-bit isolation (0x3F)
+; Broadcast mask for 6-bit isolation (03Fh)
 mask_3F:
     DB  3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
     DB  3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh, 3Fh
@@ -104,12 +104,12 @@ KQuant_DequantizeF16 PROC FRAME
     mov     rbx, r8                     ; count
     mov     rax, r8                     ; return value
     
-    ; ---- AVX2+F16C main loop: 8 halfs → 8 floats ----
+    ; ---- AVX2+F16C main loop: 8 halfs ? 8 floats ----
 @f16_loop:
     cmp     rbx, 8
     jb      @f16_tail
     
-    ; F16C: convert 8 x fp16 (128-bit) → 8 x fp32 (256-bit)
+    ; F16C: convert 8 x fp16 (128-bit) ? 8 x fp32 (256-bit)
     vcvtph2ps ymm0, xmmword ptr [rsi]
     vmovups ymmword ptr [rdi], ymm0
     
@@ -147,10 +147,10 @@ KQuant_DequantizeF16 ENDP
 ; RCX = src (block_q4_k*), RDX = dst (float*), R8 = num_elements
 ;
 ; Q4_K super-block (144 bytes per 256 elements):
-;   +0:   d (fp16) — super-scale
-;   +2:   dmin (fp16) — super-minimum
-;   +4:   scales[12] — packed 6-bit scale/min pairs for 8 sub-blocks
-;   +16:  qs[128] — packed 4-bit quants (2 per byte)
+;   +0:   d (fp16) ? super-scale
+;   +2:   dmin (fp16) ? super-minimum
+;   +4:   scales[12] ? packed 6-bit scale/min pairs for 8 sub-blocks
+;   +16:  qs[128] ? packed 4-bit quants (2 per byte)
 ;
 ; Formula per element: output = d * sc * q - dmin * m
 ;   where sc/m are unpacked from scales[], q is 4-bit quant
@@ -215,8 +215,8 @@ KQuant_DequantizeQ4_K PROC FRAME
     
     ; Unpack scale and min for this sub-block
     ; scales[] is 6-bit packed. For sub-block j:
-    ;   sc = (scales[j/2] >> ((j%2)*4)) & 0x3F
-    ;   m  = (scales[j/2 + K_SCALE_SIZE/2] >> ((j%2)*4)) & 0x3F
+    ;   sc = (scales[j/2] >> ((j%2)*4)) & 03Fh
+    ;   m  = (scales[j/2 + K_SCALE_SIZE/2] >> ((j%2)*4)) & 03Fh
     ; Simplified: read byte, isolate nibble, use as 4-bit approx
     ; (Full 6-bit unpack is in C++ get_scale_min_k4; here we approximate)
     mov     ecx, ebx
@@ -319,7 +319,7 @@ KQuant_DequantizeQ4_K ENDP
 ; Q5_K Dequantization (AVX2)
 ; Same as Q4_K but with qh[] high bits (5-bit = 4 low + 1 high)
 ; RCX = src, RDX = dst, R8 = num_elements
-; Block size: 176 bytes per 256 elements
+; Block m_size: 176 bytes per 256 elements
 ; Returns: RAX = num_elements processed
 ; =============================================================================
 KQuant_DequantizeQ5_K PROC FRAME
@@ -354,7 +354,7 @@ KQuant_DequantizeQ5_K ENDP
 ; Q6_K Dequantization (AVX2)
 ; RCX = src, RDX = dst, R8 = num_elements
 ; 16 sub-blocks of 16, 6-bit quants (ql[128]+qh[64]), signed (q-32)
-; Block size: 210 bytes per 256 elements
+; Block m_size: 210 bytes per 256 elements
 ; Returns: RAX = num_elements processed
 ; =============================================================================
 KQuant_DequantizeQ6_K PROC FRAME
@@ -382,10 +382,10 @@ KQuant_DequantizeQ6_K PROC FRAME
     jae     @q6k_done
     
     ; Q6_K layout per 256 elements:
-    ;   ql[128] — low 4 bits of each 6-bit quant (2 per byte)
-    ;   qh[64]  — high 2 bits (4 per byte)
-    ;   scales[16] — int8 scales for 16 sub-blocks
-    ;   d (fp16) — super-scale (at end, offset 208)
+    ;   ql[128] ? low 4 bits of each 6-bit quant (2 per byte)
+    ;   qh[64]  ? high 2 bits (4 per byte)
+    ;   scales[16] ? int8 scales for 16 sub-blocks
+    ;   d (fp16) ? super-scale (at end, offset 208)
     
     ; Read super-scale d (fp16 at offset 208)
     movzx   eax, word ptr [rsi + 208]
@@ -479,7 +479,7 @@ KQuant_DequantizeQ3_K PROC FRAME
 KQuant_DequantizeQ3_K ENDP
 
 ; =============================================================================
-; KQuant_Dispatch — Type-based dispatcher
+; KQuant_Dispatch ? m_type-based dispatcher
 ; RCX = ggml_type, RDX = src, R8 = dst, R9 = num_elements
 ; Returns: RAX = elements processed (0 = use C++ fallback)
 ;
@@ -492,7 +492,7 @@ KQuant_Dispatch PROC FRAME
     .endprolog
     
     ; Save original args
-    mov     ebx, ecx                    ; type
+    mov     ebx, ecx                    ; m_type
     
     cmp     ebx, GGML_TYPE_Q4_K
     je      @d_q4k
@@ -507,7 +507,7 @@ KQuant_Dispatch PROC FRAME
     cmp     ebx, GGML_TYPE_Q3_K
     je      @d_q3k
     
-    ; Unknown type: return 0
+    ; Unknown m_type: return 0
     xor     rax, rax
     pop     rbx
     ret
@@ -561,3 +561,4 @@ KQuant_Dispatch ENDP
 ; End
 ; =============================================================================
 END
+

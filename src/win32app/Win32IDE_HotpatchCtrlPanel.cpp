@@ -3,8 +3,12 @@
 // version graph visualization, dependency auditing, and rollback chains.
 //
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
-#include "Win32IDE.h"
 #include "../core/hotpatch_control_plane.hpp"
+
+// Capture the global PatchTransaction type before Win32IDE.h shadows it
+typedef struct PatchTransaction GlobalPatchTransaction;
+
+#include "Win32IDE.h"
 #include <sstream>
 #include <iomanip>
 
@@ -280,7 +284,9 @@ void Win32IDE::cmdHPCtrlAuditLog() {
 void Win32IDE::cmdHPCtrlTxnBegin() {
     auto& cp = HotpatchControlPlane::instance();
     if (m_hotpatchCtrlActiveTransactionId != 0) {
-        const PatchTransaction* activeTxn = cp.getTransaction(m_hotpatchCtrlActiveTransactionId);
+        auto* rawTxn = cp.getTransaction(m_hotpatchCtrlActiveTransactionId);
+        void* tmp = (void*)rawTxn;
+        auto* activeTxn = (GlobalPatchTransaction*)tmp;
         if (activeTxn && !activeTxn->committed && !activeTxn->rolledBack) {
             appendToOutput("[HotpatchCtrl] Transaction already active: ID=" +
                            std::to_string(m_hotpatchCtrlActiveTransactionId) + "\n");

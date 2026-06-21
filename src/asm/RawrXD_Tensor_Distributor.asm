@@ -13,21 +13,21 @@ extern RawrXD_Swarm_SyncTensorShard : proc
 
 ;-------------------------------------------------------------------------------
 ; Swarm Protocol v1.2 Header Structure (56 bytes)
-; offset 0:  Magic(DD)           - 0x5854494A (TITAN)
-; offset 4:  Version(DW)         - 0x0102
+; offset 0:  Magic(DD)           - 05854494Ah (TITAN)
+; offset 4:  Version(DW)         - 00102h
 ; offset 8:  ShardID(DQ)         - Unique shard index
 ; offset 16: TensorID(DQ)        - Parent model/tensor identifier
 ; offset 24: ShardOffset(DQ)     - Offset within the main tensor
 ; offset 32: TotalElements(DQ)   - Total elements of the parent tensor
-; offset 40: ShardSize(DQ)       - Size of this shard in bytes
+; offset 40: ShardSize(DQ)       - m_size of this shard in bytes
 ; offset 48: Flags/Checksum(DQ)  - Transmission flags and data integrity
 ;-------------------------------------------------------------------------------
 
 ;-------------------------------------------------------------------------------
 ; RawrXD_Tensor_SliceAndDistribute
 ; RCX = Ptr to Full Model Tensor (Source)
-; RDX = Total Tensor Size (800B scale)
-; R8  = Number of Nodes (Cluster Size)
+; RDX = Total Tensor m_size (800B scale)
+; R8  = Number of Nodes (Cluster m_size)
 ; R9  = Socket Array (Array of node socket handles)
 ; Returns: RAX = Number of successfully distributed shards
 ;-------------------------------------------------------------------------------
@@ -44,7 +44,7 @@ RawrXD_Tensor_SliceAndDistribute proc
     sub rsp, 128            ; Shadow space + 56-byte Header + alignment
 
     mov r12, rcx            ; r12 = Tensor Base
-    mov r13, rdx            ; r13 = Total Size
+    mov r13, rdx            ; r13 = Total m_size
     mov r14, r8             ; r14 = Node Count
     mov r15, r9             ; r15 = Socket Array Ptr
 
@@ -53,7 +53,7 @@ RawrXD_Tensor_SliceAndDistribute proc
     test r12, r12           ; Check for null buffer
     jz @error_exit
 
-    ; 1. Calculate Shard Size (Aligned to 64 bytes for AVX-512)
+    ; 1. Calculate Shard m_size (Aligned to 64 bytes for AVX-512)
     xor rdx, rdx
     mov rax, r13
     div r14                 ; rax = Base ShardSize
@@ -76,25 +76,25 @@ RawrXD_Tensor_SliceAndDistribute proc
     ; 2. Initialize Swarm Protocol v1.2 Header on Stack
     lea rdx, [rsp + 40]     ; rdx = Pointer to 56-byte header structure
 
-    ; offset 0: Magic(DD) - TITAN (0x5854494A)
+    ; offset 0: Magic(DD) - TITAN (05854494Ah)
     mov dword ptr [rdx + 0], 5854494Ah
     ; offset 4: Version(DW) - 1.2
     mov word ptr [rdx + 4], 0102h
     ; offset 8: ShardID(DQ)
     mov qword ptr [rdx + 8], rsi
-    ; offset 16: TensorID(DQ) - Using 0x800B-FEED for the 800B model
+    ; offset 16: TensorID(DQ) - Using 0800Bh-FEED for the 800B model
     mov qword ptr [rdx + 16], 0800BFEEDh
     ; offset 24: ShardOffset(DQ) = NodeIndex * ShardSize
     mov rax, rsi
     mul rbx
     mov qword ptr [rdx + 24], rax
-    ; offset 32: TotalElements(DQ) - Mapping Total Size / 2 (assuming FP16)
+    ; offset 32: TotalElements(DQ) - Mapping Total m_size / 2 (assuming FP16)
     mov rax, r13
     shr rax, 1
     mov qword ptr [rdx + 32], rax
     ; offset 40: ShardSize(DQ)
     mov qword ptr [rdx + 40], rbx
-    ; offset 48: Flags/Checksum(DQ) - 0x1 (ACTIVE)
+    ; offset 48: Flags/Checksum(DQ) - 01h (ACTIVE)
     mov qword ptr [rdx + 48], 1
 
     ; 3. Call Sync Kernel
@@ -140,3 +140,4 @@ RawrXD_Tensor_SliceAndDistribute proc
 RawrXD_Tensor_SliceAndDistribute endp
 
 end
+

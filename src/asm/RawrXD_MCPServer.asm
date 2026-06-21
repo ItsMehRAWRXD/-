@@ -63,11 +63,11 @@ file_rd_bytes     DQ 0
 json_prefix       DB '{"jsonrpc":"2.0","id":',0
 suffix_init       DB ',"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"rawrxd-masm-mcp","version":"2.0"}}}',0
 suffix_tools      DB ',"result":{"tools":['
-                  DB '{"name":"echo","description":"Echoes input text","inputSchema":{"type":"object","properties":{"text":{"type":"string"}}}},'
-                  DB '{"name":"read_file","description":"Read file contents","inputSchema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}},'
-                  DB '{"name":"list_dir","description":"List directory contents","inputSchema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}'
+                  DB '{"name":"echo","description":"Echoes input text","inputSchema":{"m_type":"object","properties":{"text":{"m_type":"string"}}}},'
+                  DB '{"name":"read_file","description":"Read file contents","inputSchema":{"m_type":"object","properties":{"path":{"m_type":"string"}},"required":["path"]}},'
+                  DB '{"name":"list_dir","description":"List directory contents","inputSchema":{"m_type":"object","properties":{"path":{"m_type":"string"}},"required":["path"]}}'
                   DB ']}}',0
-suffix_echo_head  DB ',"result":{"content":[{"type":"text","text":"',0
+suffix_echo_head  DB ',"result":{"content":[{"m_type":"text","text":"',0
 suffix_echo_tail  DB '"}]}}',0
 suffix_unknown    DB ',"error":{"code":-32601,"message":"unknown method"}}',0
 suffix_bad_tool   DB ',"error":{"code":-32601,"message":"unknown tool"}}',0
@@ -727,7 +727,7 @@ jec_done:
 json_escape_copy ENDP
 
 ; ---------------------------------------------------------------------------
-; exec_read_file — reads file at path_buf, stores content in text_buf
+; exec_read_file ? reads file at path_buf, stores content in text_buf
 ; ---------------------------------------------------------------------------
 exec_read_file PROC
     push rbx
@@ -795,7 +795,7 @@ erf_fail:
 exec_read_file ENDP
 
 ; ---------------------------------------------------------------------------
-; exec_list_dir — lists directory at path_buf, stores names in text_buf
+; exec_list_dir ? lists directory at path_buf, stores names in text_buf
 ;   Builds search pattern: path_buf + "\\*"
 ;   Walks FindFirstFileA / FindNextFileA, appends each cFileName + newline
 ; ---------------------------------------------------------------------------
@@ -1307,3 +1307,4 @@ exit_ok:
 RawrXD_MCPServer_Entry ENDP
 
 END
+

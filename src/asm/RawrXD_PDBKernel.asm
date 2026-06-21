@@ -1,23 +1,23 @@
 ; ============================================================================
-; RawrXD_PDBKernel.asm — Native PDB Symbol Server ASM Kernel
+; RawrXD_PDBKernel.asm ? Native PDB Symbol Server ASM Kernel
 ; ============================================================================
 ;
-; Phase 29: PDB Symbol Server — MASM64 accelerated core operations
+; Phase 29: PDB Symbol Server ? MASM64 accelerated core operations
 ;
 ; Architecture:
 ;   MSF v7.00 magic validation (32-byte compare)
 ;   Public symbol stream scanner (CVRecordHeader walker)
-;   Stream page list builder (directory → block array)
+;   Stream page list builder (directory ? block array)
 ;   GUID-to-hex converter (for cache path construction)
 ;
 ; Assemble: ml64.exe /c /Fo RawrXD_PDBKernel.obj RawrXD_PDBKernel.asm
 ; Link:     Linked as object into RawrXD-Win32IDE (not a DLL)
 ;
 ; Exports:
-;   PDB_ValidateMagic   — Compare 32-byte MSF superblock magic
-;   PDB_ScanPublics     — Walk public symbol records, find name match
-;   PDB_BuildPageList   — Extract page/block numbers for a stream
-;   PDB_GuidToHex       — Convert 16-byte GUID to 32-char hex string
+;   PDB_ValidateMagic   ? Compare 32-byte MSF superblock magic
+;   PDB_ScanPublics     ? Walk public symbol records, find name match
+;   PDB_BuildPageList   ? Extract page/block numbers for a stream
+;   PDB_GuidToHex       ? Convert 16-byte GUID to 32-char hex string
 ;
 ; ABI:      Windows x64 (RCX, RDX, R8, R9 + shadow space)
 ; Callee-save: RBX, RBP, RSI, RDI, R12-R15, XMM6-XMM15
@@ -28,7 +28,7 @@
 option casemap:none
 
 ; ============================================================================
-; Constants — MSF v7.00 Format
+; Constants ? MSF v7.00 Format
 ; ============================================================================
 
 ; MSF magic string: "Microsoft C/C++ MSF 7.00\r\n\x1ADS\0\0\0"
@@ -44,7 +44,7 @@ S_LDATA32           equ 0110Ch      ; Local data
 
 ; CVRecordHeader layout:
 ;   uint16_t recLen;   // +0  (record length, excludes this 2-byte field)
-;   uint16_t recTyp;   // +2  (record type)
+;   uint16_t recTyp;   // +2  (record m_type)
 REC_LEN_OFFSET      equ 0
 REC_TYP_OFFSET      equ 2
 REC_HEADER_SIZE     equ 4
@@ -71,12 +71,12 @@ HEX_LOWER           equ 0
 ; ============================================================================
 .data
 
-; MSF v7.00 magic bytes — canonical reference for validation
+; MSF v7.00 magic bytes ? canonical reference for validation
 ; "Microsoft C/C++ MSF 7.00\r\n\x1ADS\0\0\0"
 ALIGN 16
 msf_magic_ref db 'Microsoft C/C++ MSF 7.00', 0Dh, 0Ah, 1Ah, 44h, 53h, 00h, 00h, 00h
 
-; Hex digit table (uppercase) for GUID→hex conversion
+; Hex digit table (uppercase) for GUID?hex conversion
 ALIGN 16
 hex_digits_upper db '0','1','2','3','4','5','6','7'
                  db '8','9','A','B','C','D','E','F'
@@ -92,7 +92,7 @@ hex_digits_lower db '0','1','2','3','4','5','6','7'
 .code
 
 ; ============================================================================
-; PDB_ValidateMagic — Compare 32-byte MSF superblock magic
+; PDB_ValidateMagic ? Compare 32-byte MSF superblock magic
 ; ============================================================================
 ;
 ; Purpose:
@@ -113,7 +113,7 @@ hex_digits_lower db '0','1','2','3','4','5','6','7'
 ; Preserves: RBX, RSI, RDI, RBP, R12-R15
 ;
 ; Strategy:
-;   Uses 4x QWORD comparisons (4 × 8 = 32 bytes) for minimal branch count.
+;   Uses 4x QWORD comparisons (4 ? 8 = 32 bytes) for minimal branch count.
 ;   On modern CPUs this is faster than rep cmpsb for small fixed sizes.
 ;
 ; ============================================================================
@@ -152,7 +152,7 @@ PDB_ValidateMagic ENDP
 
 
 ; ============================================================================
-; PDB_ScanPublics — Walk public symbol records and find name match
+; PDB_ScanPublics ? Walk public symbol records and find name match
 ; ============================================================================
 ;
 ; Purpose:
@@ -164,14 +164,14 @@ PDB_ValidateMagic ENDP
 ; Prototype:
 ;   uint32_t PDB_ScanPublics(
 ;       const void* streamData,   // RCX: contiguous buffer of CV records
-;       uint32_t    streamSize,   // EDX: buffer size in bytes
+;       uint32_t    streamSize,   // EDX: buffer m_size in bytes
 ;       const char* name,         // R8:  null-terminated search name
 ;       uint32_t    nameLen       // R9D: length of search name (not including null)
 ;   );
 ;
 ; Returns:
 ;   EAX = byte offset within streamData of the matching CVPubSym32 record,
-;         or 0xFFFFFFFF (NOT_FOUND) if no match.
+;         or 0FFFFFFFFh (NOT_FOUND) if no match.
 ;
 ; Clobbers: RAX, RCX, RDX, R8, R9, R10, R11
 ; Preserves: RBX, RSI, RDI, RBP, R12-R15
@@ -223,16 +223,16 @@ scan_loop:
 
     ; Validate: recLen must be >= 2 (at least recTyp)
     cmp ecx, 2
-    jl scan_not_found              ; Corrupt record — bail
+    jl scan_not_found              ; Corrupt record ? bail
 
     ; Validate: record must fit within stream
     lea eax, [ebx + ecx + 2]      ; Total bytes consumed by this record
     cmp eax, r12d
-    ja scan_not_found              ; Record extends past stream end — bail
+    ja scan_not_found              ; Record extends past stream end ? bail
 
     ; Check if this is S_PUB32
     cmp edx, S_PUB32
-    jne scan_advance               ; Not a public symbol — skip
+    jne scan_advance               ; Not a public symbol ? skip
 
     ; ---- S_PUB32 found: compare name ----
     ; Name starts at offset 14 from record start (PUB32_NAME_OFFSET)
@@ -265,7 +265,7 @@ name_compare_done:
     ; All nameLen bytes matched. Verify null terminator in record name.
     movzx eax, BYTE PTR [r14 + r11]
     test al, al
-    jnz scan_advance               ; Not null-terminated — partial match, skip
+    jnz scan_advance               ; Not null-terminated ? partial match, skip
 
     ; Full match found. Return the offset of this record.
     mov eax, ebx
@@ -299,7 +299,7 @@ PDB_ScanPublics ENDP
 
 
 ; ============================================================================
-; PDB_BuildPageList — Extract page/block numbers for a stream from directory
+; PDB_BuildPageList ? Extract page/block numbers for a stream from directory
 ; ============================================================================
 ;
 ; Purpose:
@@ -356,7 +356,7 @@ PDB_BuildPageList PROC
     ; EDX = streamIndex
     ; R8D = numStreams
     ; R9  = streamSizes (page counts per stream)
-    ; [RSP+40+40] = pagesOut (5 pushes × 8 = 40, + shadow 32 + ret 8 = +80 from original RSP)
+    ; [RSP+40+40] = pagesOut (5 pushes ? 8 = 40, + shadow 32 + ret 8 = +80 from original RSP)
     ; Actually: 5 pushes = 40 bytes on stack. Parameters at [RSP+40+40] = [RSP+80]
     ; Stack: [ret][shadow32][arg5][arg6] + 5 pushes
     ; pagesOut at RSP + 40 (pushes) + 8 (ret) + 32 (shadow) = RSP + 80? No.
@@ -373,7 +373,7 @@ PDB_BuildPageList PROC
     ; Note: Adjust offsets. 5 pushes = 40, ret = 8, shadow = 32. 5th param at original [rsp+40]
     ; After pushes: 5th param at [rsp + 40 + 40] = [rsp + 80]? Let me recalculate.
     ; Original stack at CALL: [ret_addr][arg5_home][arg6_home]... 
-    ; No — 5th arg is at [RSP_at_call + 40]. After "push rbx; push rsi; push rdi; push r12; push r13":
+    ; No ? 5th arg is at [RSP_at_call + 40]. After "push rbx; push rsi; push rdi; push r12; push r13":
     ; RSP decreased by 40. So original [RSP_at_call + 40] is now at [RSP + 40 + 40] = [RSP+80].
     ; But RSP_at_call already has ret pushed, so: [RSP + 40 (pushes) + 8 (ret) + 32 (shadow)] = 80
     ; 5th param at [RSP + 80], 6th at [RSP + 88].
@@ -460,7 +460,7 @@ PDB_BuildPageList ENDP
 
 
 ; ============================================================================
-; PDB_GuidToHex — Convert 16-byte GUID to 32-character hex string
+; PDB_GuidToHex ? Convert 16-byte GUID to 32-character hex string
 ; ============================================================================
 ;
 ; Purpose:
@@ -518,7 +518,7 @@ PDB_GuidToHex PROC
     ; Load hex digit lookup table
     lea r10, [hex_digits_upper]
 
-    ; Convert 16 bytes → 32 hex characters
+    ; Convert 16 bytes ? 32 hex characters
     xor ecx, ecx                  ; ECX = byte index (0..15)
 
 guid_byte_loop:
@@ -569,3 +569,4 @@ PDB_GuidToHex ENDP
 ; Export declarations for MSVC linker
 ; ============================================================================
 END
+

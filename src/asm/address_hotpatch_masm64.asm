@@ -124,3 +124,4 @@ rawrxd_addr_patch_diag_reset_asm PROC
 rawrxd_addr_patch_diag_reset_asm ENDP
 
 END
+

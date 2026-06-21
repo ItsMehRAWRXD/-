@@ -1,5 +1,5 @@
 ; ============================================================================
-; goal_stack.asm — Atomic Goal Management (Autonomy Core)
+; goal_stack.asm ? Atomic Goal Management (Autonomy Core)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -50,3 +50,4 @@ Shield_GoalPop PROC FRAME
 Shield_GoalPop ENDP
 
 END
+

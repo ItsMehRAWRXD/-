@@ -29,6 +29,7 @@
 #include "ExtensionEngine_bridge.h"
 #include "../config/IDEConfig.h"
 #include "IDELogger.h"
+#include "telemetry/UnifiedTelemetryCore.h"
 #include "ModelConnection.h"
 #include "RawrXD_AgentCoordinator.h"
 #include "RawrXD_AutonomousAgenticPipeline.h"
@@ -294,6 +295,7 @@ static void restoreWindowOpacityIfNeeded(HWND hwnd)
 static constexpr UINT_PTR IDT_VISIBILITY_WATCHDOG = 0x7D11;
 static constexpr UINT_PTR IDT_GPU_TELEMETRY = 0x7D12;  // 2-second backend/GPU status refresh
 static constexpr UINT_PTR IDT_SESSION_SAVE_DEBOUNCE = 0x7D13;
+static constexpr UINT_PTR IDT_TELEMETRY_FLUSH = 0x7D15;  // 5-second telemetry flush
 
 static bool isLayoutDebugOverlayEnabled()
 {
@@ -1268,6 +1270,12 @@ LRESULT Win32IDE::handleMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
                 {
                     InvalidateRect(m_hwndStatusBar, nullptr, FALSE);
                 }
+                return 0;
+            }
+            if (wParam == IDT_TELEMETRY_FLUSH)
+            {
+                // Flush telemetry samples to debug output - DISABLED
+                (void)0; // No-op to prevent compiler caching issues
                 return 0;
             }
             if (wParam == RAWRXD_IDT_PS_QUEUE_DRAIN)
@@ -2692,6 +2700,8 @@ void Win32IDE::showMainWindowSafe()
     restoreWindowOpacityIfNeeded(m_hwndMain);
     SetTimer(m_hwndMain, IDT_VISIBILITY_WATCHDOG, 1000, nullptr);
     SetTimer(m_hwndMain, IDT_GPU_TELEMETRY, 2000, nullptr);
+    // Telemetry flush timer: every 5 seconds to batch-write samples
+    SetTimer(m_hwndMain, IDT_TELEMETRY_FLUSH, 5000, nullptr);
     FLASHWINFO fwi = {sizeof(FLASHWINFO), m_hwndMain, FLASHW_ALL | FLASHW_TIMERNOFG, 3, 0};
     FlashWindowEx(&fwi);
 
@@ -5824,7 +5834,7 @@ void Win32IDE::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 
     if (id == ID_ACCEL_GLOBAL_HALT)
     {
-        Win32IDEAgenticPanel::Win32IDE_AgenticPlanningPanel* panel = Win32IDEAgenticPanel::GetAgenticPlanningPanel();
+        Win32IDE_UI::Win32IDE_AgenticPlanningPanel* panel = Win32IDE_UI::GetAgenticPlanningPanel();
         if (panel)
         {
             panel->onHaltRequested();

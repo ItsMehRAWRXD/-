@@ -1,14 +1,14 @@
 ; ============================================================================
-; RawrXD_RefProvider.asm — Phase 29.2: Reference Provider MASM64 Kernels
+; RawrXD_RefProvider.asm ? Phase 29.2: Reference Provider MASM64 Kernels
 ; ============================================================================
 ;
 ; PURPOSE:
 ;   MASM64 accelerated routines for the multi-reference provider system:
-;   1. REF_HashReference    — FNV-1a hash for reference deduplication
-;   2. REF_PatternMatch     — Wildcard pattern match (case-insensitive)
-;   3. REF_ScanSymbolName   — SIMD-accelerated substring search for symbol names
+;   1. REF_HashReference    ? FNV-1a hash for reference deduplication
+;   2. REF_PatternMatch     ? Wildcard pattern match (case-insensitive)
+;   3. REF_ScanSymbolName   ? SIMD-accelerated substring search for symbol names
 ;
-; CALLING CONVENTION: x64 Microsoft (RCX, RDX, R8, R9 → return RAX)
+; CALLING CONVENTION: x64 Microsoft (RCX, RDX, R8, R9 ? return RAX)
 ; ALIGNMENT:          All data 16-byte aligned for SSE/AVX
 ; RULE:               NO SOURCE FILE IS TO BE SIMPLIFIED
 ; ============================================================================
@@ -16,13 +16,13 @@
 .code
 
 ; ============================================================================
-; REF_HashReference — FNV-1a hash of a reference location
+; REF_HashReference ? FNV-1a hash of a reference location
 ; ============================================================================
 ;
 ; uint64_t REF_HashReference(
-;     const char* moduleName,    ; RCX — null-terminated module name
-;     const char* symbolName,    ; RDX — null-terminated symbol name
-;     uint64_t    rva            ; R8  — RVA
+;     const char* moduleName,    ; RCX ? null-terminated module name
+;     const char* symbolName,    ; RDX ? null-terminated symbol name
+;     uint64_t    rva            ; R8  ? RVA
 ; );
 ;
 ; Returns: 64-bit FNV-1a hash (case-insensitive)
@@ -44,7 +44,7 @@ hash_mod_loop:
     test    r10d, r10d
     jz      hash_symbol
 
-    ; tolower: if 'A'..'Z', add 0x20
+    ; tolower: if 'A'..'Z', add 020h
     cmp     r10b, 'A'
     jb      hash_mod_xor
     cmp     r10b, 'Z'
@@ -128,12 +128,12 @@ REF_HashReference ENDP
 
 
 ; ============================================================================
-; REF_PatternMatch — Simple wildcard pattern match (case-insensitive)
+; REF_PatternMatch ? Simple wildcard pattern match (case-insensitive)
 ; ============================================================================
 ;
 ; uint32_t REF_PatternMatch(
-;     const char* pattern,       ; RCX — pattern with optional * and ?
-;     const char* name           ; RDX — string to match against
+;     const char* pattern,       ; RCX ? pattern with optional * and ?
+;     const char* name           ; RDX ? string to match against
 ; );
 ;
 ; Returns: 1 if match, 0 if no match
@@ -190,9 +190,9 @@ pm_compare:
     cmp     r8d, r9d
     je      pm_advance
 
-    ; Chars don't match — can we backtrack to a star?
+    ; Chars don't match ? can we backtrack to a star?
     test    rbp, rbp
-    jz      pm_fail                 ; No star saved → fail
+    jz      pm_fail                 ; No star saved ? fail
 
     ; Backtrack: restore to star position and advance name by one
     mov     rsi, rbp
@@ -204,7 +204,7 @@ pm_compare:
 pm_question:
     ; '?' matches one char (but not end of string)
     test    ecx, ecx
-    jz      pm_check_star           ; '?' at end of name — check if we can recover
+    jz      pm_check_star           ; '?' at end of name ? check if we can recover
 
 pm_advance:
     inc     rsi
@@ -219,7 +219,7 @@ pm_star:
     jmp     pm_loop
 
 pm_check_star:
-    ; Name ended but pattern has '?' — can't match
+    ; Name ended but pattern has '?' ? can't match
     test    rbp, rbp
     jz      pm_fail
     mov     rsi, rbp
@@ -232,7 +232,7 @@ pm_end_check:
     ; Name is exhausted. Skip any trailing '*' in pattern.
     movzx   eax, BYTE PTR [rsi]
     test    eax, eax
-    jz      pm_match                ; Both exhausted → match
+    jz      pm_match                ; Both exhausted ? match
     cmp     al, '*'
     jne     pm_fail
     inc     rsi
@@ -258,17 +258,17 @@ REF_PatternMatch ENDP
 
 
 ; ============================================================================
-; REF_ScanSymbolName — Case-insensitive substring search
+; REF_ScanSymbolName ? Case-insensitive substring search
 ; ============================================================================
 ;
 ; uint32_t REF_ScanSymbolName(
-;     const char* haystack,      ; RCX — string to search in
-;     uint32_t    haystackLen,   ; EDX — length of haystack
-;     const char* needle,        ; R8  — substring to find
-;     uint32_t    needleLen      ; R9D — length of needle
+;     const char* haystack,      ; RCX ? string to search in
+;     uint32_t    haystackLen,   ; EDX ? length of haystack
+;     const char* needle,        ; R8  ? substring to find
+;     uint32_t    needleLen      ; R9D ? length of needle
 ; );
 ;
-; Returns: offset of first match, or 0xFFFFFFFF if not found
+; Returns: offset of first match, or 0FFFFFFFFh if not found
 ;
 ; Simple scalar implementation. Phase 29.3: SSE4.2 PCMPESTRI version.
 ;
@@ -285,9 +285,9 @@ REF_ScanSymbolName PROC
 
     ; Edge cases
     test    ebp, ebp
-    jz      scan_fail               ; Empty needle → not found
+    jz      scan_fail               ; Empty needle ? not found
     cmp     ebp, ebx
-    ja      scan_fail               ; Needle longer than haystack → not found
+    ja      scan_fail               ; Needle longer than haystack ? not found
 
     ; Calculate last valid start position
     mov     ecx, ebx
@@ -328,7 +328,7 @@ scan_skip_lower1:
 scan_skip_lower2:
 
     cmp     r10d, r11d
-    jne     scan_next               ; Mismatch — try next offset
+    jne     scan_next               ; Mismatch ? try next offset
 
     inc     r8d
     jmp     scan_inner
@@ -356,3 +356,4 @@ scan_fail:
 REF_ScanSymbolName ENDP
 
 END
+

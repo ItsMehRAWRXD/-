@@ -3,7 +3,7 @@
 ; ============================================================================
 .code
 
-; EnumerateModules Callback: (BaseAddr, Size, PathPtr)
+; EnumerateModules Callback: (BaseAddr, m_size, PathPtr)
 ; RCX = CallbackProc
 
 EXTERN GetModuleHandleA : PROC
@@ -34,7 +34,7 @@ rawrxd_find_export PROC
     jne L_fail
     
     ; Optional Header -> DataDirectory[0] (Export)
-    ; IMAGE_NT_HEADERS64.OptionalHeader.DataDirectory[0] is at offset 136 (0x88)
+    ; IMAGE_NT_HEADERS64.OptionalHeader.DataDirectory[0] is at offset 136 (088h)
     mov eax, [rbx+88h]  ; Export Directory RVA
     test eax, eax
     jz L_fail
@@ -66,3 +66,4 @@ L_fail:
 rawrxd_find_export ENDP
 
 END
+

@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_AgenticShellBridge.asm — AI-Native Terminal Intelligence Layer
+; RawrXD_AgenticShellBridge.asm ? AI-Native Terminal Intelligence Layer
 ; Production bridge between ShellIntegration and Local LLM Inference
 ; =============================================================================
 ;
@@ -19,14 +19,14 @@
 ;     - Idle > 2s      ->  Proactive suggestion based on CWD/git status
 ;
 ; Exports:
-;   AgenticShell_Init           — Bind to ShellInteg instance, spawn AI worker
-;   AgenticShell_Shutdown       — Drain context, terminate AI thread
-;   AgenticShell_OnCommandEnd   — Called by ShellInteg post-execution (async AI)
-;   AgenticShell_GetSuggestion  — Retrieve AI-generated command suggestion
-;   AgenticShell_AcceptFix      — Apply AI-suggested fix to ShellInteg
-;   AgenticShell_SetMode        — Toggle: 0=passive, 1=active, 2=aggressive
-;   AgenticShell_GetStats       — Return AI subsystem performance counters
-;   AgenticShell_SetModel       — Configure LLM model name for inference
+;   AgenticShell_Init           ? Bind to ShellInteg instance, spawn AI worker
+;   AgenticShell_Shutdown       ? Drain context, terminate AI thread
+;   AgenticShell_OnCommandEnd   ? Called by ShellInteg post-execution (async AI)
+;   AgenticShell_GetSuggestion  ? Retrieve AI-generated command suggestion
+;   AgenticShell_AcceptFix      ? Apply AI-suggested fix to ShellInteg
+;   AgenticShell_SetMode        ? Toggle: 0=passive, 1=active, 2=aggressive
+;   AgenticShell_GetStats       ? Return AI subsystem performance counters
+;   AgenticShell_SetModel       ? Configure LLM model name for inference
 ;
 ; Pattern: PatchResult (RAX=0 success, RAX=NTSTATUS-style error on failure)
 ;          RDX = detail pointer or supplemental data
@@ -127,9 +127,9 @@ CTX_OFF_PADDING         EQU 536           ; [536-575]: Reserved
 CTX_OFF_OUTPUT          EQU 576           ; [576-4095]: Output text
 
 ; =============================================================================
-;              Cache-Line Padded Counters — now in rawr_globals.asm
+;              Cache-Line Padded Counters ? now in rawr_globals.asm
 ; =============================================================================
-; g_AS_MetricStart..End, g_AS_Counter_* — accessed via EXTERNDEF
+; g_AS_MetricStart..End, g_AS_Counter_* ? accessed via EXTERNDEF
 INCLUDE rawr_globals.inc
 
 ; =============================================================================
@@ -173,7 +173,7 @@ INCLUDE rawr_globals.inc
     g_AS_ActiveBuf          dq  0       ; 0 = A is readable, 1 = B is readable
 
     ; =========================================================================
-    ; JSON payload scratch (only used by AI thread — no concurrency concern)
+    ; JSON payload scratch (only used by AI thread ? no concurrency concern)
     ; =========================================================================
     ALIGN 8
     g_AS_JsonPayload        db MAX_JSON_PAYLOAD dup(0)
@@ -207,9 +207,9 @@ INCLUDE rawr_globals.inc
     szAS_UserAgent          db "RawrXD-AgenticShell/1.0", 0
     szAS_ApiPath            db "/api/generate", 0
     szAS_HttpVerb           db "POST", 0
-    szAS_ContentType        db "Content-Type: application/json", 0Dh, 0Ah, 0
+    szAS_ContentType        db "Content-m_type: application/json", 0Dh, 0Ah, 0
 
-    ; JSON template fragments (built manually — no CRT sprintf)
+    ; JSON template fragments (built manually ? no CRT sprintf)
     szAS_JsonModelOpen      db '{"model":"', 0
     szAS_JsonPromptOpen     db '","prompt":"', 0
     szAS_JsonStreamFalse    db '","stream":false}', 0
@@ -258,7 +258,7 @@ INCLUDE rawr_globals.inc
 .code
 
 ; =============================================================================
-; AgenticShell_Init — Initialize AI shell bridge
+; AgenticShell_Init ? Initialize AI shell bridge
 ;
 ; Spawns background worker thread, prepares context ring, opens WinInet.
 ;
@@ -437,7 +437,7 @@ AgenticShell_Init PROC FRAME
 AgenticShell_Init ENDP
 
 ; =============================================================================
-; AgenticShell_Shutdown — Tear down AI shell bridge
+; AgenticShell_Shutdown ? Tear down AI shell bridge
 ;
 ; Signals worker thread to exit, waits 3 seconds, closes all handles.
 ;
@@ -531,7 +531,7 @@ AgenticShell_Shutdown PROC FRAME
 AgenticShell_Shutdown ENDP
 
 ; =============================================================================
-; AgenticShell_OnCommandEnd — Called when a command completes
+; AgenticShell_OnCommandEnd ? Called when a command completes
 ;
 ; Captures command + output + exit code into the context ring.
 ; If mode >= ACTIVE and exit code != 0, signals AI thread.
@@ -580,7 +580,7 @@ AgenticShell_OnCommandEnd PROC FRAME
     sub     rax, qword ptr [g_ContextTail]
     cmp     rax, CTX_RING_SLOTS
     jb      @as_oce_ring_ok
-    ; Ring full — drop this context capture
+    ; Ring full ? drop this context capture
     lock inc qword ptr [g_AS_Counter_CtxDropped]
     xor     eax, eax
     jmp     @as_oce_exit_ok
@@ -700,7 +700,7 @@ AgenticShell_OnCommandEnd PROC FRAME
 AgenticShell_OnCommandEnd ENDP
 
 ; =============================================================================
-; AgenticShell_GetSuggestion — Retrieve AI-generated suggestion
+; AgenticShell_GetSuggestion ? Retrieve AI-generated suggestion
 ;
 ; RCX = Output buffer pointer (at least MAX_SUGGESTION_LEN bytes)
 ; RDX = Buffer capacity
@@ -725,8 +725,8 @@ AgenticShell_GetSuggestion PROC FRAME
     jz      @as_gs_null
 
     ; Check if a suggestion is ready (atomic test-and-clear)
-    ; cmpxchg: if [SuggestionReady] == RAX(1), store R8(0) → atomically consume
-    ;          if [SuggestionReady] != RAX(1), load current into RAX → no modify
+    ; cmpxchg: if [SuggestionReady] == RAX(1), store R8(0) ? atomically consume
+    ;          if [SuggestionReady] != RAX(1), load current into RAX ? no modify
     mov     rax, 1                  ; Expected: ready (1)
     xor     r8d, r8d                ; Desired: consumed (0)
     lock cmpxchg qword ptr [g_AS_SuggestionReady], r8
@@ -761,7 +761,7 @@ AgenticShell_GetSuggestion PROC FRAME
     mov     byte ptr [rdi], 0       ; Null-terminate
     pop     rax
 
-    ; Flag was atomically cleared by cmpxchg above — no redundant clear needed
+    ; Flag was atomically cleared by cmpxchg above ? no redundant clear needed
 
     jmp     @as_gs_exit
 
@@ -784,7 +784,7 @@ AgenticShell_GetSuggestion PROC FRAME
 AgenticShell_GetSuggestion ENDP
 
 ; =============================================================================
-; AgenticShell_AcceptFix — Apply AI-suggested fix by submitting to shell
+; AgenticShell_AcceptFix ? Apply AI-suggested fix by submitting to shell
 ;
 ; Reads the current suggestion and passes it to ShellInteg_ExecuteCommand.
 ;
@@ -836,7 +836,7 @@ AgenticShell_AcceptFix PROC FRAME
 AgenticShell_AcceptFix ENDP
 
 ; =============================================================================
-; AgenticShell_SetMode — Change AI trigger mode
+; AgenticShell_SetMode ? Change AI trigger mode
 ;
 ; ECX = New mode (AI_MODE_PASSIVE/ACTIVE/AGGRESSIVE)
 ; Returns: RAX = 0 on success
@@ -854,7 +854,7 @@ AgenticShell_SetMode PROC
 AgenticShell_SetMode ENDP
 
 ; =============================================================================
-; AgenticShell_SetModel — Configure LLM model name
+; AgenticShell_SetModel ? Configure LLM model name
 ;
 ; RCX = Model name string pointer (null-terminated)
 ; Returns: RAX = 0 on success
@@ -899,7 +899,7 @@ AgenticShell_SetModel PROC FRAME
 AgenticShell_SetModel ENDP
 
 ; =============================================================================
-; AgenticShell_GetStats — Return AI subsystem performance counters
+; AgenticShell_GetStats ? Return AI subsystem performance counters
 ;
 ; RCX = Output buffer (9 QWORDs = 72 bytes minimum)
 ;   [0] = CtxCaptured
@@ -950,7 +950,7 @@ AgenticShell_GetStats ENDP
 ; =============================================================================
 
 ; -----------------------------------------------------------------------------
-; as_AIWorkerThread — Background thread for Ollama inference
+; as_AIWorkerThread ? Background thread for Ollama inference
 ;
 ; Loop:
 ;   1. WaitForSingleObject on event (2s timeout for proactive checks)
@@ -1010,7 +1010,7 @@ as_AIWorkerThread PROC FRAME
     mov     rax, qword ptr [g_ContextTail]
     mov     rcx, qword ptr [g_ContextHead]
     cmp     rax, rcx
-    jae     @ai_worker_loop         ; Tail caught up to head — no work
+    jae     @ai_worker_loop         ; Tail caught up to head ? no work
 
 @ai_process_slot:
     ; Load slot address
@@ -1123,7 +1123,7 @@ as_AIWorkerThread PROC FRAME
 as_AIWorkerThread ENDP
 
 ; =============================================================================
-; as_BuildPromptJson — Construct JSON payload for Ollama /api/generate
+; as_BuildPromptJson ? Construct JSON payload for Ollama /api/generate
 ;
 ; Input:
 ;   RSI = ContextSlot pointer (read-only)
@@ -1177,7 +1177,7 @@ as_BuildPromptJson PROC FRAME
     sub     rax, r12                ; rax = bytes written so far
     mov     ecx, MAX_JSON_PAYLOAD - 128
     sub     ecx, eax                ; ecx = remaining capacity for output
-    jle     @bp_skip_output         ; No room left — skip output body
+    jle     @bp_skip_output         ; No room left ? skip output body
 
     mov     eax, dword ptr [rsi + CTX_OFF_OUTLEN]
     cmp     eax, MAX_PROMPT_CONTEXT
@@ -1218,7 +1218,7 @@ as_BuildPromptJson PROC FRAME
 as_BuildPromptJson ENDP
 
 ; =============================================================================
-; as_PostToOllama — HTTP POST JSON payload, read response into suggestion buf
+; as_PostToOllama ? HTTP POST JSON payload, read response into suggestion buf
 ;
 ; RCX = JSON payload pointer
 ; RDX = JSON payload length
@@ -1292,7 +1292,7 @@ as_PostToOllama PROC FRAME
 @po_read_loop:
     mov     rcx, rbx                ; hRequest
     mov     rdx, rdi                ; Buffer
-    mov     r8d, 4096               ; Chunk size
+    mov     r8d, 4096               ; Chunk m_size
     lea     r9, [rbp - 16]          ; &bytesRead (fixed stack slot)
     mov     dword ptr [rbp - 16], 0
     sub     rsp, 32
@@ -1357,7 +1357,7 @@ as_PostToOllama PROC FRAME
 as_PostToOllama ENDP
 
 ; =============================================================================
-; as_ParseOllamaResponse — Extract "response" field value from JSON
+; as_ParseOllamaResponse ? Extract "response" field value from JSON
 ;
 ; Scans for "response":"<value>" pattern and copies <value> into output buffer.
 ; Handles JSON escapes: \n -> newline, \\ -> backslash, \" -> quote.
@@ -1478,7 +1478,7 @@ as_ParseOllamaResponse ENDP
 ; =============================================================================
 
 ; -----------------------------------------------------------------------------
-; as_strcpy_advance — Copy null-terminated string from [rbx] to [rdi]
+; as_strcpy_advance ? Copy null-terminated string from [rbx] to [rdi]
 ;                     Advances rdi past the last written byte (before null)
 ;                     Does NOT write null terminator
 ; Preserves: rsi, r12-r15
@@ -1502,7 +1502,7 @@ as_strcpy_advance PROC
 as_strcpy_advance ENDP
 
 ; -----------------------------------------------------------------------------
-; as_json_escape_copy — Copy string from [rbx] to [rdi] with JSON escaping
+; as_json_escape_copy ? Copy string from [rbx] to [rdi] with JSON escaping
 ;                       Escapes: " -> \", \ -> \\, \n -> \\n, \r -> \\r
 ;                       Advances rdi
 ; Preserves: rsi, r12-r15
@@ -1575,7 +1575,7 @@ as_json_escape_copy PROC
 as_json_escape_copy ENDP
 
 ; -----------------------------------------------------------------------------
-; as_json_escape_copy_n — Same as above but limited to ECX bytes
+; as_json_escape_copy_n ? Same as above but limited to ECX bytes
 ; RBX = source, RDI = dest, ECX = max bytes to read
 ; -----------------------------------------------------------------------------
 as_json_escape_copy_n PROC
@@ -1653,7 +1653,7 @@ as_json_escape_copy_n PROC
 as_json_escape_copy_n ENDP
 
 ; -----------------------------------------------------------------------------
-; as_uint32_to_buf — Convert unsigned 32-bit integer in EAX to decimal ASCII
+; as_uint32_to_buf ? Convert unsigned 32-bit integer in EAX to decimal ASCII
 ;                    Writes directly into [rdi], advances rdi
 ; Preserves: rsi, rbx, r12-r15
 ; Clobbers: rax, rcx, rdx, r8
@@ -1671,7 +1671,7 @@ as_uint32_to_buf PROC
 
 @u2b_nonzero:
     ; Convert digits in reverse into static scratch buffer.
-    ; Uses g_AS_ItoBuf (AI thread only — no concurrency concern).
+    ; Uses g_AS_ItoBuf (AI thread only ? no concurrency concern).
     ; Avoids push/pop digit reversal which corrupts SEH unwind state
     ; in a non-FRAME leaf procedure.
     mov     ebx, eax                ; save value
@@ -1715,7 +1715,7 @@ as_uint32_to_buf PROC
 as_uint32_to_buf ENDP
 
 ; =============================================================================
-; AgenticShell_SetLocalMode — Toggle between HTTP/Ollama and local stub
+; AgenticShell_SetLocalMode ? Toggle between HTTP/Ollama and local stub
 ;
 ; ECX = 0: Use HTTP (Ollama) inference (default)
 ; ECX = 1: Use deterministic local inference stub (no network)
@@ -1734,13 +1734,13 @@ AgenticShell_SetLocalMode PROC
 AgenticShell_SetLocalMode ENDP
 
 ; =============================================================================
-; as_LocalInferenceStub — Deterministic local inference (no HTTP/Ollama)
+; as_LocalInferenceStub ? Deterministic local inference (no HTTP/Ollama)
 ;
 ; Generates a canned error explanation + suggestion based on exit code.
 ; Used for offline testing, CI environments, or as fallback when Ollama
 ; is unavailable.
 ;
-; RCX = Slot pointer (ContextSlot base — read exit code + command)
+; RCX = Slot pointer (ContextSlot base ? read exit code + command)
 ; RDX = Output suggestion buffer
 ; R8  = Output capacity
 ; Returns: EAX = 0 on success
@@ -1863,3 +1863,4 @@ as_LocalInferenceStub PROC FRAME
 as_LocalInferenceStub ENDP
 
 END
+

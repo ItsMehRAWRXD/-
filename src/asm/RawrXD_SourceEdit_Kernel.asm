@@ -1,12 +1,12 @@
 ; ============================================================================
-; RawrXD_SourceEdit_Kernel.asm — MASM64 Atomic Source File Replacement
+; RawrXD_SourceEdit_Kernel.asm ? MASM64 Atomic Source File Replacement
 ; ============================================================================
 ;
 ; Provides two exported procedures for safe source-level self-modification:
 ;
 ;   SourceEdit_AtomicReplace:
 ;     Atomically replaces a source file's contents with backup guarantee.
-;     Transaction: backup → write temp → rename → cleanup
+;     Transaction: backup ? write temp ? rename ? cleanup
 ;     On any failure, the original file is guaranteed untouched.
 ;
 ;   SourceEdit_GitCommand:
@@ -15,7 +15,7 @@
 ;
 ; Calling Convention: Microsoft x64 (RCX, RDX, R8, R9 + stack)
 ; Error Model: RAX = 0 on success, GetLastError() on failure
-; Threading: Not thread-safe — caller must serialize (orchestrator mutex)
+; Threading: Not thread-safe ? caller must serialize (orchestrator mutex)
 ;
 ; Integration:
 ;   - Called by AutonomousRecoveryOrchestrator::atomicWriteSourceFile()
@@ -67,11 +67,11 @@ STARTF_USESTDHANDLES    EQU 00000100h
 HANDLE_FLAG_INHERIT     EQU 00000001h
 WAIT_OBJECT_0           EQU 0
 
-; STARTUPINFOW size = 104 bytes on x64
+; STARTUPINFOW m_size = 104 bytes on x64
 STARTUPINFOW_SIZE       EQU 104
-; PROCESS_INFORMATION size = 24 bytes on x64
+; PROCESS_INFORMATION m_size = 24 bytes on x64
 PROCINFO_SIZE           EQU 24
-; SECURITY_ATTRIBUTES size = 24 bytes on x64
+; SECURITY_ATTRIBUTES m_size = 24 bytes on x64
 SECATTR_SIZE            EQU 24
 
 ; ============================================================================
@@ -95,10 +95,10 @@ SECATTR_SIZE            EQU 24
 ; Atomically replaces a source file with new content, creating a backup.
 ;
 ; Parameters (Microsoft x64 ABI):
-;   RCX = originalPath   (const wchar_t*) — file to modify
-;   RDX = backupPath     (const wchar_t*) — where to write backup
-;   R8  = newContent     (const void*)    — new file content bytes
-;   R9  = newContentLen  (uint64_t)       — length of new content
+;   RCX = originalPath   (const wchar_t*) ? file to modify
+;   RDX = backupPath     (const wchar_t*) ? where to write backup
+;   R8  = newContent     (const void*)    ? new file content bytes
+;   R9  = newContentLen  (uint64_t)       ? length of new content
 ;
 ; Returns:
 ;   RAX = 0 on success, GetLastError() on failure
@@ -107,13 +107,13 @@ SECATTR_SIZE            EQU 24
 ;   1. Read original file into stack buffer
 ;   2. Write original content to backupPath
 ;   3. Write newContent to originalPath.tmp
-;   4. MoveFileEx(originalPath → originalPath.old)
-;   5. MoveFileEx(originalPath.tmp → originalPath)
+;   4. MoveFileEx(originalPath ? originalPath.old)
+;   5. MoveFileEx(originalPath.tmp ? originalPath)
 ;   6. DeleteFile(originalPath.old)
 ;
 ; On failure at step 4+, reverse the rename to restore original.
 ;
-; Stack frame layout (large — uses 64KB buffer for file read):
+; Stack frame layout (large ? uses 64KB buffer for file read):
 ;   [RSP+0]     shadow space (32 bytes)
 ;   [RSP+32]    local variables
 ;   [RSP+??]    temp path buffers (1024 bytes each)
@@ -142,7 +142,7 @@ SourceEdit_AtomicReplace PROC PUBLIC FRAME
     .PUSHREG r15
 
     ; Reserve stack: 32 shadow + 80 locals + 2048 path bufs + 65536 read buf
-    ;              = 67696 → round to 67712 (aligned 16)
+    ;              = 67696 ? round to 67712 (aligned 16)
     FRAME_SIZE EQU 67712
     sub     rsp, FRAME_SIZE
     .ALLOCSTACK FRAME_SIZE
@@ -226,7 +226,7 @@ SourceEdit_AtomicReplace PROC PUBLIC FRAME
     je      @@fail_getlasterror
     mov     [rbp + 32], rax             ; hOriginal
 
-    ; Get file size
+    ; Get file m_size
     mov     rcx, rax                    ; hFile
     xor     rdx, rdx                    ; lpFileSizeHigh = NULL
     call    GetFileSize
@@ -314,7 +314,7 @@ SourceEdit_AtomicReplace PROC PUBLIC FRAME
     je      @@skip_attr_strip
     test    eax, FILE_ATTRIBUTE_READONLY
     jz      @@skip_attr_strip
-    ; Has read-only flag — strip it
+    ; Has read-only flag ? strip it
     and     eax, NOT FILE_ATTRIBUTE_READONLY
     mov     rcx, r12
     mov     edx, eax
@@ -355,8 +355,8 @@ SourceEdit_AtomicReplace PROC PUBLIC FRAME
     test    eax, eax
     jnz     @@replace_ok
 
-    ; ReplaceFileW failed — fall back to MoveFileEx chain
-    ; ======== STEP 4-FALLBACK: Rename original → .old ========
+    ; ReplaceFileW failed ? fall back to MoveFileEx chain
+    ; ======== STEP 4-FALLBACK: Rename original ? .old ========
     mov     rcx, r12                    ; lpExistingFileName = originalPath
     lea     rdx, [rbp + OLD_PATH_OFF]   ; lpNewFileName = oldPath
     mov     r8d, MOVEFILE_REPLACE_EXISTING OR MOVEFILE_WRITE_THROUGH
@@ -364,7 +364,7 @@ SourceEdit_AtomicReplace PROC PUBLIC FRAME
     test    eax, eax
     jz      @@fail_getlasterror         ; Original untouched on failure
 
-    ; ======== STEP 5-FALLBACK: Rename .tmp → original ========
+    ; ======== STEP 5-FALLBACK: Rename .tmp ? original ========
     lea     rcx, [rbp + TMP_PATH_OFF]   ; lpExistingFileName = tmpPath
     mov     rdx, r12                    ; lpNewFileName = originalPath
     mov     r8d, MOVEFILE_REPLACE_EXISTING OR MOVEFILE_WRITE_THROUGH
@@ -375,7 +375,7 @@ SourceEdit_AtomicReplace PROC PUBLIC FRAME
     ; ======== STEP 6-FALLBACK: Delete .old (cleanup, non-fatal) ========
     lea     rcx, [rbp + OLD_PATH_OFF]
     call    DeleteFileW
-    ; Ignore failure — .old is just cleanup
+    ; Ignore failure ? .old is just cleanup
 
 @@replace_ok:
 
@@ -384,7 +384,7 @@ SourceEdit_AtomicReplace PROC PUBLIC FRAME
     jmp     @@epilogue
 
 @@fail_reverse_rename:
-    ; Restore: .old → original
+    ; Restore: .old ? original
     call    GetLastError
     push    rax                         ; save error code
     lea     rcx, [rbp + OLD_PATH_OFF]
@@ -434,11 +434,11 @@ SourceEdit_AtomicReplace ENDP
 ; Launches git.exe with given arguments and captures stdout.
 ;
 ; Parameters (Microsoft x64 ABI):
-;   RCX = gitExePath    (const wchar_t*) — path to git.exe
-;   RDX = workingDir    (const wchar_t*) — repo root directory
-;   R8  = args          (const wchar_t*) — command line arguments
-;   R9  = stdoutBuf     (wchar_t*)       — output buffer (nullable)
-;   [RSP+40] = stdoutBufLen (uint64_t)   — buffer size in wchar_t
+;   RCX = gitExePath    (const wchar_t*) ? path to git.exe
+;   RDX = workingDir    (const wchar_t*) ? repo root directory
+;   R8  = args          (const wchar_t*) ? command line arguments
+;   R9  = stdoutBuf     (wchar_t*)       ? output buffer (nullable)
+;   [RSP+40] = stdoutBufLen (uint64_t)   ? buffer m_size in wchar_t
 ;
 ; Returns:
 ;   RAX = process exit code (0 = success), -1 on launch failure
@@ -474,7 +474,7 @@ SourceEdit_GitCommand PROC PUBLIC FRAME
 
     ; Stack: 32 shadow + locals + STARTUPINFOW(104) + PROCINFO(24) +
     ;        SECATTR(24) + cmdline buf(4096) + pipe handles(16)
-    ;      = 32 + 16 + 104 + 24 + 24 + 4096 + 16 = 4312 → 4320 (align 16)
+    ;      = 32 + 16 + 104 + 24 + 24 + 4096 + 16 = 4312 ? 4320 (align 16)
     GIT_FRAME EQU 4320
     sub     rsp, GIT_FRAME
     .ALLOCSTACK GIT_FRAME
@@ -652,7 +652,7 @@ SourceEdit_GitCommand PROC PUBLIC FRAME
     test    rcx, rcx
     jz      @@cleanup
 
-    ; Simple read loop — read bytes, store as wchar (ASCII assumption)
+    ; Simple read loop ? read bytes, store as wchar (ASCII assumption)
     xor     edi, edi                            ; bytes written to output
 @@read_loop:
     ; Check buffer space
@@ -741,3 +741,4 @@ SourceEdit_GitCommand PROC PUBLIC FRAME
 SourceEdit_GitCommand ENDP
 
 END
+

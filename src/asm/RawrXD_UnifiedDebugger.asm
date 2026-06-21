@@ -1,9 +1,9 @@
 ; =============================================================================
-; RawrXD_UnifiedDebugger.asm — Complete x64 MASM Debugger
+; RawrXD_UnifiedDebugger.asm ? Complete x64 MASM Debugger
 ; =============================================================================
 ; Combines: RawrXD_Debugger.asm + RawrXD_Debug_Engine.asm + rawrxd_minimal_debugger.asm
 ; Features:
-;   - Debug event loop (WaitForDebugEvent → ContinueDebugEvent)
+;   - Debug event loop (WaitForDebugEvent ? ContinueDebugEvent)
 ;   - Hardware breakpoints (DR0-DR3) with full DR7 control
 ;   - Software breakpoints (INT3 injection/restoration)
 ;   - Single-step tracing (RFLAGS.TF manipulation)
@@ -13,7 +13,7 @@
 ;   - CRC-32 checksum
 ;   - Stack walking
 ;   - Thread context capture
-; Zero dependencies — kernel32.lib only
+; Zero dependencies ? kernel32.lib only
 ; =============================================================================
 
 option casemap:none
@@ -96,7 +96,7 @@ MEMORY_BASIC_INFORMATION STRUCT
     RegionSize          DQ ?
     State               DD ?
     Protect             DD ?
-    Type                DD ?
+    MemType             DD ?
     __pad2              DD ?
 MEMORY_BASIC_INFORMATION ENDS
 
@@ -254,7 +254,7 @@ crc32_table DD 000000000h, 077073096h, 0EE0E612Ch, 0990951BAh
 .code
 
 ; =============================================================================
-; Dbg_Init — Attach to target process
+; Dbg_Init ? Attach to target process
 ; RCX = target PID
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -299,7 +299,7 @@ Dbg_Init PROC FRAME
 Dbg_Init ENDP
 
 ; =============================================================================
-; Dbg_Detach — Detach from target process
+; Dbg_Detach ? Detach from target process
 ; =============================================================================
 ALIGN 16
 Dbg_Detach PROC FRAME
@@ -325,7 +325,7 @@ Dbg_Detach PROC FRAME
 Dbg_Detach ENDP
 
 ; =============================================================================
-; Dbg_IsAddressWritable — Validate memory before write
+; Dbg_IsAddressWritable ? Validate memory before write
 ; RCX = hProcess, RDX = address
 ; Returns: RAX = 1 writable, 0 protected/invalid
 ; =============================================================================
@@ -373,8 +373,8 @@ Dbg_IsAddressWritable PROC FRAME
 Dbg_IsAddressWritable ENDP
 
 ; =============================================================================
-; Dbg_MakeWritable — Change page protection if needed
-; RCX = hProcess, RDX = address, R8 = size
+; Dbg_MakeWritable ? Change page protection if needed
+; RCX = hProcess, RDX = address, R8 = m_size
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
 ALIGN 16
@@ -395,7 +395,7 @@ Dbg_MakeWritable PROC FRAME
     test rax, rax
     jnz @@done
     
-    ; VirtualProtectEx(hProcess, addr, size, PAGE_EXECUTE_READWRITE, &oldProtect)
+    ; VirtualProtectEx(hProcess, addr, m_size, PAGE_EXECUTE_READWRITE, &oldProtect)
     lea r9, [rsp+30h]               ; oldProtect
     mov qword ptr [rsp+28h], PAGE_EXECUTE_READWRITE
     mov rcx, rbx
@@ -419,8 +419,8 @@ Dbg_MakeWritable PROC FRAME
 Dbg_MakeWritable ENDP
 
 ; =============================================================================
-; Dbg_ReadMemory — Safe memory read
-; RCX = hProcess, RDX = address, R8 = buffer, R9 = size
+; Dbg_ReadMemory ? Safe memory read
+; RCX = hProcess, RDX = address, R8 = buffer, R9 = m_size
 ; Returns: RAX = bytes read (0 on failure)
 ; =============================================================================
 ALIGN 16
@@ -433,9 +433,9 @@ Dbg_ReadMemory PROC FRAME
     .allocstack 38h
     .endprolog
     
-    mov rbx, r9                     ; size
+    mov rbx, r9                     ; m_size
     mov qword ptr [rsp+28h], 0      ; bytesRead
-    mov qword ptr [rsp+30h], rbx    ; size param
+    mov qword ptr [rsp+30h], rbx    ; m_size param
     
     call ReadProcessMemory
     
@@ -456,8 +456,8 @@ Dbg_ReadMemory PROC FRAME
 Dbg_ReadMemory ENDP
 
 ; =============================================================================
-; Dbg_WriteMemory — Safe memory write with protection toggle
-; RCX = hProcess, RDX = address, R8 = buffer, R9 = size
+; Dbg_WriteMemory ? Safe memory write with protection toggle
+; RCX = hProcess, RDX = address, R8 = buffer, R9 = m_size
 ; Returns: RAX = bytes written (0 on failure)
 ; =============================================================================
 ALIGN 16
@@ -474,7 +474,7 @@ Dbg_WriteMemory PROC FRAME
     
     mov rbx, rcx                    ; hProcess
     mov rsi, rdx                    ; address
-    mov rdi, r9                     ; size
+    mov rdi, r9                     ; m_size
     
     ; Make writable if needed
     call Dbg_MakeWritable
@@ -483,7 +483,7 @@ Dbg_WriteMemory PROC FRAME
     
     ; WriteProcessMemory
     mov qword ptr [rsp+28h], 0      ; bytesWritten
-    mov qword ptr [rsp+30h], rdi    ; size
+    mov qword ptr [rsp+30h], rdi    ; m_size
     mov rcx, rbx
     mov rdx, rsi
     call WriteProcessMemory
@@ -506,7 +506,7 @@ Dbg_WriteMemory PROC FRAME
 Dbg_WriteMemory ENDP
 
 ; =============================================================================
-; Dbg_InjectINT3 — Inject software breakpoint
+; Dbg_InjectINT3 ? Inject software breakpoint
 ; RCX = hProcess, RDX = address, R8 = outOriginalByte
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -525,7 +525,7 @@ Dbg_InjectINT3 PROC FRAME
     
     ; Read original byte
     lea r8, [rsp+30h]               ; buffer for 1 byte
-    mov qword ptr [rsp+28h], 1      ; size = 1
+    mov qword ptr [rsp+28h], 1      ; m_size = 1
     call ReadProcessMemory
     test rax, rax
     jz @@fail
@@ -562,7 +562,7 @@ Dbg_InjectINT3 PROC FRAME
 Dbg_InjectINT3 ENDP
 
 ; =============================================================================
-; Dbg_RestoreINT3 — Restore original byte after breakpoint
+; Dbg_RestoreINT3 ? Restore original byte after breakpoint
 ; RCX = hProcess, RDX = address, R8 = originalByte
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -579,7 +579,7 @@ Dbg_RestoreINT3 PROC FRAME
     ; Write original byte back
     lea r8, [rsp+30h]               ; buffer
     mov byte ptr [rsp+30h], dl      ; originalByte
-    mov qword ptr [rsp+28h], 1      ; size = 1
+    mov qword ptr [rsp+28h], 1      ; m_size = 1
     call WriteProcessMemory
     test rax, rax
     jz @@fail
@@ -602,9 +602,9 @@ Dbg_RestoreINT3 PROC FRAME
 Dbg_RestoreINT3 ENDP
 
 ; =============================================================================
-; Dbg_SetHardwareBreakpoint — Set DR0-DR3 breakpoint
-; RCX = hThread, RDX = address, R8 = slot (0-3), R9 = type (0=exec,1=write,3=rw)
-; Stack: size (1,2,4,8)
+; Dbg_SetHardwareBreakpoint ? Set DR0-DR3 breakpoint
+; RCX = hThread, RDX = address, R8 = slot (0-3), R9 = m_type (0=exec,1=write,3=rw)
+; Stack: m_size (1,2,4,8)
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
 ALIGN 16
@@ -624,7 +624,7 @@ Dbg_SetHardwareBreakpoint PROC FRAME
     mov rbx, rcx                    ; hThread
     mov rsi, rdx                    ; address
     mov edi, r8d                    ; slot
-    mov r12d, r9d                   ; type
+    mov r12d, r9d                   ; m_type
     
     ; Validate slot
     cmp edi, 3
@@ -668,7 +668,7 @@ Dbg_SetHardwareBreakpoint PROC FRAME
     shl edx, cl                     ; LEn bit
     or rax, rdx
     
-    ; Type: (type) << (16 + slot * 4)
+    ; m_type: (m_type) << (16 + slot * 4)
     mov ecx, edi
     shl ecx, 2
     add ecx, 16
@@ -676,11 +676,11 @@ Dbg_SetHardwareBreakpoint PROC FRAME
     shl edx, cl
     or rax, rdx
     
-    ; Size: get from stack
+    ; m_size: get from stack
     mov ecx, edi
     shl ecx, 2
     add ecx, 18
-    mov edx, [rsp+508h]            ; size param
+    mov edx, [rsp+508h]            ; m_size param
     cmp edx, 1
     je @@size_done
     cmp edx, 2
@@ -725,7 +725,7 @@ Dbg_SetHardwareBreakpoint PROC FRAME
 Dbg_SetHardwareBreakpoint ENDP
 
 ; =============================================================================
-; Dbg_ClearHardwareBreakpoint — Clear DR0-DR3 breakpoint
+; Dbg_ClearHardwareBreakpoint ? Clear DR0-DR3 breakpoint
 ; RCX = hThread, RDX = slot (0-3)
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -777,7 +777,7 @@ Dbg_ClearHardwareBreakpoint PROC FRAME
     shl edx, cl
     shl edx, cl
     shl edx, cl
-    shl edx, cl                     ; mask for type+size bits
+    shl edx, cl                     ; mask for m_type+m_size bits
     not edx
     and rax, rdx
     mov ecx, ebx
@@ -808,7 +808,7 @@ Dbg_ClearHardwareBreakpoint PROC FRAME
 Dbg_ClearHardwareBreakpoint ENDP
 
 ; =============================================================================
-; Dbg_EnableSingleStep — Enable trap flag for single-step
+; Dbg_EnableSingleStep ? Enable trap flag for single-step
 ; RCX = hThread
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -854,7 +854,7 @@ Dbg_EnableSingleStep PROC FRAME
 Dbg_EnableSingleStep ENDP
 
 ; =============================================================================
-; Dbg_DisableSingleStep — Disable trap flag
+; Dbg_DisableSingleStep ? Disable trap flag
 ; RCX = hThread
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -900,7 +900,7 @@ Dbg_DisableSingleStep PROC FRAME
 Dbg_DisableSingleStep ENDP
 
 ; =============================================================================
-; Dbg_CaptureContext — Capture full thread context
+; Dbg_CaptureContext ? Capture full thread context
 ; RCX = hThread, RDX = outContext
 ; Returns: RAX = 1 success, 0 failure
 ; =============================================================================
@@ -937,7 +937,7 @@ Dbg_CaptureContext PROC FRAME
 Dbg_CaptureContext ENDP
 
 ; =============================================================================
-; Dbg_WalkStack — Walk RBP chain
+; Dbg_WalkStack ? Walk RBP chain
 ; RCX = hProcess, RDX = startRBP, R8 = outFrames, R9 = maxFrames
 ; Returns: RAX = frame count
 ; =============================================================================
@@ -964,7 +964,7 @@ Dbg_WalkStack PROC FRAME
     
     ; Read [RBP] (previous RBP) and [RBP+8] (return address)
     lea r8, [rsp+20h]               ; buffer for 16 bytes
-    mov qword ptr [rsp+28h], 16     ; size
+    mov qword ptr [rsp+28h], 16     ; m_size
     mov rcx, rbx
     mov rdx, rsi
     call ReadProcessMemory
@@ -994,8 +994,8 @@ Dbg_WalkStack PROC FRAME
 Dbg_WalkStack ENDP
 
 ; =============================================================================
-; Dbg_CRC32 — Calculate CRC-32 of memory region
-; RCX = buffer, RDX = size
+; Dbg_CRC32 ? Calculate CRC-32 of memory region
+; RCX = buffer, RDX = m_size
 ; Returns: EAX = CRC-32
 ; =============================================================================
 ALIGN 16
@@ -1004,14 +1004,17 @@ Dbg_CRC32 PROC FRAME
     .pushreg rbx
     push rsi
     .pushreg rsi
+    push rdi
+    .pushreg rdi
     sub rsp, 28h
     .allocstack 28h
     .endprolog
     
     mov rsi, rcx                    ; buffer
-    mov rbx, rdx                    ; size
+    mov rbx, rdx                    ; m_size
+    lea rdi, [crc32_table]          ; get 64-bit address of table
     
-    ; Initialize CRC to 0xFFFFFFFF
+    ; Initialize CRC to 0FFFFFFFFh
     mov eax, 0FFFFFFFFh
     
     test rbx, rbx
@@ -1022,7 +1025,7 @@ Dbg_CRC32 PROC FRAME
     xor cl, al
     shr eax, 8
     movzx ecx, cl
-    mov ecx, [crc32_table + rcx*4]
+    mov ecx, [rdi + rcx*4]          ; use 64-bit base register
     xor eax, ecx
     
     inc rsi
@@ -1033,13 +1036,14 @@ Dbg_CRC32 PROC FRAME
     not eax
     
     add rsp, 28h
+    pop rdi
     pop rsi
     pop rbx
     ret
 Dbg_CRC32 ENDP
 
 ; =============================================================================
-; Dbg_EventLoop — Main debug event loop
+; Dbg_EventLoop ? Main debug event loop
 ; RCX = callback (optional, can be 0)
 ; Returns: 0 on normal exit, error code on failure
 ; =============================================================================
@@ -1133,7 +1137,7 @@ Dbg_EventLoop PROC FRAME
 Dbg_EventLoop ENDP
 
 ; =============================================================================
-; Dbg_GetLastProcess — Get current debug target process handle
+; Dbg_GetLastProcess ? Get current debug target process handle
 ; Returns: RAX = hProcess
 ; =============================================================================
 ALIGN 16
@@ -1143,7 +1147,7 @@ Dbg_GetLastProcess PROC
 Dbg_GetLastProcess ENDP
 
 ; =============================================================================
-; Dbg_GetLastThread — Get current debug target thread handle
+; Dbg_GetLastThread ? Get current debug target thread handle
 ; Returns: RAX = hThread
 ; =============================================================================
 ALIGN 16

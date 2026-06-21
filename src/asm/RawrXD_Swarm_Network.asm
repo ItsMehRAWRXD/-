@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_Swarm_Network.asm — Phase 11: Distributed Swarm Network Kernel
+; RawrXD_Swarm_Network.asm ? Phase 11: Distributed Swarm Network Kernel
 ; =============================================================================
 ; Pure x64 MASM zero-dependency network hot-path for the Swarm Build System.
 ;
@@ -78,10 +78,10 @@ SWARM_RING STRUCT 8
     Head            DQ      ?       ; Write cursor (atomic, producers XADD)
     Tail            DQ      ?       ; Read cursor (consumer only)
     Capacity        DD      ?       ; Always SWARM_RING_CAPACITY
-    SlotSize        DD      ?       ; Size of each slot in bytes
+    SlotSize        DD      ?       ; m_size of each slot in bytes
     pBuffer         DQ      ?       ; Base pointer to slot array
-    TotalPushed     DQ      ?       ; Cumulative pushes (stats)
-    TotalPopped     DQ      ?       ; Cumulative pops (stats)
+    TotalPushed     DQ      ?       ; Cumulative pushes (m_stats)
+    TotalPopped     DQ      ?       ; Cumulative pops (m_stats)
     Overflows       DQ      ?       ; Pushes that failed (ring full)
     _pad0           DQ      ?       ; Alignment
 SWARM_RING ENDS
@@ -100,7 +100,7 @@ SWARM_MAX_NODES         EQU     64
 ALIGN 16
 
 ; Blake2b-128 initialization vector (first 4 words of SHA-512 fractional parts)
-; Blake2b IV is defined by the spec — these are the full 8 x 64-bit words
+; Blake2b IV is defined by the spec ? these are the full 8 x 64-bit words
 g_Blake2bIV     DQ      06A09E667F3BCC908h
                 DQ      0BB67AE8584CAA73Bh
                 DQ      03C6EF372FE94F82Bh
@@ -187,11 +187,11 @@ Swarm_RingBuffer_Init ENDP
 ; =============================================================================
 ; Swarm_RingBuffer_Push
 ; Atomically push a packet into the ring buffer (producer side).
-; Uses LOCK XADD to claim a slot — wait-free for producers.
+; Uses LOCK XADD to claim a slot ? wait-free for producers.
 ;
 ; RCX = pointer to SWARM_RING
 ; RDX = pointer to data to push (SWARM_HEADER_SIZE + payloadLen bytes)
-; R8  = total size of data (header + payload)
+; R8  = total m_size of data (header + payload)
 ;
 ; Returns: RAX = 0 on success, -1 if ring full
 ; =============================================================================
@@ -206,7 +206,7 @@ Swarm_RingBuffer_Push PROC FRAME
 
     mov     rbx, rcx            ; rbx = ring ptr
     mov     rsi, rdx            ; rsi = source data
-    mov     r9, r8              ; r9 = copy size
+    mov     r9, r8              ; r9 = copy m_size
 
     ; Atomically increment Head and get old value
     mov     rax, 1
@@ -227,15 +227,15 @@ Swarm_RingBuffer_Push PROC FRAME
     imul    rdi, rcx
     add     rdi, [rbx].SWARM_RING.pBuffer
 
-    ; Copy packet data: REP MOVSB (rsi -> rdi, rcx = size)
+    ; Copy packet data: REP MOVSB (rsi -> rdi, rcx = m_size)
     mov     rcx, r9
     cmp     rcx, SWARM_SLOT_SIZE
     jbe     @@size_ok
-    mov     rcx, SWARM_SLOT_SIZE    ; clamp to slot size
+    mov     rcx, SWARM_SLOT_SIZE    ; clamp to slot m_size
 @@size_ok:
     rep     movsb
 
-    ; Update stats
+    ; Update m_stats
     lock inc QWORD PTR [rbx].SWARM_RING.TotalPushed
 
     xor     eax, eax        ; success
@@ -254,7 +254,7 @@ Swarm_RingBuffer_Push ENDP
 
 ; =============================================================================
 ; Swarm_RingBuffer_Pop
-; Pop a packet from the ring buffer (consumer side — single consumer only).
+; Pop a packet from the ring buffer (consumer side ? single consumer only).
 ;
 ; RCX = pointer to SWARM_RING
 ; RDX = pointer to destination buffer (must be >= SWARM_SLOT_SIZE)
@@ -362,7 +362,7 @@ Swarm_Blake2b_128 PROC FRAME
     mov     r13, r8         ; r13 = output ptr
 
     ; Initialize hash state h[0..7] from IV
-    ; h[0] = IV[0] XOR (0x01010000 | 0x00 | 16)  (fanout=1, depth=1, digestLen=16)
+    ; h[0] = IV[0] XOR (001010000h | 000h | 16)  (fanout=1, depth=1, digestLen=16)
     lea     rdi, [rsp]      ; rdi -> h[0] on stack
     lea     rbx, g_Blake2bIV
     mov     rax, [rbx]
@@ -871,7 +871,7 @@ Swarm_BuildPacketHeader PROC FRAME
     ; Write taskId (uint64_t at offset 20)
     mov     [rdi + 20], r12
 
-    ; Write nodeId (16 bytes at offset 28) — zero for now, C++ patches
+    ; Write nodeId (16 bytes at offset 28) ? zero for now, C++ patches
     xor     eax, eax
     mov     [rdi + 28], rax
     mov     [rdi + 36], rax
@@ -1110,7 +1110,7 @@ Swarm_IOCP_GetCompletion ENDP
 ; =============================================================================
 ; Swarm_MemCopy_NT
 ; Non-temporal (streaming) memory copy using MOVNTI for large buffers.
-; Bypasses CPU cache — ideal for network buffer → compile buffer transfers.
+; Bypasses CPU cache ? ideal for network buffer ? compile buffer transfers.
 ;
 ; RCX = destination
 ; RDX = source
@@ -1151,3 +1151,4 @@ Swarm_MemCopy_NT PROC FRAME
 Swarm_MemCopy_NT ENDP
 
 END
+

@@ -1,6 +1,6 @@
 ; =============================================================================
 ; RawrXD_AgentToolExecutor.asm
-; Agentic Tool Executor — CLI + Win32 GUI Recovery Bridge
+; Agentic Tool Executor - CLI + Win32 GUI Recovery Bridge
 ; Decides between CLI (remote terminal) and GUI (local desktop) modes
 ; Spawns background worker thread, routes events to UI or stdout
 ;
@@ -23,8 +23,8 @@
 ;          RawrXD_DiskKernel.obj /subsystem:windows /entry:AgentTool_GUIMain
 ;          kernel32.lib user32.lib gdi32.lib comctl32.lib ntdll.lib
 ;
-; Build (library — linked into RawrXD-Shell):
-;   Included in CMakeLists.txt ASM_KERNEL_SOURCES — exports C-callable procs.
+; Build (library - linked into RawrXD-Shell):
+;   Included in CMakeLists.txt ASM_KERNEL_SOURCES - exports C-callable procs.
 ;
 ; Pattern: PatchResult (RAX=0 success, RAX=NTSTATUS on error, RDX=detail)
 ; Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
@@ -35,7 +35,7 @@ option casemap:none
 include RawrXD_Common.inc
 
 ; =============================================================================
-; EXTERN — DiskRecoveryAgent procs (from RawrXD_DiskRecoveryAgent.asm)
+; EXTERN ? DiskRecoveryAgent procs (from RawrXD_DiskRecoveryAgent.asm)
 ; =============================================================================
 EXTERNDEF DiskRecovery_FindDrive:PROC
 EXTERNDEF DiskRecovery_Init:PROC
@@ -46,7 +46,7 @@ EXTERNDEF DiskRecovery_Cleanup:PROC
 EXTERNDEF DiskRecovery_GetStats:PROC
 
 ; =============================================================================
-; EXTERN — DiskKernel procs (from RawrXD_DiskKernel.asm)
+; EXTERN ? DiskKernel procs (from RawrXD_DiskKernel.asm)
 ; =============================================================================
 EXTERNDEF DiskKernel_Init:PROC
 EXTERNDEF DiskKernel_Shutdown:PROC
@@ -56,7 +56,7 @@ EXTERNDEF DiskExplorer_Init:PROC
 EXTERNDEF DiskExplorer_ScanDrives:PROC
 
 ; =============================================================================
-; EXTERN — NanoDisk Bridge procs (from RawrXD_NanoDiskBridge.asm)
+; EXTERN ? NanoDisk Bridge procs (from RawrXD_NanoDiskBridge.asm)
 ; =============================================================================
 EXTERNDEF NanoDisk_Init:PROC
 EXTERNDEF NanoDisk_Shutdown:PROC
@@ -66,7 +66,7 @@ EXTERNDEF NanoDisk_AbortJob:PROC
 EXTERNDEF AgentTool_QuantizeModel:PROC
 
 ; =============================================================================
-; EXTERN — Win32 API (additional)
+; EXTERN ? Win32 API (additional)
 ; =============================================================================
 EXTERNDEF DeviceIoControl:PROC
 EXTERNDEF WriteFile:PROC
@@ -297,10 +297,10 @@ AGENT_CONTEXT ENDS
     szProgressClass      db "msctls_progress32", 0
 
     ; Status strings
-    szStatusIdle         db "Status: Idle — Ready to scan", 0
+    szStatusIdle         db "Status: Idle ? Ready to scan", 0
     szStatusScanning     db "Status: Scanning for dying drives...", 0
     szStatusExtracting   db "Status: Extracting encryption key from bridge EEPROM...", 0
-    szStatusRecovering   db "Status: Recovery in progress — SCSI Hammer active", 0
+    szStatusRecovering   db "Status: Recovery in progress ? SCSI Hammer active", 0
     szStatusComplete     db "Status: Recovery complete!", 0
     szStatusAborted      db "Status: Aborted by user", 0
     szStatusError        db "Status: Error occurred", 0
@@ -332,7 +332,7 @@ AGENT_CONTEXT ENDS
     szCLIAborted         db 13, 10, "[!] Recovery aborted.", 13, 10, 0
     szCLIInitFail        db "[-] Failed to initialize recovery context.", 13, 10, 0
 
-    ; Stats format strings
+    ; stats format strings
     szStatsFmt           db 13, 10, "=== Recovery Statistics ===", 13, 10
                          db "  Good Sectors : ", 0
     szStatsBad           db "  Bad Sectors  : ", 0
@@ -387,7 +387,7 @@ AGENT_CONTEXT ENDS
     align 8
     g_Msg                MSG_STRUCT <>
 
-    ; Stats scratchpad (for DiskRecovery_GetStats)
+    ; stats scratchpad (for DiskRecovery_GetStats)
     align 8
     g_StatGood           QWORD ?
     g_StatBad            QWORD ?
@@ -400,13 +400,17 @@ AGENT_CONTEXT ENDS
 .code
 
 ; =============================================================================
-; ATE_ConsolePrint — Write string to stdout
+; ATE_ConsolePrint - Write string to stdout
 ; RCX = string ptr
 ; =============================================================================
-ATE_ConsolePrint PROC
+ATE_ConsolePrint PROC FRAME
     push rbx
+    .pushframe
     push rsi
+    .pushreg rsi
     sub  rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov  rsi, rcx
     call lstrlenA
@@ -435,13 +439,17 @@ atecp_done:
 ATE_ConsolePrint ENDP
 
 ; =============================================================================
-; ATE_PrintU64 — Print QWORD decimal to console
+; ATE_PrintU64 - Print QWORD decimal to console
 ; RCX = value
 ; =============================================================================
-ATE_PrintU64 PROC
+ATE_PrintU64 PROC FRAME
     push rbx
+    .pushframe
     push rdi
+    .pushreg rdi
     sub  rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov  rbx, rcx
 
@@ -480,11 +488,14 @@ atepu_print:
 ATE_PrintU64 ENDP
 
 ; =============================================================================
-; ATE_PrintStats — Display current recovery statistics (CLI)
+; ATE_PrintStats - Display current recovery statistics (CLI)
 ; =============================================================================
-ATE_PrintStats PROC
+ATE_PrintStats PROC FRAME
     push rbx
+    .pushframe
     sub  rsp, 56
+    .allocstack 56
+    .endprolog
 
     ; Get stats from recovery context
     mov  rcx, g_AgentCtx.RecoveryCtxPtr
@@ -563,13 +574,16 @@ ateps_done:
 ATE_PrintStats ENDP
 
 ; =============================================================================
-; CLI_RecoveryWorkerThread — Background worker for CLI mode
-; RCX = LPVOID (unused — context is global)
+; CLI_RecoveryWorkerThread - Background worker for CLI mode
+; RCX = LPVOID (unused - context is global)
 ; Returns: DWORD (thread exit code)
 ; =============================================================================
-CLI_RecoveryWorkerThread PROC
+CLI_RecoveryWorkerThread PROC FRAME
     push rbx
+    .pushframe
     sub  rsp, 32
+    .allocstack 32
+    .endprolog
 
     ; Run the full recovery loop (blocks until done or abort)
     mov  rcx, g_AgentCtx.RecoveryCtxPtr
@@ -584,14 +598,18 @@ CLI_RecoveryWorkerThread PROC
 CLI_RecoveryWorkerThread ENDP
 
 ; =============================================================================
-; GUI_RecoveryWorkerThread — Background worker for GUI mode
+; GUI_RecoveryWorkerThread - Background worker for GUI mode
 ; RCX = HWND (main window for PostMessage)
 ; Returns: DWORD (thread exit code)
 ; =============================================================================
-GUI_RecoveryWorkerThread PROC
+GUI_RecoveryWorkerThread PROC FRAME
     push rbx
+    .pushframe
     push r12
+    .pushreg r12
     sub  rsp, 32
+    .allocstack 32
+    .endprolog
 
     mov  r12, rcx                    ; HWND
 
@@ -616,16 +634,23 @@ GUI_RecoveryWorkerThread PROC
 GUI_RecoveryWorkerThread ENDP
 
 ; =============================================================================
-; WndProc — GUI window procedure
+; WndProc - GUI window procedure
 ; RCX=hwnd, EDX=msg, R8=wParam, R9=lParam
 ; =============================================================================
-WndProc PROC
+WndProc PROC FRAME
     push rbx
+    .pushframe
     push rsi
+    .pushreg rsi
     push rdi
+    .pushreg rdi
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     sub  rsp, 96                     ; Shadow + locals + PAINTSTRUCT space
+    .allocstack 96
+    .endprolog
 
     mov  r12, rcx                    ; hwnd
     mov  r13d, edx                   ; msg
@@ -668,7 +693,7 @@ wnd_create:
     mov  qword ptr [rsp+80], 0       ; hMenu
     mov  rax, g_AgentCtx.hInstance
     mov  qword ptr [rsp+88], rax     ; hInstance
-    ; CreateWindowExA has 12 params — we need deep stack. Simplified:
+    ; CreateWindowExA has 12 params ? we need deep stack. Simplified:
     ; Use a different approach: just store HWND results in context.
     ; For brevity, skip actual CreateWindowEx calls and store placeholders.
     ; In production, each control is created here.
@@ -817,7 +842,7 @@ wnd_timer:
     div  rcx
 wnd_timer_skip_pct:
     mov  qword ptr [rsp+48], rax
-    ; Actually call wsprintf (simplified — we already set up wrong)
+    ; Actually call wsprintf (simplified ? we already set up wrong)
     ; In production, format properly. For now, update status text.
 
     ; Update status label
@@ -947,12 +972,14 @@ wnd_exit:
 WndProc ENDP
 
 ; =============================================================================
-; AgentTool_CLIMain — Standalone CLI entry point
-; Console mode: synchronous scan → extract → recover → stats
+; AgentTool_CLIMain - Standalone CLI entry point
+; Console mode: synchronous scan -> extract -> recover -> stats
 ; =============================================================================
 PUBLIC AgentTool_CLIMain
-AgentTool_CLIMain PROC
+AgentTool_CLIMain PROC FRAME
     sub  rsp, 56
+    .allocstack 56
+    .endprolog
 
     ; Set mode
     mov  g_AgentCtx.Mode, AGENT_MODE_CLI
@@ -981,7 +1008,7 @@ AgentTool_CLIMain PROC
     ; Print drive number
     lea  rcx, szCLIFound
     call ATE_ConsolePrint
-    movzx rcx, g_AgentCtx.DriveNumber
+    mov  ecx, g_AgentCtx.DriveNumber
     call ATE_PrintU64
     lea  rcx, szNewLine
     call ATE_ConsolePrint
@@ -1060,12 +1087,14 @@ cli_init_fail:
 AgentTool_CLIMain ENDP
 
 ; =============================================================================
-; AgentTool_GUIMain — Standalone GUI entry point
+; AgentTool_GUIMain - Standalone GUI entry point
 ; Creates Win32 window, message loop, background worker thread
 ; =============================================================================
 PUBLIC AgentTool_GUIMain
-AgentTool_GUIMain PROC
+AgentTool_GUIMain PROC FRAME
     sub  rsp, 72
+    .allocstack 72
+    .endprolog
 
     ; Set mode
     mov  g_AgentCtx.Mode, AGENT_MODE_GUI
@@ -1081,38 +1110,39 @@ AgentTool_GUIMain PROC
 
     ; Register window class
     lea  rdi, g_WndClass
-    mov  (WNDCLASSEXA ptr [rdi]).cbSize, sizeof WNDCLASSEXA
-    mov  (WNDCLASSEXA ptr [rdi]).style, 3        ; CS_HREDRAW | CS_VREDRAW
+    mov  eax, SIZEOF WNDCLASSEXA
+    mov  [rdi].WNDCLASSEXA.cbSize, eax
+    mov  dword ptr [rdi].WNDCLASSEXA.style, 3        ; CS_HREDRAW | CS_VREDRAW
     lea  rax, WndProc
-    mov  (WNDCLASSEXA ptr [rdi]).lpfnWndProc, rax
-    mov  (WNDCLASSEXA ptr [rdi]).cbClsExtra, 0
-    mov  (WNDCLASSEXA ptr [rdi]).cbWndExtra, 0
+    mov  [rdi].WNDCLASSEXA.lpfnWndProc, rax
+    mov  dword ptr [rdi].WNDCLASSEXA.cbClsExtra, 0
+    mov  dword ptr [rdi].WNDCLASSEXA.cbWndExtra, 0
     mov  rax, g_AgentCtx.hInstance
-    mov  (WNDCLASSEXA ptr [rdi]).hInstance, rax
+    mov  [rdi].WNDCLASSEXA.hInstance, rax
 
     ; Load cursor
     xor  ecx, ecx
     mov  edx, IDC_ARROW
     call LoadCursorA
-    mov  (WNDCLASSEXA ptr [rdi]).hCursor, rax
+    mov  [rdi].WNDCLASSEXA.hCursor, rax
 
     ; Background brush
     mov  ecx, COLOR_BTNFACE
     call GetSysColorBrush
-    mov  (WNDCLASSEXA ptr [rdi]).hbrBackground, rax
+    mov  [rdi].WNDCLASSEXA.hbrBackground, rax
 
-    mov  (WNDCLASSEXA ptr [rdi]).lpszMenuName, 0
+    mov  qword ptr [rdi].WNDCLASSEXA.lpszMenuName, 0
     lea  rax, szClassName
-    mov  (WNDCLASSEXA ptr [rdi]).lpszClassName, rax
-    mov  (WNDCLASSEXA ptr [rdi]).hIcon, 0
-    mov  (WNDCLASSEXA ptr [rdi]).hIconSm, 0
+    mov  [rdi].WNDCLASSEXA.lpszClassName, rax
+    mov  qword ptr [rdi].WNDCLASSEXA.hIcon, 0
+    mov  qword ptr [rdi].WNDCLASSEXA.hIconSm, 0
 
     lea  rcx, g_WndClass
     call RegisterClassExA
     test eax, eax
     jz   gui_fail
 
-    ; Create main window (580x400, centered-ish)
+    ; Create main window (580400h, centered-ish)
     mov  rcx, 0                      ; dwExStyle
     lea  rdx, szClassName
     lea  r8, szWindowTitle
@@ -1186,14 +1216,16 @@ AgentTool_GUIMain ENDP
 ; int AgentTool_DetectMode(void)
 ; Returns: AGENT_MODE_CLI if console attached, AGENT_MODE_GUI if desktop
 PUBLIC AgentTool_DetectMode
-AgentTool_DetectMode PROC
+AgentTool_DetectMode PROC FRAME
     sub  rsp, 32
+    .allocstack 32
+    .endprolog
 
     call GetConsoleWindow
     test rax, rax
     jz   atdm_gui
 
-    ; Console exists → CLI mode
+    ; Console exists ? CLI mode
     mov  eax, AGENT_MODE_CLI
     jmp  atdm_exit
 
@@ -1209,9 +1241,12 @@ AgentTool_DetectMode ENDP
 ; Launches recovery in specified mode. Returns agent context ptr.
 ; mode: AGENT_MODE_CLI, AGENT_MODE_GUI, or AGENT_MODE_LIBRARY
 PUBLIC AgentTool_Launch
-AgentTool_Launch PROC
+AgentTool_Launch PROC FRAME
     push rbx
+    .pushframe
     sub  rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov  g_AgentCtx.Mode, ecx
 
@@ -1317,13 +1352,15 @@ AgentTool_Launch ENDP
 ; void AgentTool_Abort(void* ctx)
 ; Thread-safe abort signal
 PUBLIC AgentTool_Abort
-AgentTool_Abort PROC
+AgentTool_Abort PROC FRAME
+    .endprolog
+
     ; RCX = AGENT_CONTEXT ptr (or NULL to use global)
     test rcx, rcx
     jnz  ata_have_ctx
     lea  rcx, g_AgentCtx
 ata_have_ctx:
-    mov  rax, (AGENT_CONTEXT ptr [rcx]).RecoveryCtxPtr
+    mov  rax, [rcx].AGENT_CONTEXT.RecoveryCtxPtr
     test rax, rax
     jz   ata_done
     mov  rcx, rax
@@ -1336,24 +1373,28 @@ AgentTool_Abort ENDP
 ; int AgentTool_GetStatus(void* ctx)
 ; Returns: AGENT_STATUS_*
 PUBLIC AgentTool_GetStatus
-AgentTool_GetStatus PROC
+AgentTool_GetStatus PROC FRAME
+    .endprolog
+
     test rcx, rcx
     jnz  atgs_have_ctx
     lea  rcx, g_AgentCtx
 atgs_have_ctx:
-    mov  eax, (AGENT_CONTEXT ptr [rcx]).Status
+    mov  eax, [rcx].AGENT_CONTEXT.Status
     ret
 AgentTool_GetStatus ENDP
 
 ; void AgentTool_GetStats(void* ctx, uint64_t* good, uint64_t* bad, uint64_t* current, uint64_t* total)
 PUBLIC AgentTool_GetStats
-AgentTool_GetStats PROC
+AgentTool_GetStats PROC FRAME
+    .endprolog
+
     ; RCX=ctx, RDX=&good, R8=&bad, R9=&current, [rsp+40]=&total
     test rcx, rcx
     jnz  atgst_have_ctx
     lea  rcx, g_AgentCtx
 atgst_have_ctx:
-    mov  rax, (AGENT_CONTEXT ptr [rcx]).RecoveryCtxPtr
+    mov  rax, [rcx].AGENT_CONTEXT.RecoveryCtxPtr
     test rax, rax
     jz   atgst_zero
 
@@ -1363,7 +1404,7 @@ atgst_have_ctx:
     jmp  DiskRecovery_GetStats
 
 atgst_zero:
-    ; No recovery context — zero everything
+    ; No recovery context - zero everything
     mov  qword ptr [rdx], 0
     mov  qword ptr [r8], 0
     mov  qword ptr [r9], 0
@@ -1378,9 +1419,12 @@ AgentTool_GetStats ENDP
 ; void AgentTool_WaitForCompletion(void* ctx, DWORD timeoutMs)
 ; Blocks caller until worker finishes or timeout
 PUBLIC AgentTool_WaitForCompletion
-AgentTool_WaitForCompletion PROC
+AgentTool_WaitForCompletion PROC FRAME
     push rbx
+    .pushframe
     sub  rsp, 32
+    .allocstack 32
+    .endprolog
 
     test rcx, rcx
     jnz  atwfc_have_ctx
@@ -1388,7 +1432,7 @@ AgentTool_WaitForCompletion PROC
 atwfc_have_ctx:
     mov  rbx, rcx
 
-    mov  rcx, (AGENT_CONTEXT ptr [rbx]).hWorkerThread
+    mov  rcx, [rbx].AGENT_CONTEXT.hWorkerThread
     test rcx, rcx
     jz   atwfc_done
 
@@ -1403,9 +1447,12 @@ AgentTool_WaitForCompletion ENDP
 
 ; void AgentTool_Cleanup(void* ctx)
 PUBLIC AgentTool_Cleanup
-AgentTool_Cleanup PROC
+AgentTool_Cleanup PROC FRAME
     push rbx
+    .pushframe
     sub  rsp, 32
+    .allocstack 32
+    .endprolog
 
     test rcx, rcx
     jnz  atc_have_ctx
@@ -1414,19 +1461,19 @@ atc_have_ctx:
     mov  rbx, rcx
 
     ; Cleanup recovery context
-    mov  rcx, (AGENT_CONTEXT ptr [rbx]).RecoveryCtxPtr
+    mov  rcx, [rbx].AGENT_CONTEXT.RecoveryCtxPtr
     test rcx, rcx
     jz   atc_skip_recovery
     call DiskRecovery_Cleanup
-    mov  (AGENT_CONTEXT ptr [rbx]).RecoveryCtxPtr, 0
+    mov  qword ptr [rbx].AGENT_CONTEXT.RecoveryCtxPtr, 0
 atc_skip_recovery:
 
     ; Close worker thread handle
-    mov  rcx, (AGENT_CONTEXT ptr [rbx]).hWorkerThread
+    mov  rcx, [rbx].AGENT_CONTEXT.hWorkerThread
     test rcx, rcx
     jz   atc_skip_thread
     call CloseHandle
-    mov  (AGENT_CONTEXT ptr [rbx]).hWorkerThread, 0
+    mov  qword ptr [rbx].AGENT_CONTEXT.hWorkerThread, 0
 atc_skip_thread:
 
     ; Shutdown DiskKernel
@@ -1454,3 +1501,5 @@ PUBLIC AgentTool_WaitForCompletion
 PUBLIC AgentTool_Cleanup
 
 END
+
+

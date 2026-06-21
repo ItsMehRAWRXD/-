@@ -1,16 +1,16 @@
 ; =============================================================================
-; RawrXD_Debug_Engine.asm — Phase 12: Native Debugger Low-Level Kernel
+; RawrXD_Debug_Engine.asm ? Phase 12: Native Debugger Low-Level Kernel
 ; =============================================================================
 ; Pure x64 MASM zero-dependency debug primitives for the Native Debugger.
 ;
 ; Responsibilities:
 ;   1. INT3 software breakpoint injection and restoration
-;   2. Hardware breakpoint (DR0–DR3) set/clear via thread context
+;   2. Hardware breakpoint (DR0?DR3) set/clear via thread context
 ;   3. Single-step enable/disable (RFLAGS Trap Flag manipulation)
 ;   4. Thread context capture (full GPR + segment + debug registers)
 ;   5. Stack walking via RBP chain traversal
 ;   6. Remote process memory read/write (ReadProcessMemory/WriteProcessMemory)
-;   7. Boyer–Moore inspired pattern scan in remote process memory
+;   7. Boyer?Moore inspired pattern scan in remote process memory
 ;   8. CRC-32 checksum of remote memory regions
 ;   9. RDTSC high-precision timestamp counter
 ;
@@ -136,7 +136,7 @@ DR7_COND_WRITE              EQU     1       ; Break on data write
 DR7_COND_IO                 EQU     2       ; Break on I/O (rarely used)
 DR7_COND_RW                 EQU     3       ; Break on data read/write
 
-; DR7 size encoding (bits 18-19, 22-23, 26-27, 30-31 for DR0-DR3)
+; DR7 m_size encoding (bits 18-19, 22-23, 26-27, 30-31 for DR0-DR3)
 DR7_SIZE_1                  EQU     0       ; 1 byte
 DR7_SIZE_2                  EQU     1       ; 2 bytes (WORD)
 DR7_SIZE_8                  EQU     2       ; 8 bytes (QWORD)
@@ -164,7 +164,7 @@ CRC32_POLY                  EQU     0EDB88320h
 
 .data
 
-; CRC-32 lookup table (256 entries × 4 bytes = 1024 bytes)
+; CRC-32 lookup table (256 entries ? 4 bytes = 1024 bytes)
 ALIGN 16
 crc32_table DD 000000000h, 077073096h, 0EE0E612Ch, 0990951BAh
             DD 0076DC419h, 0706AF48Fh, 0E963A535h, 09E6495A3h
@@ -230,7 +230,7 @@ dbg_err_rpm     DB "ReadProcessMemory failed", 0
 dbg_err_wpm     DB "WriteProcessMemory failed", 0
 dbg_err_vpe     DB "VirtualProtectEx failed", 0
 dbg_err_slot    DB "Invalid HW breakpoint slot", 0
-dbg_err_size    DB "Invalid buffer size", 0
+dbg_err_size    DB "Invalid buffer m_size", 0
 dbg_err_scan    DB "Pattern not found", 0
 
 ; =============================================================================
@@ -240,10 +240,10 @@ dbg_err_scan    DB "Pattern not found", 0
 .code
 
 ; =============================================================================
-; Dbg_InjectINT3 — Inject INT3 (0xCC) at a target address
+; Dbg_InjectINT3 ? Inject INT3 (0CCh) at a target address
 ; =============================================================================
 ; IN:  RCX = targetAddress (ULONG64)
-;      RDX = outOriginalByte (BYTE* — receives the byte replaced)
+;      RDX = outOriginalByte (BYTE* ? receives the byte replaced)
 ; OUT: EAX = 0 on success, nonzero on failure
 ; =============================================================================
 ALIGN 16
@@ -349,7 +349,7 @@ Dbg_InjectINT3 PROC FRAME
 Dbg_InjectINT3 ENDP
 
 ; =============================================================================
-; Dbg_RestoreINT3 — Restore original byte at address (remove INT3)
+; Dbg_RestoreINT3 ? Restore original byte at address (remove INT3)
 ; =============================================================================
 ; IN:  RCX = targetAddress (ULONG64)
 ;      DL  = originalByte (BYTE to restore)
@@ -431,10 +431,10 @@ Dbg_RestoreINT3 PROC FRAME
 Dbg_RestoreINT3 ENDP
 
 ; =============================================================================
-; Dbg_SetHardwareBreakpoint — Set a hardware breakpoint via DR0–DR3
+; Dbg_SetHardwareBreakpoint ? Set a hardware breakpoint via DR0?DR3
 ; =============================================================================
 ; IN:  RCX = threadHandle (HANDLE)
-;      EDX = slotIndex (0–3)
+;      EDX = slotIndex (0?3)
 ;      R8  = breakpoint address
 ;      R9D = condition (0=exec, 1=write, 3=rw)
 ;      [rsp+28h] = sizeBytes (1,2,4,8)
@@ -467,7 +467,7 @@ Dbg_SetHardwareBreakpoint PROC FRAME
     cmp     r13d, 3
     ja      @@hwbp_bad_slot
 
-    ; Get size parameter from stack (5th param at [rbp + 68h] adjusted for pushes)
+    ; Get m_size parameter from stack (5th param at [rbp + 68h] adjusted for pushes)
     ; After 7 pushes (SAVE_NONVOL) + push rbp = 8 pushes = 64 bytes
     ; Original RSP + 8 (return addr) + 20h (shadow) + 0 = 5th param at [original_rsp + 28h]
     ; With our frame: [rbp + 8 + 64 + 28h] = [rbp + 70h]
@@ -522,11 +522,11 @@ Dbg_SetHardwareBreakpoint PROC FRAME
 
 @@hwbp_set_dr7:
     ; Configure DR7
-    ; Each DR slot uses 2 bits for local/global enable + 4 bits for condition/size
+    ; Each DR slot uses 2 bits for local/global enable + 4 bits for condition/m_size
     ; Slot n:
     ;   Enable bits: bit (2*n) = local enable, bit (2*n+1) = global enable
     ;   Condition: bits (16 + 4*n) and (17 + 4*n)
-    ;   Size:      bits (18 + 4*n) and (19 + 4*n)
+    ;   m_size:      bits (18 + 4*n) and (19 + 4*n)
 
     mov     rax, QWORD PTR [rdi + CTX_Dr7]
 
@@ -542,7 +542,7 @@ Dbg_SetHardwareBreakpoint PROC FRAME
     shl     ecx, 2                  ; ecx = 4 * slot
     add     ecx, 16                 ; ecx = 16 + 4*slot
 
-    ; Clear condition + size bits (4 bits)
+    ; Clear condition + m_size bits (4 bits)
     mov     edx, 0Fh
     shl     edx, cl
     not     edx
@@ -554,9 +554,9 @@ Dbg_SetHardwareBreakpoint PROC FRAME
     shl     edx, cl
     or      eax, edx
 
-    ; Set size (2 bits at offset +2)
+    ; Set m_size (2 bits at offset +2)
     add     ecx, 2
-    ; Encode size: 1→0, 2→1, 4→3, 8→2
+    ; Encode m_size: 1?0, 2?1, 4?3, 8?2
     xor     edx, edx
     cmp     ebx, 1
     je      @@hwbp_size_done
@@ -613,10 +613,10 @@ Dbg_SetHardwareBreakpoint PROC FRAME
 Dbg_SetHardwareBreakpoint ENDP
 
 ; =============================================================================
-; Dbg_ClearHardwareBreakpoint — Clear a hardware breakpoint slot
+; Dbg_ClearHardwareBreakpoint ? Clear a hardware breakpoint slot
 ; =============================================================================
 ; IN:  RCX = threadHandle
-;      EDX = slotIndex (0–3)
+;      EDX = slotIndex (0?3)
 ; OUT: EAX = 0 on success
 ; =============================================================================
 ALIGN 16
@@ -685,7 +685,7 @@ Dbg_ClearHardwareBreakpoint PROC FRAME
     mov     QWORD PTR [rdi + CTX_Dr3], 0
 
 @@clr_update_dr7:
-    ; Clear enable bits + condition/size for this slot in DR7
+    ; Clear enable bits + condition/m_size for this slot in DR7
     mov     rax, QWORD PTR [rdi + CTX_Dr7]
 
     ; Clear local + global enable (bits 2*n, 2*n+1)
@@ -696,7 +696,7 @@ Dbg_ClearHardwareBreakpoint PROC FRAME
     not     edx
     and     eax, edx
 
-    ; Clear condition + size (bits 16+4*n through 19+4*n)
+    ; Clear condition + m_size (bits 16+4*n through 19+4*n)
     mov     ecx, r13d
     shl     ecx, 2
     add     ecx, 16
@@ -742,7 +742,7 @@ Dbg_ClearHardwareBreakpoint PROC FRAME
 Dbg_ClearHardwareBreakpoint ENDP
 
 ; =============================================================================
-; Dbg_EnableSingleStep — Set Trap Flag (TF) in thread's RFLAGS
+; Dbg_EnableSingleStep ? Set Trap Flag (TF) in thread's RFLAGS
 ; =============================================================================
 ; IN:  RCX = threadHandle
 ; OUT: EAX = 0 on success
@@ -820,7 +820,7 @@ Dbg_EnableSingleStep PROC FRAME
 Dbg_EnableSingleStep ENDP
 
 ; =============================================================================
-; Dbg_DisableSingleStep — Clear Trap Flag (TF) in thread's RFLAGS
+; Dbg_DisableSingleStep ? Clear Trap Flag (TF) in thread's RFLAGS
 ; =============================================================================
 ; IN:  RCX = threadHandle
 ; OUT: EAX = 0 on success
@@ -894,10 +894,10 @@ Dbg_DisableSingleStep PROC FRAME
 Dbg_DisableSingleStep ENDP
 
 ; =============================================================================
-; Dbg_CaptureContext — Get full thread context (GPR + debug registers)
+; Dbg_CaptureContext ? Get full thread context (GPR + debug registers)
 ; =============================================================================
 ; IN:  RCX = threadHandle
-;      RDX = outContextBuffer (void* — must be >= CONTEXT_STRUCT_SIZE bytes)
+;      RDX = outContextBuffer (void* ? must be >= CONTEXT_STRUCT_SIZE bytes)
 ;      R8D = bufferSize
 ; OUT: EAX = 0 on success
 ; =============================================================================
@@ -923,7 +923,7 @@ Dbg_CaptureContext PROC FRAME
     mov     r13, rdx                ; outBuffer
     mov     r14d, r8d               ; bufferSize
 
-    ; Validate buffer size
+    ; Validate buffer m_size
     cmp     r14d, CONTEXT_STRUCT_SIZE
     jb      @@cap_bad_size
 
@@ -976,7 +976,7 @@ Dbg_CaptureContext PROC FRAME
 Dbg_CaptureContext ENDP
 
 ; =============================================================================
-; Dbg_SetRegister — Set a single GPR by index in thread context
+; Dbg_SetRegister ? Set a single GPR by index in thread context
 ; =============================================================================
 ; IN:  RCX = threadHandle
 ;      EDX = registerIndex (0=rax, 1=rcx, 2=rdx, ... 16=rip, 17=rflags)
@@ -1119,7 +1119,7 @@ ALIGN 4
 Dbg_SetRegister ENDP
 
 ; =============================================================================
-; Dbg_WalkStack — Walk the call stack via RBP chain in remote process
+; Dbg_WalkStack ? Walk the call stack via RBP chain in remote process
 ; =============================================================================
 ; IN:  RCX = processHandle
 ;      RDX = threadHandle (for initial RBP/RIP from context)
@@ -1208,7 +1208,7 @@ Dbg_WalkStack PROC FRAME
     mov     rdi, QWORD PTR [rbp - 500h]
 
     ; Sanity check: RBP should be increasing (stack grows down)
-    ; If new RBP < old, we likely hit corruption — stop
+    ; If new RBP < old, we likely hit corruption ? stop
     cmp     rdi, QWORD PTR [rbp - 500h]
     jmp     @@walk_loop
 
@@ -1233,12 +1233,12 @@ Dbg_WalkStack PROC FRAME
 Dbg_WalkStack ENDP
 
 ; =============================================================================
-; Dbg_ReadMemory — Read memory from a target process
+; Dbg_ReadMemory ? Read memory from a target process
 ; =============================================================================
 ; IN:  RCX = processHandle
 ;      RDX = sourceAddress
 ;      R8  = outBuffer
-;      R9  = size (uint64_t)
+;      R9  = m_size (uint64_t)
 ;      [rsp+28h] = outBytesRead (uint64_t*)
 ; OUT: EAX = 0 on success
 ; =============================================================================
@@ -1253,7 +1253,7 @@ Dbg_ReadMemory PROC FRAME
     .ENDPROLOG
 
     ; ReadProcessMemory(hProcess, lpBaseAddress, lpBuffer, nSize, *lpNumberOfBytesRead)
-    ; RCX=processHandle, RDX=sourceAddress, R8=outBuffer, R9=size
+    ; RCX=processHandle, RDX=sourceAddress, R8=outBuffer, R9=m_size
     ; 5th param from caller at [rbp + 30h]  (adjusted for push rbp)
     mov     rax, QWORD PTR [rbp + 30h]
     mov     QWORD PTR [rsp + 20h], rax
@@ -1275,12 +1275,12 @@ Dbg_ReadMemory PROC FRAME
 Dbg_ReadMemory ENDP
 
 ; =============================================================================
-; Dbg_WriteMemory — Write memory to a target process
+; Dbg_WriteMemory ? Write memory to a target process
 ; =============================================================================
 ; IN:  RCX = processHandle
 ;      RDX = destAddress
 ;      R8  = buffer (const void*)
-;      R9  = size (uint64_t)
+;      R9  = m_size (uint64_t)
 ;      [rsp+28h] = outBytesWritten (uint64_t*)
 ; OUT: EAX = 0 on success
 ; =============================================================================
@@ -1301,17 +1301,17 @@ Dbg_WriteMemory PROC FRAME
     lea     r9, [rbp - 10h]         ; lpflOldProtect
     mov     rcx, r10
     mov     rdx, r11
-    ; r8 is already size — but we need it for VirtualProtectEx(proc, addr, size, newprot, &old)
-    ; Reorder: VirtualProtectEx expects (proc, addr, size, newProt, &oldProt)
-    push    r8                      ; save size
+    ; r8 is already m_size ? but we need it for VirtualProtectEx(proc, addr, m_size, newprot, &old)
+    ; Reorder: VirtualProtectEx expects (proc, addr, m_size, newProt, &oldProt)
+    push    r8                      ; save m_size
     push    r9                      ; save &oldProt addr
     mov     rcx, r10                ; hProcess
     mov     rdx, r11                ; lpAddress
     pop     r9                      ; &oldProt => r9 (5th param position swap)
-    pop     r8                      ; size
+    pop     r8                      ; m_size
     mov     DWORD PTR [rsp + 20h], PAGE_EXECUTE_READWRITE
     ; Actually VirtualProtectEx is (hProcess, lpAddress, dwSize, flNewProtect, lpflOldProtect)
-    ; So: rcx=proc, rdx=addr, r8=size, r9d=newprot, [rsp+20h]=&oldprot
+    ; So: rcx=proc, rdx=addr, r8=m_size, r9d=newprot, [rsp+20h]=&oldprot
     ; Need to swap r9 and [rsp+20h]
     mov     rax, r9
     mov     r9d, PAGE_EXECUTE_READWRITE
@@ -1323,10 +1323,10 @@ Dbg_WriteMemory PROC FRAME
     ; WriteProcessMemory
     mov     rcx, r10
     mov     rdx, r11
-    ; Reload original r8 (buffer) and r9 (size) from caller's original values
-    ; They're still in our caller's area — reconstruct from rbp
+    ; Reload original r8 (buffer) and r9 (m_size) from caller's original values
+    ; They're still in our caller's area ? reconstruct from rbp
     mov     r8, QWORD PTR [rbp + 20h]   ; 3rd param (buffer)
-    mov     r9, QWORD PTR [rbp + 28h]   ; 4th param (size)
+    mov     r9, QWORD PTR [rbp + 28h]   ; 4th param (m_size)
     mov     rax, QWORD PTR [rbp + 30h]  ; outBytesWritten
     mov     QWORD PTR [rsp + 20h], rax
     call    WriteProcessMemory
@@ -1338,7 +1338,7 @@ Dbg_WriteMemory PROC FRAME
     push    rcx
     mov     rcx, r10
     mov     rdx, r11
-    mov     r8, QWORD PTR [rbp + 28h]   ; size
+    mov     r8, QWORD PTR [rbp + 28h]   ; m_size
     pop     r9                           ; old protect value... 
     ; Reorder for VirtualProtectEx
     mov     DWORD PTR [rsp + 28h], r9d   ; Wait, this is getting complex
@@ -1376,7 +1376,7 @@ Dbg_WriteMemory PROC FRAME
 Dbg_WriteMemory ENDP
 
 ; =============================================================================
-; Dbg_MemoryScan — Scan remote process memory for a byte pattern
+; Dbg_MemoryScan ? Scan remote process memory for a byte pattern
 ; =============================================================================
 ; IN:  RCX = processHandle
 ;      RDX = startAddress
@@ -1420,19 +1420,19 @@ Dbg_MemoryScan PROC FRAME
     jz      @@scan_notfound
 
 @@scan_chunk_loop:
-    ; Determine read size: min(remaining, SCAN_CHUNK_SIZE)
+    ; Determine read m_size: min(remaining, SCAN_CHUNK_SIZE)
     mov     rcx, r14
     cmp     rcx, SCAN_CHUNK_SIZE
     jbe     @@scan_size_ok
     mov     rcx, SCAN_CHUNK_SIZE
 @@scan_size_ok:
-    mov     rdi, rcx                ; rdi = this chunk size
+    mov     rdi, rcx                ; rdi = this chunk m_size
 
     ; Read chunk from remote process
     lea     r8, [rbp - 10000h]      ; local buffer (64KB)
     mov     rcx, r12                ; processHandle
     mov     rdx, r13                ; address
-    mov     r9, rdi                  ; size
+    mov     r9, rdi                  ; m_size
     lea     rax, [rbp - 10070h]     ; bytesRead
     mov     QWORD PTR [rsp + 20h], rax
     call    ReadProcessMemory
@@ -1506,11 +1506,11 @@ Dbg_MemoryScan PROC FRAME
 Dbg_MemoryScan ENDP
 
 ; =============================================================================
-; Dbg_MemoryCRC32 — Compute CRC-32 of remote process memory
+; Dbg_MemoryCRC32 ? Compute CRC-32 of remote process memory
 ; =============================================================================
 ; IN:  RCX = processHandle
 ;      RDX = address
-;      R8  = size
+;      R8  = m_size
 ;      R9  = outCRC (uint32_t*)
 ; OUT: EAX = 0 on success
 ; =============================================================================
@@ -1534,7 +1534,7 @@ Dbg_MemoryCRC32 PROC FRAME
 
     mov     r12, rcx                ; processHandle
     mov     r13, rdx                ; address
-    mov     r14, r8                  ; remaining size
+    mov     r14, r8                  ; remaining m_size
     mov     r15, r9                  ; outCRC pointer
 
     ; Initialize CRC
@@ -1550,7 +1550,7 @@ Dbg_MemoryCRC32 PROC FRAME
     jbe     @@crc_sz_ok
     mov     rcx, SCAN_CHUNK_SIZE
 @@crc_sz_ok:
-    mov     rbx, rcx                ; this chunk size
+    mov     rbx, rcx                ; this chunk m_size
 
     lea     r8, [rbp - 10000h]
     mov     rcx, r12
@@ -1575,7 +1575,7 @@ Dbg_MemoryCRC32 PROC FRAME
     jz      @@crc_next_chunk
 
     movzx   eax, BYTE PTR [rsi]
-    xor     al, dil                 ; (CRC ^ byte) & 0xFF
+    xor     al, dil                 ; (CRC ^ byte) & 0FFh
     movzx   eax, al
     mov     eax, DWORD PTR [rdx + rax * 4]  ; table[index]
     shr     edi, 8                  ; CRC >> 8
@@ -1608,7 +1608,7 @@ Dbg_MemoryCRC32 PROC FRAME
 Dbg_MemoryCRC32 ENDP
 
 ; =============================================================================
-; Dbg_RDTSC — Read Time Stamp Counter (cycle-accurate timing)
+; Dbg_RDTSC ? Read Time Stamp Counter (cycle-accurate timing)
 ; =============================================================================
 ; IN:  (none)
 ; OUT: RAX = 64-bit TSC value (edx:eax combined)
@@ -1626,3 +1626,4 @@ Dbg_RDTSC ENDP
 ; =============================================================================
 
 END
+

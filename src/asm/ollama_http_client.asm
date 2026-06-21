@@ -1,5 +1,5 @@
 ; ============================================================================
-; RawrXD Ollama HTTP Client — Pure x64 MASM Implementation
+; RawrXD Ollama HTTP Client ? Pure x64 MASM Implementation
 ; ============================================================================
 ; Direct Winsock2 HTTP client (no WinHttp abstraction layer)
 ; Zero-copy streaming parser optimized for NDJSON token response stream
@@ -54,7 +54,7 @@ extern WSAGetLastError:proc
 ; HTTP request templates
 http_post_header db "POST /api/generate HTTP/1.1", 0Dh, 0Ah
                  db "Host: 127.0.0.1:11434", 0Dh, 0Ah
-                 db "Content-Type: application/json", 0Dh, 0Ah
+                 db "Content-m_type: application/json", 0Dh, 0Ah
                  db "Connection: keep-alive", 0Dh, 0Ah
                  db "Content-Length: "
 http_post_header_len = $ - http_post_header
@@ -190,12 +190,12 @@ OllamaHttpClient_Connect PROC
 
     mov word ptr [rsp + 20h], AF_INET
 
-    ; Convert port to network byte order (11434 = 0x2C7A)
+    ; Convert port to network byte order (11434 = 02C7Ah)
     mov ecx, HTTP_PORT
     call htons
     mov word ptr [rsp + 22h], ax
 
-    ; 127.0.0.1 = 0x7F000001 in network byte order
+    ; 127.0.0.1 = 07F000001h in network byte order
     mov dword ptr [rsp + 24h], 0100007Fh
     xor eax, eax
     mov qword ptr [rsp + 28h], 0
@@ -595,3 +595,4 @@ OllamaHttpClient_ReturnPooledConnection PROC
 OllamaHttpClient_ReturnPooledConnection ENDP
 
 end
+

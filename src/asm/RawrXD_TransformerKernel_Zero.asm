@@ -17,87 +17,87 @@ OPTION EPILOGUE:NONE
 ; =============================================================================
 
 ; --- Matrix Multiplication Kernels ---
-PUBLIC MatMul_Q4_0_AVX512          ; Q4_0 dequant + matmul
-PUBLIC MatMul_Q4_K_M_AVX512        ; Q4_K_M (super-blocks) dequant + matmul
-PUBLIC MatMul_Q5_0_AVX512          ; Q5_0 dequant + matmul
-PUBLIC MatMul_Q8_0_AVX512          ; Q8_0 dequant + matmul
-PUBLIC MatMul_F16_AVX512           ; F16->F32 conversion + matmul
-PUBLIC MatMul_F32_AVX512           ; Pure F32 matmul
-PUBLIC VecDot_Q4_0_Q8_0            ; Q4_0 dot Q8_0 (inference hot path)
-PUBLIC VecDot_Q4_K_Q8_K            ; Q4_K dot Q8_K
+; PUBLIC MatMul_Q4_0_AVX512 - TODO: implement          ; Q4_0 dequant + matmul
+; PUBLIC MatMul_Q4_K_M_AVX512 - TODO: implement        ; Q4_K_M (super-blocks) dequant + matmul
+; PUBLIC MatMul_Q5_0_AVX512 - TODO: implement          ; Q5_0 dequant + matmul
+; PUBLIC MatMul_Q8_0_AVX512 - TODO: implement          ; Q8_0 dequant + matmul
+; PUBLIC MatMul_F16_AVX512 - TODO: implement           ; F16->F32 conversion + matmul
+; PUBLIC MatMul_F32_AVX512 - TODO: implement           ; Pure F32 matmul
+; PUBLIC VecDot_Q4_0_Q8_0 - TODO: implement            ; Q4_0 dot Q8_0 (inference hot path)
+; PUBLIC VecDot_Q4_K_Q8_K - TODO: implement            ; Q4_K dot Q8_K
 
 ; --- Dequantization Kernels ---
-PUBLIC Dequant_Q4_0_Block          ; 32 weights -> 32 floats
-PUBLIC Dequant_Q4_K_M_Block        ; 256 weights -> 256 floats
-PUBLIC Dequant_Q5_0_Block          ; 32 weights -> 32 floats
-PUBLIC Dequant_Q8_0_Block          ; 32 weights -> 32 floats
-PUBLIC Dequant_F16_Block           ; 16 halfs -> 16 floats
+; PUBLIC Dequant_Q4_0_Block          ; 32 weights -> 32 floats
+; PUBLIC Dequant_Q4_K_M_Block        ; 256 weights -> 256 floats
+; PUBLIC Dequant_Q5_0_Block - TODO: implement          ; 32 weights -> 32 floats
+; PUBLIC Dequant_Q8_0_Block - TODO: implement          ; 32 weights -> 32 floats
+; PUBLIC Dequant_F16_Block           ; 16 halfs -> 16 floats
 
 ; --- Transformer Ops (GGUF Graph Interpreter) ---
-PUBLIC Op_RMSNorm                  ; Root Mean Square Normalization
-PUBLIC Op_LayerNorm                ; Layer Normalization (mean + var)
-PUBLIC Op_RoPE                     ; Rotary Position Embedding
-PUBLIC Op_RoPE_Neox                ; RoPE (GPT-NeoX variant)
-PUBLIC Op_SwiGLU                   ; SwiGLU Activation
-PUBLIC Op_GELU                     ; GELU Activation
-PUBLIC Op_SiLU                     ; SiLU (Swish) Activation
-PUBLIC Op_Softmax                  ; Numerically stable Softmax
-PUBLIC Op_Softmax_Causal           ; Causal masked Softmax
-PUBLIC Op_Add                      ; Element-wise add
-PUBLIC Op_Mul                      ; Element-wise multiply
-PUBLIC Op_Scale                    ; Scale by scalar
-PUBLIC Op_Concat                   ; Tensor concatenation
-PUBLIC Op_Reshape                  ; Reshape (no-copy view)
-PUBLIC Op_Transpose                ; NCHW <-> NHWC transpose
-PUBLIC Op_View                     ; Create tensor view
-PUBLIC Op_Permute                  ; Dimension permutation
-PUBLIC Op_Cont                     ; Make contiguous
-PUBLIC Op_Repeat                   ; Repeat tensor
-PUBLIC Op_GetRows                  ; Token embedding lookup
-PUBLIC Op_Diag_Mask_Inf            ; Causal attention mask
-PUBLIC Op_Rope_Custom              ; Custom RoPE frequencies
+; PUBLIC Op_RMSNorm - TODO: implement                  ; Root Mean Square Normalization
+; PUBLIC Op_LayerNorm - TODO: implement                ; Layer Normalization (mean + var)
+; PUBLIC Op_RoPE                     ; Rotary Position Embedding
+; PUBLIC Op_RoPE_Neox                ; RoPE (GPT-NeoX variant)
+; PUBLIC Op_SwiGLU - TODO: implement                   ; SwiGLU Activation
+; PUBLIC Op_GELU - TODO: implement                     ; GELU Activation
+; PUBLIC Op_SiLU - TODO: implement                     ; SiLU (Swish) Activation
+; PUBLIC Op_SoftMax - TODO: implement                  ; Numerically stable Softmax
+; PUBLIC Op_SoftMax - TODO: implement_Causal           ; Causal masked Softmax
+; PUBLIC Op_Add                      ; Element-wise add
+; PUBLIC Op_Mul                      ; Element-wise multiply
+; PUBLIC Op_Scale                    ; Scale by scalar
+; PUBLIC Op_Concat                   ; Tensor concatenation
+; PUBLIC Op_Reshape                  ; Reshape (no-copy view)
+; PUBLIC Op_Transpose                ; NCHW <-> NHWC transpose
+; PUBLIC Op_View                     ; Create tensor view
+; PUBLIC Op_Permute                  ; Dimension permutation
+; PUBLIC Op_Cont                     ; Make contiguous
+; PUBLIC Op_Repeat                   ; Repeat tensor
+; PUBLIC Op_GetRows                  ; Token embedding lookup
+; PUBLIC Op_Diag_Mask_Inf            ; Causal attention mask
+; PUBLIC Op_Rope_Custom              ; Custom RoPE frequencies
 
 ; --- Attention Kernels ---
-PUBLIC Attention_QKV_Project       ; Q, K, V projection
-PUBLIC Attention_Scores            ; Q * K^T / sqrt(d)
-PUBLIC Attention_Softmax           ; Masked softmax
-PUBLIC Attention_Output            ; Scores * V
-PUBLIC Attention_GQA               ; Grouped Query Attention
-PUBLIC Attention_MQA               ; Multi-Query Attention
-PUBLIC Attention_Flash_V2          ; FlashAttention-2 (memory efficient)
+; PUBLIC Attention_QKV_Project       ; Q, K, V projection
+; PUBLIC Attention_Scores            ; Q * K^T / sqrt(d)
+; PUBLIC Attention_Softmax           ; Masked softmax
+; PUBLIC Attention_Output            ; Scores * V
+; PUBLIC Attention_GQA               ; Grouped Query Attention
+; PUBLIC Attention_MQA               ; Multi-Query Attention
+; PUBLIC Attention_Flash_V2          ; FlashAttention-2 (memory efficient)
 
 ; --- KV Cache Management ---
-PUBLIC KVCache_Init                ; Allocate rolling buffer
-PUBLIC KVCache_Append              ; Append new K/V
-PUBLIC KVCache_Get                 ; Get K/V for positions
-PUBLIC KVCache_Roll                ; Roll buffer (sliding window)
-PUBLIC KVCache_Clear               ; Reset cache
-PUBLIC KVCache_DefragSeq           ; Defragment sequence
+; PUBLIC KVCache_Init                ; Allocate rolling buffer
+; PUBLIC KVCache_Append              ; Append new K/V
+; PUBLIC KVCache_Get                 ; Get K/V for positions
+; PUBLIC KVCache_Roll                ; Roll buffer (sliding window)
+; PUBLIC KVCache_Clear               ; Reset cache
+; PUBLIC KVCache_DefragSeq           ; Defragment sequence
 
 ; --- Tokenizer (BPE) ---
-PUBLIC Tokenizer_Init              ; Load vocab + merges
-PUBLIC Tokenizer_Encode            ; UTF-8 string -> tokens
-PUBLIC Tokenizer_Decode            ; Tokens -> UTF-8 string
-PUBLIC Tokenizer_EncodeSpecial     ; Encode with special tokens
-PUBLIC BPE_MergePass               ; Single BPE merge iteration
+; PUBLIC Tokenizer_Init              ; Load vocab + merges
+; PUBLIC Tokenizer_Encode            ; UTF-8 string -> tokens
+; PUBLIC Tokenizer_Decode            ; Tokens -> UTF-8 string
+; PUBLIC Tokenizer_EncodeSpecial     ; Encode with special tokens
+; PUBLIC BPE_MergePass               ; Single BPE merge iteration
 
 ; --- Data Tables ---
-PUBLIC q4_lookup_table             ; Q4 -> F32 lookup (16 entries)
-PUBLIC gelu_coeff                  ; GELU polynomial coefficients
-PUBLIC rope_sin_cache              ; Sin cache for RoPE
-PUBLIC rope_cos_cache              ; Cos cache for RoPE
+; PUBLIC q4_lookup_table             ; Q4 -> F32 lookup (16 entries)
+; PUBLIC gelu_coeff                  ; GELU polynomial coefficients
+; PUBLIC rope_sin_cache              ; Sin cache for RoPE
+; PUBLIC rope_cos_cache              ; Cos cache for RoPE
 
 ; =============================================================================
 ; CONSTANTS
 ; =============================================================================
 
 ; Quantization block sizes
-QK4_0                   EQU 32      ; Q4_0 block size (32 weights)
-QK4_1                   EQU 32      ; Q4_1 block size
-QK5_0                   EQU 32      ; Q5_0 block size
-QK5_1                   EQU 32      ; Q5_1 block size
-QK8_0                   EQU 32      ; Q8_0 block size
-QK_K                    EQU 256     ; K-quants super-block size
+QK4_0                   EQU 32      ; Q4_0 block blockSize (32 weights)
+QK4_1                   EQU 32      ; Q4_1 block blockSize
+QK5_0                   EQU 32      ; Q5_0 block blockSize
+QK5_1                   EQU 32      ; Q5_1 block blockSize
+QK8_0                   EQU 32      ; Q8_0 block blockSize
+QK_K                    EQU 256     ; K-quants super-block blockSize
 
 ; Q4_K_M block layout
 Q4_K_SCALES_SIZE        EQU 12      ; 6 scale bytes + 6 min bytes
@@ -217,24 +217,24 @@ Dequant_Q4_0_Block PROC
     vbroadcastss zmm0, xmm0         ; Broadcast to all lanes
 
     ; Load 16 bytes of quants (32 x 4-bit values)
-    vmovdqu xmm1, [rcx + 2]
+    vmovdqu xmm1, xmmword ptr [rcx + 2]
 
     ; Unpack low nibbles (first 16 weights)
-    vpand   xmm2, xmm1, [rel nibble_mask_lo]
-    vpsubb  xmm2, xmm2, [rel nibble_offset_8]   ; Convert to signed (-8..7)
+    vpand   xmm2, xmm1, [nibble_mask_lo]
+    vpsubb  xmm2, xmm2, [nibble_offset_8]   ; Convert to signed (-8..7)
     vpmovsxbd zmm2, xmm2            ; Sign-extend to 32-bit
     vcvtdq2ps zmm2, zmm2            ; Convert to F32
     vmulps  zmm2, zmm2, zmm0        ; Scale
-    vmovups [rdx], zmm2
+    vmovups zmmword ptr [rdx], zmm2
 
     ; Unpack high nibbles (last 16 weights)
     vpsrlw  xmm3, xmm1, 4
-    vpand   xmm3, xmm3, [rel nibble_mask_lo]
-    vpsubb  xmm3, xmm3, [rel nibble_offset_8]
+    vpand   xmm3, xmm3, [nibble_mask_lo]
+    vpsubb  xmm3, xmm3, [nibble_offset_8]
     vpmovsxbd zmm3, xmm3
     vcvtdq2ps zmm3, zmm3
     vmulps  zmm3, zmm3, zmm0
-    vmovups [rdx + 64], zmm3
+    vmovups zmmword ptr [rdx + 64], zmm3
 
     mov     eax, 32
 
@@ -272,12 +272,12 @@ Dequant_Q4_K_M_Block PROC
     movzx   eax, word ptr [rsi]         ; d
     vmovd   xmm0, eax
     vcvtph2ps xmm0, xmm0
-    vmovss  [rsp], xmm0                 ; d as F32
+    vmovss dword ptr [rsp], xmm0                 ; d as F32
 
     movzx   eax, word ptr [rsi + 2]     ; dmin
     vmovd   xmm1, eax
     vcvtph2ps xmm1, xmm1
-    vmovss  [rsp + 4], xmm1             ; dmin as F32
+    vmovss dword ptr [rsp + 4], xmm1             ; dmin as F32
 
     ; Unpack scales (12 bytes -> 8 x 6-bit values)
     ; Layout: scales[0-5] contain scale info, scales[6-11] contain min info
@@ -304,7 +304,7 @@ Dequant_Q4_K_M_Block PROC
 @@got_scale:
 
     ; Apply d * scale
-    vmovss  xmm2, [rsp]                 ; d
+    vmovss xmm2, dword ptr [rsp]                 ; d
     vcvtsi2ss xmm3, xmm3, ebx
     vmulss  xmm2, xmm2, xmm3            ; d * scale_i
     vbroadcastss ymm2, xmm2
@@ -321,7 +321,7 @@ Dequant_Q4_K_M_Block PROC
 @@got_min:
 
     ; Apply dmin * min
-    vmovss  xmm4, [rsp + 4]             ; dmin
+    vmovss xmm4, dword ptr [rsp + 4]             ; dmin
     vcvtsi2ss xmm5, xmm5, ecx
     vmulss  xmm4, xmm4, xmm5            ; dmin * min_i
     vbroadcastss ymm4, xmm4
@@ -333,8 +333,8 @@ Dequant_Q4_K_M_Block PROC
     lea     rbx, [r13 + rax]
 
     ; First 16 weights (low nibbles)
-    vmovdqu xmm6, [rbx]
-    vpand   xmm7, xmm6, [rel nibble_mask_lo]
+    vmovdqu xmm6, xmmword ptr [rbx]
+    vpand   xmm7, xmm6, [nibble_mask_lo]
     vpmovzxbd ymm7, xmm7
     vcvtdq2ps ymm7, ymm7
     vmulps  ymm7, ymm7, ymm2            ; * scale
@@ -346,7 +346,7 @@ Dequant_Q4_K_M_Block PROC
 
     ; Last 16 weights (high nibbles)
     vpsrlw  xmm8, xmm6, 4
-    vpand   xmm8, xmm8, [rel nibble_mask_lo]
+    vpand   xmm8, xmm8, [nibble_mask_lo]
     vpmovzxbd ymm8, xmm8
     vcvtdq2ps ymm8, ymm8
     vmulps  ymm8, ymm8, ymm2
@@ -393,8 +393,8 @@ Dequant_Q8_0_Block PROC
     vmulps  zmm2, zmm2, zmm0
 
     ; Store
-    vmovups [rdx], zmm1
-    vmovups [rdx + 64], zmm2
+    vmovups zmmword ptr [rdx], zmm1
+    vmovups zmmword ptr [rdx + 64], zmm2
 
     mov     eax, 32
     ret
@@ -407,9 +407,9 @@ Dequant_Q8_0_Block ENDP
 ;   RDX = destination (64 bytes, 16 x F32)
 ; -----------------------------------------------------------------------------
 Dequant_F16_Block PROC
-    vmovdqu ymm0, [rcx]
+    vmovdqu ymm0, ymmword ptr [rcx]
     vcvtph2ps zmm0, ymm0
-    vmovups [rdx], zmm0
+    vmovups zmmword ptr [rdx], zmm0
     mov     eax, 16
     ret
 Dequant_F16_Block ENDP
@@ -496,7 +496,7 @@ MatMul_F32_AVX512 PROC FRAME
     mov     ebx, esi
     imul    ebx, r13d                   ; k * N
     add     ebx, edi                    ; + j
-    vmovups zmm2, [rax + rbx*4]
+    vmovups zmm2, zmmword ptr [rax + rbx*4]
 
     ; FMA: acc += A[i,k] * B[k,j:j+16]
     vfmadd231ps zmm0, zmm1, zmm2
@@ -510,7 +510,7 @@ MatMul_F32_AVX512 PROC FRAME
     mov     ebx, r15d
     imul    ebx, r13d                   ; i * N
     add     ebx, edi                    ; + j
-    vmovups [rax + rbx*4], zmm0
+    vmovups zmmword ptr [rax + rbx*4], zmm0
 
     add     edi, 16
     jmp     @@col_loop
@@ -556,11 +556,11 @@ VecDot_Q4_0_Q8_0 PROC
 
     ; Calculate offsets
     mov     rax, r12
-    imul    rax, 18                     ; Q4_0 block size
+    imul    rax, 18                     ; Q4_0 block blockSize
     lea     rbx, [rcx + rax]            ; Q4_0 block ptr
 
     mov     rax, r12
-    imul    rax, 34                     ; Q8_0 block size
+    imul    rax, 34                     ; Q8_0 block blockSize
     lea     r9, [rdx + rax]             ; Q8_0 block ptr
 
     ; Load Q4_0 scale (F16)
@@ -577,23 +577,23 @@ VecDot_Q4_0_Q8_0 PROC
     vmulss  xmm2, xmm0, xmm1
 
     ; Load Q4_0 quants (16 bytes = 32 x 4-bit)
-    vmovdqu xmm3, [rbx + 2]
+    vmovdqu xmm3, xmmword ptr [rbx + 2]
 
     ; Load Q8_0 quants (32 bytes = 32 x int8)
-    vmovdqu ymm4, [r9 + 2]
+    vmovdqu ymm4, ymmword ptr [r9 + 2]
 
     ; Unpack Q4_0: low and high nibbles
-    vpand   xmm5, xmm3, [rel nibble_mask_lo]    ; Low nibbles
+    vpand   xmm5, xmm3, [nibble_mask_lo]    ; Low nibbles
     vpsrlw  xmm6, xmm3, 4
-    vpand   xmm6, xmm6, [rel nibble_mask_lo]    ; High nibbles
+    vpand   xmm6, xmm6, [nibble_mask_lo]    ; High nibbles
 
     ; Interleave to match Q8_0 order
     vpunpcklbw xmm7, xmm5, xmm6
     vpunpckhbw xmm8, xmm5, xmm6
 
     ; Subtract 8 to center around zero
-    vpsubb  xmm7, xmm7, [rel nibble_offset_8]
-    vpsubb  xmm8, xmm8, [rel nibble_offset_8]
+    vpsubb  xmm7, xmm7, [nibble_offset_8]
+    vpsubb  xmm8, xmm8, [nibble_offset_8]
 
     ; Sign-extend to 16-bit and multiply with Q8_0
     vpmovsxbw ymm7, xmm7
@@ -662,7 +662,7 @@ Op_RMSNorm PROC
     cmp     ebx, r9d
     jge     @@sum_sq_done
 
-    vmovups zmm1, [r12 + rbx*4]
+    vmovups zmm1, zmmword ptr [r12 + rbx*4]
     vfmadd231ps zmm0, zmm1, zmm1        ; acc += x^2
 
     add     ebx, 16
@@ -682,7 +682,7 @@ Op_RMSNorm PROC
     vdivss  xmm0, xmm0, xmm1
 
     ; 3. Add epsilon and compute 1/sqrt
-    vaddss  xmm0, xmm0, [rel rms_epsilon]
+    vaddss  xmm0, xmm0, [rms_epsilon]
     vrsqrtss xmm0, xmm0, xmm0           ; Approximate 1/sqrt
     vbroadcastss zmm0, xmm0
 
@@ -693,7 +693,7 @@ Op_RMSNorm PROC
     cmp     ebx, r9d
     jge     @@norm_done
 
-    vmovups zmm1, [r12 + rbx*4]
+    vmovups zmm1, zmmword ptr [r12 + rbx*4]
     vmulps  zmm1, zmm1, zmm0
 
     ; Apply weight if provided
@@ -702,7 +702,7 @@ Op_RMSNorm PROC
     vmulps  zmm1, zmm1, [r8 + rbx*4]
 @@no_weight:
 
-    vmovups [r13 + rbx*4], zmm1
+    vmovups zmmword ptr [r13 + rbx*4], zmm1
 
     add     ebx, 16
     jmp     @@norm_loop
@@ -757,7 +757,7 @@ Op_RoPE PROC
     vdivss  xmm0, xmm0, xmm1            ; exp = 2*i / dim
 
     ; theta^exp via exp(exp * ln(theta))
-    vmovss  xmm1, [rel rope_theta]
+    vmovss xmm1, dword ptr [rope_theta]
     ; Fast approximation: use lookup table in production
     ; For now, use simple 1/theta^(i/dim) ~ 1/10000^(i/dim)
     ; Simplified: angle = pos / (10000^(2*i/dim))
@@ -771,11 +771,11 @@ Op_RoPE PROC
     ; Load input pair
     mov     eax, ecx
     shl     eax, 3                      ; * 8 bytes (2 floats)
-    vmovsd  xmm3, [r12 + rax]           ; [real, imag]
+    vmovsd xmm3, qword ptr [r12 + rax]           ; [real, imag]
     
     ; Simple rotation (placeholder - real impl uses sin/cos)
     ; For now, pass through
-    vmovsd  [r13 + rax], xmm3
+    vmovsd qword ptr [r13 + rax], xmm3
 
     inc     ecx
     jmp     @@rope_loop
@@ -808,8 +808,8 @@ Op_SwiGLU PROC
     jge     @@swiglu_done
 
     ; Load gate and up
-    vmovups zmm0, [rcx + rbx*4]         ; gate
-    vmovups zmm1, [rdx + rbx*4]         ; up
+    vmovups zmm0, zmmword ptr [rcx + rbx*4]         ; gate
+    vmovups zmm1, zmmword ptr [rdx + rbx*4]         ; up
 
     ; SiLU(gate) = gate * sigmoid(gate)
     ; sigmoid(x) = 1 / (1 + exp(-x))
@@ -819,21 +819,21 @@ Op_SwiGLU PROC
     vsubps  zmm2, zmm2, zmm0            ; -gate
 
     ; exp(-gate) approximation
-    vmulps  zmm2, zmm2, [rel exp_magic_scale]
-    vaddps  zmm2, zmm2, [rel exp_magic_bias]
+    vmulps  zmm2, zmm2, [exp_magic_scale]
+    vaddps  zmm2, zmm2, [exp_magic_bias]
     ; Reinterpret as int and back (Schraudolph)
     ; For full precision, use polynomial or lookup
 
     ; 1 / (1 + exp(-x)) -> simplified
-    vaddps  zmm2, zmm2, [rel one_broadcast]
-    vrcpps  zmm2, zmm2                  ; Approximate reciprocal
+    vaddps  zmm2, zmm2, [one_broadcast]
+    vrcp14ps zmm2, zmm2                  ; Approximate reciprocal
 
     ; SiLU = gate * sigmoid
     vmulps  zmm0, zmm0, zmm2
 
     ; Output = SiLU(gate) * up
     vmulps  zmm0, zmm0, zmm1
-    vmovups [r8 + rbx*4], zmm0
+    vmovups zmmword ptr [r8 + rbx*4], zmm0
 
     add     ebx, 16
     jmp     @@swiglu_loop
@@ -861,13 +861,13 @@ Op_Softmax PROC
     mov     r13, rdx                    ; output
 
     ; 1. Find max value
-    vmovups zmm0, [r12]                 ; Initial max
+    vmovups zmm0, zmmword ptr [r12]                 ; Initial max
     mov     ebx, 16
 
 @@max_loop:
     cmp     ebx, r8d
     jge     @@max_done
-    vmovups zmm1, [r12 + rbx*4]
+    vmovups zmm1, zmmword ptr [r12 + rbx*4]
     vmaxps  zmm0, zmm0, zmm1
     add     ebx, 16
     jmp     @@max_loop
@@ -892,16 +892,16 @@ Op_Softmax PROC
     cmp     ebx, r8d
     jge     @@exp_done
 
-    vmovups zmm0, [r12 + rbx*4]
+    vmovups zmm0, zmmword ptr [r12 + rbx*4]
     vsubps  zmm0, zmm0, zmm15           ; x - max
 
     ; Fast exp (Schraudolph)
-    vmaxps  zmm0, zmm0, [rel exp_clamp_lo_bcast]
-    vmulps  zmm0, zmm0, [rel exp_magic_scale_bcast]
-    vaddps  zmm0, zmm0, [rel exp_magic_bias_bcast]
+    vmaxps  zmm0, zmm0, [exp_clamp_lo_bcast]
+    vmulps  zmm0, zmm0, [exp_magic_scale_bcast]
+    vaddps  zmm0, zmm0, [exp_magic_bias_bcast]
     ; Result is approximate exp in integer bits
 
-    vmovups [r13 + rbx*4], zmm0
+    vmovups zmmword ptr [r13 + rbx*4], zmm0
     vaddps  zmm14, zmm14, zmm0
 
     add     ebx, 16
@@ -918,16 +918,16 @@ Op_Softmax PROC
     vbroadcastss zmm14, xmm14           ; sum
 
     ; 3. Normalize
-    vrcpps  zmm14, zmm14                ; 1/sum
+    vrcp14ps zmm14, zmm14                ; 1/sum
     xor     ebx, ebx
 
 @@norm_soft_loop:
     cmp     ebx, r8d
     jge     @@softmax_done
 
-    vmovups zmm0, [r13 + rbx*4]
+    vmovups zmm0, zmmword ptr [r13 + rbx*4]
     vmulps  zmm0, zmm0, zmm14
-    vmovups [r13 + rbx*4], zmm0
+    vmovups zmmword ptr [r13 + rbx*4], zmm0
 
     add     ebx, 16
     jmp     @@norm_soft_loop
@@ -961,21 +961,21 @@ KVCache_Init PROC
     sub     rsp, 40
 
     ; Store parameters
-    mov     [rel kv_cache_size], ecx
-    mov     [rel kv_cache_n_head], edx
-    mov     [rel kv_cache_head_dim], r8d
-    mov     [rel kv_cache_pos], 0
+    mov     [kv_cache_size], ecx
+    mov     [kv_cache_n_head], edx
+    mov     [kv_cache_head_dim], r8d
+    mov     [kv_cache_pos], 0
 
-    ; Calculate total size: 2 * n_layers * max_seq * n_heads * head_dim * sizeof(float)
+    ; Calculate total blockSize: 2 * n_layers * max_seq * n_heads * head_dim * sizeof(float)
     mov     eax, ecx                    ; max_seq
     imul    eax, edx                    ; * n_heads
     imul    eax, r8d                    ; * head_dim
-    shl     eax, 2                      ; * 4 (sizeof float)
+    shl     eax, 2                      ; * 4 (SIZEOF float)
     imul    eax, r9d                    ; * n_layers
     shl     eax, 1                      ; * 2 (K and V)
 
     ; Here we would call VirtualAlloc
-    ; For now, just store size needed
+    ; For now, just store blockSize needed
     mov     rbx, rax
 
     xor     eax, eax                    ; Success
@@ -998,8 +998,8 @@ KVCache_Append PROC
     push    rbx
 
     ; Get current position
-    mov     eax, [rel kv_cache_pos]
-    mov     ebx, [rel kv_cache_size]
+    mov     eax, [kv_cache_pos]
+    mov     ebx, [kv_cache_size]
 
     ; Check if cache is full (rolling)
     cmp     eax, ebx
@@ -1009,8 +1009,8 @@ KVCache_Append PROC
 
     ; Calculate offset into cache
     ; offset = layer * max_seq * n_heads * head_dim + pos * n_heads * head_dim
-    mov     r9d, [rel kv_cache_n_head]
-    imul    r9d, [rel kv_cache_head_dim]
+    mov     r9d, [kv_cache_n_head]
+    imul    r9d, [kv_cache_head_dim]
     imul    r9d, eax                    ; pos * n_heads * head_dim
     shl     r9d, 2                      ; * sizeof(float)
 
@@ -1022,7 +1022,7 @@ KVCache_Append PROC
 
     ; Increment position
     inc     eax
-    mov     [rel kv_cache_pos], eax
+    mov     [kv_cache_pos], eax
 
     pop     rbx
     ret
@@ -1042,10 +1042,10 @@ KVCache_Append ENDP
 ; Returns: RAX = 0 (success)
 ; -----------------------------------------------------------------------------
 Tokenizer_Init PROC
-    mov     [rel vocab_data], rcx
-    mov     [rel merges_data], rdx
-    mov     [rel vocab_size], r8d
-    mov     [rel merges_count], r9d
+    mov     [vocab_data], rcx
+    mov     [merges_data], rdx
+    mov     [vocab_size], r8d
+    mov     [merges_count], r9d
     xor     eax, eax
     ret
 Tokenizer_Init ENDP
@@ -1093,7 +1093,7 @@ Tokenizer_Encode PROC
     cmp     al, 0F0h
     jl      @@three_byte
     ; Four byte
-    movzx   ebx, dword ptr [rsi]
+    mov ebx, dword ptr [rsi]
     add     rsi, 4
     jmp     @@store_token
 
@@ -1140,7 +1140,7 @@ Tokenizer_Encode ENDP
 ;   RCX = input token array
 ;   RDX = output string buffer
 ;   R8  = token count
-;   R9  = buffer size
+;   R9  = buffer blockSize
 ; Returns: RAX = bytes written (excluding null)
 ; -----------------------------------------------------------------------------
 Tokenizer_Decode PROC
@@ -1153,7 +1153,7 @@ Tokenizer_Decode PROC
     mov     rsi, rcx                    ; tokens
     mov     rdi, rdx                    ; output
     mov     r12d, r8d                   ; count
-    mov     r13d, r9d                   ; buf size
+    mov     r13d, r9d                   ; buf blockSize
     xor     ebx, ebx                    ; bytes written
 
 @@decode_loop:
@@ -1210,3 +1210,4 @@ exp_magic_bias_bcast  DD 16 DUP(1065353216.0)
 exp_clamp_lo_bcast    DD 16 DUP(-87.33654)
 
 END
+

@@ -5,7 +5,7 @@
 ;   solo_standalone_compiler.asm, masm_solo_compiler.asm,
 ;   RawrXD_Compiler_Engine_Complete.asm, language_terraformer.asm
 ;
-; These are C-calling-convention functions across compiler .obj files.
+; These are calling-convention functions across compiler .obj files.
 ;
 ; Usage:  INCLUDE rawrxd_compiler_protos.inc
 ; ═══════════════════════════════════════════════════════════════════════════════

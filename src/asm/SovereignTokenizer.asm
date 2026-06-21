@@ -6,7 +6,7 @@
 ;=============================================================================
 
 OPTION CASEMAP:NONE
-OPTION WIN64:8
+OPTION DOTNAME
 
 ;=============================================================================
 ; Public Interface
@@ -22,7 +22,7 @@ PUBLIC SovereignTokenizer_LoadVocab
 ;=============================================================================
 ; Constants
 ;=============================================================================
-MAX_VOCAB_SIZE      EQU     50000   ; Maximum vocabulary size
+MAX_VOCAB_SIZE      EQU     50000   ; Maximum vocabulary blockSize
 MAX_TOKEN_LEN       EQU     256     ; Maximum token length
 MAX_INPUT_LEN       EQU     4096    ; Maximum input length
 MAX_MERGES          EQU     50000   ; Maximum merge operations
@@ -36,15 +36,16 @@ TOKEN_TYPE_SPECIAL  EQU     2       ; Special token
 ; Data Section
 ;=============================================================================
 .data
-ALIGN 64
 
 ; Vocabulary storage
+ALIGN 16
 g_vocab             DB      MAX_VOCAB_SIZE * MAX_TOKEN_LEN DUP(0)
 g_vocab_lengths     DW      MAX_VOCAB_SIZE DUP(0)
 g_vocab_types       DB      MAX_VOCAB_SIZE DUP(0)
 g_vocab_size        DD      0
 
 ; Merge table
+ALIGN 16
 g_merge_pairs       DD      MAX_MERGES * 2 DUP(0)
 g_merge_scores      DD      MAX_MERGES DUP(0)
 g_merge_count       DD      0
@@ -77,11 +78,11 @@ SovereignTokenizer_Init PROC FRAME
     .ENDPROLOG
     
     mov r10, rcx            ; R10 = vocab data
-    mov r11d, edx           ; R11 = vocab size
+    mov r11d, edx           ; R11 = vocab blockSize
     mov r12, r8             ; R12 = merge data
     mov r13d, r9d           ; R13 = merge count
     
-    ; Store vocab size
+    ; Store vocab blockSize
     mov g_vocab_size, r11d
     mov g_merge_count, r13d
     
@@ -116,7 +117,7 @@ SovereignTokenizer_Encode PROC FRAME
     mov r10, rcx            ; R10 = input text
     mov r11d, edx           ; R11 = input length
     mov r12, r8             ; R12 = output buffer
-    mov r13d, r9d           ; R13 = output buffer size
+    mov r13d, r9d           ; R13 = output buffer blockSize
     
     ; Step 1: Convert text to initial byte tokens
     xor ebx, ebx            ; EBX = token count
@@ -456,3 +457,4 @@ LookupMergeScore PROC
 LookupMergeScore ENDP
 
 END
+

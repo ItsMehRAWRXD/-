@@ -1,5 +1,5 @@
 ; ============================================================================
-; identity_gate.asm — Hardware-Locked Identity & Gated Auth (Batch 18)
+; identity_gate.asm ? Hardware-Locked Identity & Gated Auth (Batch 18)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -84,3 +84,4 @@ Shield_AuthorizeKernelMutation PROC FRAME
 Shield_AuthorizeKernelMutation ENDP
 
 END
+

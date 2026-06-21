@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_Hotpatch_Kernel.asm — Shadow-Page Detour Hotpatching Kernel (x64 MASM)
+; RawrXD_Hotpatch_Kernel.asm ? Shadow-Page Detour Hotpatching Kernel (x64 MASM)
 ; =============================================================================
 ;
 ; Atomic redirect of Camellia-256 / DirectML functions at runtime via
@@ -10,7 +10,7 @@
 ; Capabilities:
 ;   - Atomic 14-byte absolute-jump prologue rewrite (FAR JMP via FF 25)
 ;     * Corrected 8+6 split atomic write (lock cmpxchg8b + lock cmpxchg)
-;     * NO cmpxchg16b (requires 16-byte alignment — function prologues don't)
+;     * NO cmpxchg16b (requires 16-byte alignment ? function prologues don't)
 ;     * VirtualProtect is CALLER'S responsibility (C++ bridge handles it)
 ;   - Trampoline installation: preserves original 14 bytes + appends jump-back
 ;   - Shadow page allocation (RWX code cave via VirtualAlloc)
@@ -21,15 +21,15 @@
 ;   - CRC32 pre/post verification guard
 ;
 ; Exports (called from shadow_page_detour.cpp / agent_self_repair.cpp):
-;   asm_hotpatch_atomic_swap          — Atomic redirect (8+6 split atomic write)
-;   asm_hotpatch_install_trampoline   — Saves original 14B + JMP-back (28B total)
-;   asm_hotpatch_alloc_shadow         — Allocate RWX shadow page for new code
-;   asm_hotpatch_free_shadow          — Release shadow page
-;   asm_hotpatch_backup_prologue      — Backup function prologue (16 bytes)
-;   asm_hotpatch_restore_prologue     — Restore backed-up prologue (rollback)
-;   asm_hotpatch_verify_prologue      — CRC32 verify that prologue matches expected
-;   asm_hotpatch_flush_icache         — Flush instruction cache for patched region
-;   asm_hotpatch_get_stats            — Read hotpatch statistics
+;   asm_hotpatch_atomic_swap          ? Atomic redirect (8+6 split atomic write)
+;   asm_hotpatch_install_trampoline   ? Saves original 14B + JMP-back (28B total)
+;   asm_hotpatch_alloc_shadow         ? Allocate RWX shadow page for new code
+;   asm_hotpatch_free_shadow          ? Release shadow page
+;   asm_hotpatch_backup_prologue      ? Backup function prologue (16 bytes)
+;   asm_hotpatch_restore_prologue     ? Restore backed-up prologue (rollback)
+;   asm_hotpatch_verify_prologue      ? CRC32 verify that prologue matches expected
+;   asm_hotpatch_flush_icache         ? Flush instruction cache for patched region
+;   asm_hotpatch_get_stats            ? Read hotpatch statistics
 ;
 ; Architecture: x64 MASM64 | Windows x64 ABI | No CRT | No exceptions
 ; Build: ml64.exe /c /Zi /Zd /Fo RawrXD_Hotpatch_Kernel.obj
@@ -78,7 +78,7 @@ PUBLIC asm_hotpatch_flush_icache
 PUBLIC asm_hotpatch_get_stats
 
 ; =============================================================================
-;                    DATA SECTION — Statistics
+;                    DATA SECTION ? Statistics
 ; =============================================================================
 
 .data
@@ -118,19 +118,19 @@ hp_crc32_initialized        DWORD   0
 ;
 ; CORRECTED IMPLEMENTATION: 8+6 byte split atomic write.
 ;
-; The cmpxchg16b approach is WRONG for this — it requires 16-byte alignment
+; The cmpxchg16b approach is WRONG for this ? it requires 16-byte alignment
 ; which function prologues do not guarantee. Instead we use:
 ;
 ;   1. lock cmpxchg8b [target] to atomically write the first 8 bytes
 ;      (FF 25 00 00 00 00 + low 2 bytes of the 64-bit destination)
 ;   2. lock xchg [target+8] to atomically write the next 4 bytes
-;      (middle 4 bytes of the destination address — bits 16..47)
+;      (middle 4 bytes of the destination address ? bits 16..47)
 ;   3. Masked lock cmpxchg [target+12] for the final 2 bytes
 ;      (top 2 bytes of the 64-bit addr, preserving upper 2 bytes of QWORD)
 ;   4. MFENCE + CLFLUSH serialization
 ;
 ; The caller (C++ bridge) is responsible for VirtualProtect before calling
-; this function. This function writes ONLY — no protection changes.
+; this function. This function writes ONLY ? no protection changes.
 ;
 ; RCX = TargetFunctionAddr (original function to detour, MUST be RWX)
 ; RDX = NewFunctionAddr    (patched replacement on shadow page)
@@ -189,7 +189,7 @@ asm_hotpatch_atomic_swap PROC FRAME
     mov     rax, r13
     mov     word  ptr [rsp + 38], ax        ; low 2 bytes of destination addr
 
-    ; Build desired_hi (bytes 8..15 — we only need 6 of 8)
+    ; Build desired_hi (bytes 8..15 ? we only need 6 of 8)
     mov     rax, r13
     shr     rax, 16                         ; shift off the low 16 bits
     mov     qword ptr [rsp + 40], rax       ; addr[2..7] in bits 0..47
@@ -200,11 +200,11 @@ asm_hotpatch_atomic_swap PROC FRAME
     ; CMPXCHG8B compares EDX:EAX with m64, if equal stores ECX:EBX.
     ; We retry until it succeeds (CAS loop).
     ;
-    ; Read current 8 bytes at [r12] → EDX:EAX
+    ; Read current 8 bytes at [r12] ? EDX:EAX
     mov     eax, dword ptr [r12]
     mov     edx, dword ptr [r12 + 4]
 
-    ; Load desired 8 bytes → ECX:EBX
+    ; Load desired 8 bytes ? ECX:EBX
     mov     ebx, dword ptr [rsp + 32]       ; desired low DWORD
     mov     ecx, dword ptr [rsp + 36]       ; desired high DWORD
 
@@ -236,7 +236,7 @@ asm_hotpatch_atomic_swap PROC FRAME
     jnz     @@swap_retry_hi                 ; retry on contention
 
     ; ================================================================
-    ; Step 5: Serialization — MFENCE + CLFLUSH
+    ; Step 5: Serialization ? MFENCE + CLFLUSH
     ; ================================================================
     ; MFENCE ensures all stores are globally visible to all cores.
     ; CLFLUSH evicts the modified cache lines so the I-cache fetcher
@@ -256,7 +256,7 @@ asm_hotpatch_atomic_swap PROC FRAME
     mfence                                  ; serialize after CLFLUSH
 
     ; ================================================================
-    ; Step 6: FlushInstructionCache (Win32 API — belt-and-suspenders)
+    ; Step 6: FlushInstructionCache (Win32 API ? belt-and-suspenders)
     ; ================================================================
     call    GetCurrentProcess
     mov     rcx, rax                        ; hProcess = -1 (pseudo)
@@ -297,10 +297,10 @@ asm_hotpatch_atomic_swap ENDP
 ; calling the original implementation AFTER the detour is in place.
 ;
 ; The trampoline buffer receives:
-;   [0..13]   — Original 14 bytes (saved from the function prologue)
-;   [14..27]  — JMP QWORD PTR [RIP+0] + 8-byte address of (original + 14)
+;   [0..13]   ? Original 14 bytes (saved from the function prologue)
+;   [14..27]  ? JMP QWORD PTR [RIP+0] + 8-byte address of (original + 14)
 ;
-; Total trampoline size: 28 bytes.
+; Total trampoline m_size: 28 bytes.
 ;
 ; The caller can then CALL the trampoline to execute the original prologue
 ; and seamlessly continue at originalFn+14 (where the real code body begins).
@@ -312,7 +312,7 @@ asm_hotpatch_atomic_swap ENDP
 ;
 ; NOTE: The caller is responsible for ensuring trampolineBuffer is RWX
 ;       (allocated via asm_hotpatch_alloc_shadow).
-; NOTE: Call BEFORE asm_hotpatch_atomic_swap — the original bytes are
+; NOTE: Call BEFORE asm_hotpatch_atomic_swap ? the original bytes are
 ;       still intact at this point.
 ;
 ; Architecture: x64 MASM64 | Windows x64 ABI | No CRT | No exceptions
@@ -415,7 +415,7 @@ asm_hotpatch_install_trampoline ENDP
 ; =============================================================================
 ; Allocate a shadow page (RWX executable memory) for storing patched code.
 ;
-; RCX = desired size (0 = default HP_SHADOW_PAGE_SIZE)
+; RCX = desired m_size (0 = default HP_SHADOW_PAGE_SIZE)
 ;
 ; Returns: RAX = base address of shadow page, or 0 on failure
 ; =============================================================================
@@ -426,14 +426,14 @@ asm_hotpatch_alloc_shadow PROC FRAME
     .allocstack 48
     .endprolog
 
-    ; Default size if 0
+    ; Default m_size if 0
     test    rcx, rcx
     jnz     @@has_size
     mov     rcx, HP_SHADOW_PAGE_SIZE
 @@has_size:
-    mov     rbx, rcx                        ; rbx = size
+    mov     rbx, rcx                        ; rbx = m_size
 
-    ; VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE)
+    ; VirtualAlloc(NULL, m_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE)
     mov     r9d, PAGE_EXECUTE_READWRITE
     mov     r8d, MEM_COMMIT OR MEM_RESERVE
     mov     rdx, rbx                        ; dwSize
@@ -470,7 +470,7 @@ asm_hotpatch_alloc_shadow ENDP
 ; Release a shadow page allocated by asm_hotpatch_alloc_shadow.
 ;
 ; RCX = base address of shadow page
-; RDX = size of shadow page (0 = use MEM_RELEASE which ignores size)
+; RDX = m_size of shadow page (0 = use MEM_RELEASE which ignores m_size)
 ;
 ; Returns: EAX = 0 on success, -1 on failure
 ; =============================================================================
@@ -548,7 +548,7 @@ asm_hotpatch_backup_prologue PROC FRAME
     mov     eax, edx
     inc     eax
     lock cmpxchg dword ptr [hp_backup_count], eax
-    ; Ignore failure — high-water mark may already be higher
+    ; Ignore failure ? high-water mark may already be higher
 
     xor     eax, eax
     jmp     @@backup_done
@@ -699,7 +699,7 @@ asm_hotpatch_verify_prologue PROC FRAME
     cmp     edx, HP_BACKUP_SIZE
     jge     @@crc_done_loop
     movzx   eax, byte ptr [rsi + rdx]
-    xor     al, cl                          ; al = (crc ^ byte) & 0xFF
+    xor     al, cl                          ; al = (crc ^ byte) & 0FFh
     movzx   eax, al
     lea     r8, [hp_crc32_table]
     mov     eax, dword ptr [r8 + rax * 4]   ; table lookup
@@ -738,7 +738,7 @@ asm_hotpatch_verify_prologue ENDP
 ; Flush instruction cache for a memory region after hotpatching.
 ;
 ; RCX = base address
-; RDX = size in bytes
+; RDX = m_size in bytes
 ;
 ; Returns: EAX = 0 on success, -1 on failure
 ; =============================================================================
@@ -755,7 +755,7 @@ asm_hotpatch_flush_icache PROC FRAME
     jz      @@flush_fail
 
     mov     r12, rcx                        ; base address
-    mov     r13, rdx                        ; size
+    mov     r13, rdx                        ; m_size
 
     ; CLFLUSH each cache line (64-byte stride)
     xor     rcx, rcx
@@ -892,3 +892,4 @@ hp_init_crc32_table PROC
 hp_init_crc32_table ENDP
 
 END
+

@@ -35,23 +35,23 @@ SparseGather_Initialize ENDP
 ;                                   * input[i:+16]
 ;
 ;   Register map
-;   ── Non-volatile (saved/restored): ─────────────────────────────────────
+;   ?? Non-volatile (saved/restored): ?????????????????????????????????????
 ;     RBX = MoeConfig*          RSI = router_logits
 ;     RDI = input               R12 = output
 ;     R13 = top_k               R14 = hidden_dim (DWORD)
 ;     R15 = weights_base        R11 = expert_size_bytes (intermediate)
-;   ── Volatile (no save needed): ─────────────────────────────────────────
+;   ?? Volatile (no save needed): ?????????????????????????????????????????
 ;     RCX = k (outer loop)      RDX = i (inner loop, float index)
 ;     RAX = expert_ptr          R10 = scratch
-;   ── ZMM — only volatile registers ZMM0-ZMM5 are used: ─────────────────
+;   ?? ZMM ? only volatile registers ZMM0-ZMM5 are used: ?????????????????
 ;   (Win64 requires saving XMM/YMM/ZMM6-15; using only 0-5 avoids that)
 ;     ZMM0 = weights chunk      ZMM1 = input chunk
 ;     ZMM2 = output accumul.    ZMM3 = elem product (weight*input)
 ;     ZMM4 = logit broadcast    ZMM5 = zero
 ;
 ;   Stack frame (entry RSP%16==8):
-;     push r15/r14/r13/r12/rsi/rdi/rbx  = 7×8 = 56 bytes  → RSP%16 == 0
-;     sub rsp, 40                        = 40 bytes         → RSP%16 == 8
+;     push r15/r14/r13/r12/rsi/rdi/rbx  = 7?8 = 56 bytes  ? RSP%16 == 0
+;     sub rsp, 40                        = 40 bytes         ? RSP%16 == 8
 ;     (40 = 32 shadow + 8 alignment pad to keep RSP 16-aligned at any call)
 ; ============================================================================
 SparseGather_Execute PROC EXPORT
@@ -89,7 +89,7 @@ SparseGather_Execute PROC EXPORT
 
     mov     r11, QWORD PTR [rbx + MOECONFIG_EXPERT_BYTES]
 
-    ; ── zero output buffer ──────────────────────────────────────────────
+    ; ?? zero output buffer ??????????????????????????????????????????????
     vpxord  zmm5, zmm5, zmm5
     xor     eax, eax
 SG_zero:
@@ -114,7 +114,7 @@ SG_zero_full:
     jl      SG_zero
 SG_zero_done:
 
-    ; ── outer loop: k = 0..top_k-1 ─────────────────────────────────────
+    ; ?? outer loop: k = 0..top_k-1 ?????????????????????????????????????
     xor     r10d, r10d      ; r10d = outer loop counter k
 SG_k_loop:
     cmp     r10d, r13d
@@ -128,7 +128,7 @@ SG_k_loop:
     imul    rax, r11
     add     rax, r15        ; rax = &weights[k][0]
 
-    ; ── inner loop: i = 0..hidden-1, step 16 ───────────────────────────
+    ; ?? inner loop: i = 0..hidden-1, step 16 ???????????????????????????
     xor     edx, edx
 SG_i_loop:
     mov     r8d, r14d
@@ -193,7 +193,7 @@ SG_fail:
 SparseGather_Execute ENDP
 
 ; ============================================================================
-; SparseGather_FlushCache — no persistent cache
+; SparseGather_FlushCache ? no persistent cache
 ; ============================================================================
 SparseGather_FlushCache PROC EXPORT
     ret
@@ -215,3 +215,4 @@ SG_gs_done:
 SparseGather_GetStats ENDP
 
 END
+

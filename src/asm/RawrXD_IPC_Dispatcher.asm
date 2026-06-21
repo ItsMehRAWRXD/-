@@ -16,7 +16,7 @@ REQ_IMPORTS  equ 1004h
 
 RawrXD_DispatchIPC proc frame
     ; rcx = pData (pointer to message buffer)
-    ; rdx = size  (size of buffer)
+    ; rdx = m_size  (m_size of buffer)
     
     push rbp
     .pushreg rbp
@@ -26,7 +26,7 @@ RawrXD_DispatchIPC proc frame
     .allocstack 32
     .endprolog
 
-    ; 1. Validate size
+    ; 1. Validate m_size
     test rdx, rdx
     jz @exit
 
@@ -64,3 +64,4 @@ RawrXD_DispatchIPC proc frame
 RawrXD_DispatchIPC endp
 
 end
+

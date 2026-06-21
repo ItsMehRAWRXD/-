@@ -23,8 +23,8 @@ PUBLIC rawrxd_startup_trace
 PUBLIC rawrxd_startup_peb_walk_snapshot
 
 ; LDR offsets relative to InMemoryOrderLinks node pointer
-; (LDR_DATA_TABLE_ENTRY.InMemoryOrderLinks sits at entry+0x10)
-; So node-based offset = entry-offset - 0x10.
+; (LDR_DATA_TABLE_ENTRY.InMemoryOrderLinks sits at entry+010h)
+; So node-based offset = entry-offset - 010h.
 LDRE_DLLBASE        EQU 020h    ; DllBase    (entry+030h -> node+020h)
 LDRE_FULLDLL_LEN    EQU 038h    ; FullDllName.Length USHORT bytes
 LDRE_FULLDLL_BUF    EQU 040h    ; FullDllName.Buffer PWSTR
@@ -181,10 +181,10 @@ rawrxd_startup_trace ENDP
 ; calls rawrxd_startup_trace("peb_mod","<N> <fullname>") per module.
 ; Max 32 modules.  No CRT, no wsprintfA, no heap.
 ;
-; Offsets from node (InMemoryOrderLinks*), which is LDR_DATA_TABLE_ENTRY+0x10:
-;   node+0x20 = DllBase
-;   node+0x38 = FullDllName.Length (USHORT, byte count)
-;   node+0x40 = FullDllName.Buffer (PWSTR)
+; Offsets from node (InMemoryOrderLinks*), which is LDR_DATA_TABLE_ENTRY+010h:
+;   node+020h = DllBase
+;   node+038h = FullDllName.Length (USHORT, byte count)
+;   node+040h = FullDllName.Buffer (PWSTR)
 ;
 ; Stack frame:
 ;   push rbx/rsi/rdi/r12/r13/r14/r15 (7x8=56B) + sub rsp,320
@@ -395,3 +395,4 @@ RPWS_exit:
     ret
 rawrxd_startup_peb_walk_snapshot ENDP
 END
+

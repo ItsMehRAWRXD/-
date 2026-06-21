@@ -1,6 +1,8 @@
 #pragma once
 
 #include "gguf_loader.h"
+#include "streaming_gguf_loader.h"
+#include "streaming_gguf_loader_enhanced.h"
 #include <chrono>
 #include <cstdint>
 #include <functional>
@@ -317,6 +319,7 @@ class CPUInferenceEngine : public InferenceEngine
 
     // Loader and execution state
     std::unique_ptr<IGGUFLoader> m_loader;
+    std::unique_ptr<EnhancedStreamingGGUFLoader> m_enhancedLoader;
 
     // Titan ASM Integration
     void* m_hTitanDLL = nullptr;

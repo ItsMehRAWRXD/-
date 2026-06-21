@@ -1,5 +1,5 @@
 ; =============================================================================
-; rawrxd_cot_phase39.asm — Phase 39–42 Enhancements & Finishers
+; rawrxd_cot_phase39.asm ? Phase 39?42 Enhancements & Finishers
 ; =============================================================================
 ;
 ; Phase 39: Adaptive Commit Governor, Copy Engine Selector, Multi-Producer
@@ -11,22 +11,22 @@
 ; All new procs coordinate with rawrxd_cot_engine.asm via EXTERN globals.
 ;
 ; Exports (16 new procs):
-;   CoT_CreateSnapshot       — O(1) snapshot of arena state
-;   CoT_RestoreSnapshot      — Rollback arena to snapshot
-;   CoT_SetReplayMode        — Enable/disable deterministic replay
-;   CoT_IsReplayMode         — Check if replay mode is active
-;   CoT_GetTelemetryPage     — Get pointer to shared telemetry struct
-;   CoT_UpdateTelemetry      — Refresh telemetry counters (lock-free)
-;   CoT_SealMemory           — Mark arena read-only post-generation
-;   CoT_UnsealMemory         — Restore read-write for new generation
-;   CoT_SetTenantQuota       — Set per-tenant token ceiling
-;   CoT_CheckTenantQuota     — Check remaining quota for tenant
-;   CoT_SelectCopyEngine     — Probe CPUID and select optimal copy engine
-;   CoT_CopyDispatch         — Dispatch copy via selected engine
-;   CoT_EnableMultiProducer  — Enable lock-free multi-producer mode
-;   CoT_MultiProducerAppend  — Ticket-reserved append (multi-producer path)
-;   CoT_GetCommitGovernor    — Get current throttle level + EMA
-;   CoT_SetBackpressure      — Set GPU backpressure signal
+;   CoT_CreateSnapshot       ? O(1) snapshot of arena state
+;   CoT_RestoreSnapshot      ? Rollback arena to snapshot
+;   CoT_SetReplayMode        ? Enable/disable deterministic replay
+;   CoT_IsReplayMode         ? Check if replay mode is active
+;   CoT_GetTelemetryPage     ? Get pointer to shared telemetry struct
+;   CoT_UpdateTelemetry      ? Refresh telemetry counters (lock-free)
+;   CoT_SealMemory           ? Mark arena read-only post-generation
+;   CoT_UnsealMemory         ? Restore read-write for new generation
+;   CoT_SetTenantQuota       ? Set per-tenant token ceiling
+;   CoT_CheckTenantQuota     ? Check remaining quota for tenant
+;   CoT_SelectCopyEngine     ? Probe CPUID and select optimal copy engine
+;   CoT_CopyDispatch         ? Dispatch copy via selected engine
+;   CoT_EnableMultiProducer  ? Enable lock-free multi-producer mode
+;   CoT_MultiProducerAppend  ? Ticket-reserved append (multi-producer path)
+;   CoT_GetCommitGovernor    ? Get current throttle level + EMA
+;   CoT_SetBackpressure      ? Set GPU backpressure signal
 ;
 ; Architecture: x64 MASM | Windows ABI | SEH | No CRT | No exceptions
 ; Build: ml64 /c /Zi /Zd /Fo rawrxd_cot_phase39.obj rawrxd_cot_phase39.asm
@@ -98,7 +98,7 @@ EXTERN g_executionState: DWORD
 ;                            CONSTANTS
 ; =============================================================================
 
-; Arena size (must match rawrxd_cot_engine.asm)
+; Arena m_size (must match rawrxd_cot_engine.asm)
 COT_ARENA_RESERVE_SIZE      EQU     40000000h       ; 1 GB reserved
 
 ; Copy engine IDs
@@ -107,8 +107,8 @@ COPY_ENGINE_AVX2            EQU     1
 COPY_ENGINE_AVX512          EQU     2
 
 ; Copy engine thresholds
-COPY_THRESHOLD_SMALL        EQU     256             ; < 256 B → ERMS
-COPY_THRESHOLD_MEDIUM       EQU     8000h           ; < 32 KB → AVX2, else AVX-512
+COPY_THRESHOLD_SMALL        EQU     256             ; < 256 B ? ERMS
+COPY_THRESHOLD_MEDIUM       EQU     8000h           ; < 32 KB ? AVX2, else AVX-512
 
 ; Throttle levels
 THROTTLE_NONE               EQU     0
@@ -163,7 +163,7 @@ CoT_CommitGovernor STRUCT
     _reserved           DQ ?            ; alignment pad
 CoT_CommitGovernor ENDS
 
-; Phase 40: Snapshot descriptor — O(1) snapshot of arena state
+; Phase 40: Snapshot descriptor ? O(1) snapshot of arena state
 CoT_Snapshot STRUCT
     UsedLength          DQ ?            ; g_arenaUsed at snapshot time
     CommitMark          DQ ?            ; g_arenaCommitted at snapshot time
@@ -284,11 +284,11 @@ ALIGN 8
 
 szP39_SnapshotCreated   DB "[CoT-P39] Snapshot created (slot ", 0
 szP39_SnapshotSlotEnd   DB ").", 0
-szP39_SnapshotRestored  DB "[CoT-P39] Snapshot restored — arena rolled back.", 0
-szP39_SnapshotInvalid   DB "[CoT-P39] Snapshot restore FAILED — invalid slot.", 0
+szP39_SnapshotRestored  DB "[CoT-P39] Snapshot restored ? arena rolled back.", 0
+szP39_SnapshotInvalid   DB "[CoT-P39] Snapshot restore FAILED ? invalid slot.", 0
 szP39_ReplayOn          DB "[CoT-P39] Deterministic replay mode ENABLED.", 0
 szP39_ReplayOff         DB "[CoT-P39] Deterministic replay mode DISABLED.", 0
-szP39_ReplayBlocked     DB "[CoT-P39] Append BLOCKED — replay mode active.", 0
+szP39_ReplayBlocked     DB "[CoT-P39] Append BLOCKED ? replay mode active.", 0
 szP39_SealOK            DB "[CoT-P39] Arena SEALED (read-only).", 0
 szP39_UnsealOK          DB "[CoT-P39] Arena UNSEALED (read-write).", 0
 szP39_SealFail          DB "[CoT-P39] Arena seal FAILED.", 0
@@ -299,7 +299,7 @@ szP39_CopyFallback      DB "[CoT-P39] Copy engine fallback: ERMS (no AVX2/512)."
 szP39_MPEnabled         DB "[CoT-P39] Multi-producer mode ENABLED.", 0
 szP39_MPDisabled        DB "[CoT-P39] Multi-producer mode remains DISABLED.", 0
 szP39_Backpressure      DB "[CoT-P39] GPU backpressure: throttling append.", 0
-szP39_QuotaExceeded     DB "[CoT-P39] Tenant quota EXCEEDED — append refused.", 0
+szP39_QuotaExceeded     DB "[CoT-P39] Tenant quota EXCEEDED ? append refused.", 0
 szP39_TelemetryReady    DB "[CoT-P39] Telemetry page initialized.", 0
 szP39_ThrottleSoft      DB "[CoT-P39] Commit governor: SOFT throttle engaged.", 0
 szP39_ThrottleHard      DB "[CoT-P39] Commit governor: HARD throttle engaged.", 0
@@ -313,7 +313,7 @@ szP39_ThrottleHard      DB "[CoT-P39] Commit governor: HARD throttle engaged.", 
 ; CoT_SelectCopyEngine
 ; Probe CPUID to detect ERMS, AVX2, AVX-512F capabilities.
 ; Populate CopyDispatch table with function pointers.
-; Call once at init. Cached — subsequent calls are no-ops.
+; Call once at init. Cached ? subsequent calls are no-ops.
 ;
 ; Returns: EAX = selected engine ID (0=ERMS, 1=AVX2, 2=AVX-512)
 ; =============================================================================
@@ -330,7 +330,7 @@ CoT_SelectCopyEngine PROC FRAME
     cmp     DWORD PTR [g_copyEngineInitialized], 1
     je      @@sce_cached
 
-    ; CPUID leaf 7, subleaf 0 — structured extended features
+    ; CPUID leaf 7, subleaf 0 ? structured extended features
     mov     eax, CPUID_EXTENDED_FEATURES
     xor     ecx, ecx
     cpuid
@@ -351,7 +351,7 @@ CoT_SelectCopyEngine PROC FRAME
     bt      ebx, CPUID_AVX512F_BIT
     jnc     @@sce_no_avx512
 
-    ; ── XGETBV gate: verify OS has enabled AVX-512 XSTATE ────────────
+    ; ?? XGETBV gate: verify OS has enabled AVX-512 XSTATE ????????????
     ; Without this, the CPU advertises AVX-512F but the OS may not have
     ; enabled the ZMM register file (XCR0 bits 5/6/7).  Executing a ZMM
     ; instruction would #UD.
@@ -419,10 +419,10 @@ CoT_SelectCopyEngine PROC FRAME
 CoT_SelectCopyEngine ENDP
 
 ; =============================================================================
-; Internal: CopyEngine_ERMS — rep movsb copy (microcode-optimized)
+; Internal: CopyEngine_ERMS ? rep movsb copy (microcode-optimized)
 ;   RCX = dest
 ;   RDX = src
-;   R8  = size in bytes
+;   R8  = m_size in bytes
 ; =============================================================================
 CopyEngine_ERMS PROC FRAME
     push    rsi
@@ -447,10 +447,10 @@ CopyEngine_ERMS PROC FRAME
 CopyEngine_ERMS ENDP
 
 ; =============================================================================
-; Internal: CopyEngine_AVX2 — 256-bit YMM copy (best for 256B–32KB)
+; Internal: CopyEngine_AVX2 ? 256-bit YMM copy (best for 256B?32KB)
 ;   RCX = dest (need not be aligned, but perf is better aligned)
 ;   RDX = src
-;   R8  = size in bytes
+;   R8  = m_size in bytes
 ; =============================================================================
 CopyEngine_AVX2 PROC FRAME
     push    rsi
@@ -463,11 +463,11 @@ CopyEngine_AVX2 PROC FRAME
 
     mov     rdi, rcx                ; dest
     mov     rsi, rdx                ; src
-    mov     rbx, r8                 ; total size
+    mov     rbx, r8                 ; total m_size
 
     ; Copy 32-byte blocks
     mov     rcx, rbx
-    shr     rcx, 5                  ; count = size / 32
+    shr     rcx, 5                  ; count = m_size / 32
     jz      @@avx2_remainder
 
 @@avx2_loop:
@@ -479,9 +479,9 @@ CopyEngine_AVX2 PROC FRAME
     jnz     @@avx2_loop
 
 @@avx2_remainder:
-    ; Copy remaining bytes (0–31) via rep movsb
+    ; Copy remaining bytes (0?31) via rep movsb
     mov     rcx, rbx
-    and     rcx, 1Fh                ; size % 32
+    and     rcx, 1Fh                ; m_size % 32
     jz      @@avx2_done
     rep     movsb
 
@@ -500,10 +500,10 @@ CopyEngine_AVX2 PROC FRAME
 CopyEngine_AVX2 ENDP
 
 ; =============================================================================
-; Internal: CopyEngine_AVX512 — 512-bit ZMM copy (best for >32KB)
+; Internal: CopyEngine_AVX512 ? 512-bit ZMM copy (best for >32KB)
 ;   RCX = dest
 ;   RDX = src
-;   R8  = size in bytes
+;   R8  = m_size in bytes
 ; =============================================================================
 CopyEngine_AVX512 PROC FRAME
     push    rsi
@@ -516,7 +516,7 @@ CopyEngine_AVX512 PROC FRAME
 
     mov     rdi, rcx                ; dest
     mov     rsi, rdx                ; src
-    mov     rbx, r8                 ; total size
+    mov     rbx, r8                 ; total m_size
 
     ; Prefetch ahead for streaming
     prefetcht0 [rsi]
@@ -526,7 +526,7 @@ CopyEngine_AVX512 PROC FRAME
 
     ; Copy 64-byte blocks
     mov     rcx, rbx
-    shr     rcx, 6                  ; count = size / 64
+    shr     rcx, 6                  ; count = m_size / 64
     jz      @@avx512_remainder
 
 @@avx512_loop:
@@ -538,9 +538,9 @@ CopyEngine_AVX512 PROC FRAME
     jnz     @@avx512_loop
 
 @@avx512_remainder:
-    ; Remaining bytes (0–63) via rep movsb
+    ; Remaining bytes (0?63) via rep movsb
     mov     rcx, rbx
-    and     rcx, 3Fh                ; size % 64
+    and     rcx, 3Fh                ; m_size % 64
     jz      @@avx512_done
     rep     movsb
 
@@ -561,14 +561,14 @@ CopyEngine_AVX512 ENDP
 ; =============================================================================
 ; CoT_CopyDispatch
 ; Runtime-dispatched copy using the best available engine.
-; Selection is size-based:
-;   < 256 B      → ERMS  (slot 0)
-;   256 B – 32KB → AVX2  (slot 1)
-;   > 32 KB      → AVX-512 (slot 2)
+; Selection is m_size-based:
+;   < 256 B      ? ERMS  (slot 0)
+;   256 B ? 32KB ? AVX2  (slot 1)
+;   > 32 KB      ? AVX-512 (slot 2)
 ;
 ; RCX = dest
 ; RDX = src
-; R8  = size in bytes
+; R8  = m_size in bytes
 ;
 ; Returns: RAX = bytes copied (= R8 on success)
 ; =============================================================================
@@ -579,7 +579,7 @@ CoT_CopyDispatch PROC FRAME
     .allocstack 40
     .endprolog
 
-    mov     rbx, r8                 ; save size for return
+    mov     rbx, r8                 ; save m_size for return
 
     ; Ensure copy engine is initialized
     cmp     DWORD PTR [g_copyEngineInitialized], 0
@@ -595,24 +595,24 @@ CoT_CopyDispatch PROC FRAME
     pop     rcx
 
 @@cd_dispatch:
-    ; Size-based routing (no branching in hot loop — one branch here at entry)
+    ; m_size-based routing (no branching in hot loop ? one branch here at entry)
     cmp     r8, COPY_THRESHOLD_SMALL
     jb      @@cd_erms
 
     cmp     r8, COPY_THRESHOLD_MEDIUM
     jb      @@cd_avx2
 
-    ; > 32KB → AVX-512 (slot 2)
+    ; > 32KB ? AVX-512 (slot 2)
     call    QWORD PTR [CopyDispatch + 16]
     jmp     @@cd_done
 
 @@cd_avx2:
-    ; 256B–32KB → AVX2 (slot 1)
+    ; 256B?32KB ? AVX2 (slot 1)
     call    QWORD PTR [CopyDispatch + 8]
     jmp     @@cd_done
 
 @@cd_erms:
-    ; < 256B → ERMS (slot 0)
+    ; < 256B ? ERMS (slot 0)
     call    QWORD PTR [CopyDispatch]
 
 @@cd_done:
@@ -624,10 +624,10 @@ CoT_CopyDispatch ENDP
 
 ; =============================================================================
 ; CoT_CreateSnapshot
-; O(1) snapshot — captures arena UsedLength, CommitMark, Timestamp.
+; O(1) snapshot ? captures arena UsedLength, CommitMark, Timestamp.
 ; No memory movement. Stores in ring buffer.
 ;
-; Returns: EAX = snapshot slot index (0–15), or -1 on failure
+; Returns: EAX = snapshot slot index (0?15), or -1 on failure
 ; =============================================================================
 CoT_CreateSnapshot PROC FRAME
     push    rbx
@@ -704,7 +704,7 @@ CoT_CreateSnapshot ENDP
 ; Safe even mid-generation. Does NOT free VirtualAlloc pages (they remain
 ; committed for reuse). Simply rewinds g_arenaUsed.
 ;
-; RCX = snapshot slot index (0–15)
+; RCX = snapshot slot index (0?15)
 ;
 ; Returns: EAX = 0 on success, -1 on invalid slot
 ; =============================================================================
@@ -737,7 +737,7 @@ CoT_RestoreSnapshot PROC FRAME
     mov     QWORD PTR [g_arenaUsed], rax
 
     ; NOTE: We do NOT decommit pages. Committed pages stay committed
-    ; for fast reuse. This is intentional — decommit is expensive and
+    ; for fast reuse. This is intentional ? decommit is expensive and
     ; the arena is bounded at 1GB.
 
     call    Release_CoT_Lock
@@ -1007,7 +1007,7 @@ CoT_UnsealMemory ENDP
 ; CoT_SetTenantQuota
 ; Set per-tenant byte ceiling for append operations.
 ;
-; RCX = tenant ID (0–63)
+; RCX = tenant ID (0?63)
 ; RDX = quota in bytes (0 = unlimited)
 ;
 ; Returns: EAX = 0 on success, -1 on invalid tenant
@@ -1046,10 +1046,10 @@ CoT_SetTenantQuota ENDP
 
 ; =============================================================================
 ; CoT_CheckTenantQuota
-; Check if a tenant has remaining quota for an append of given size.
+; Check if a tenant has remaining quota for an append of given m_size.
 ;
-; RCX = tenant ID (0–63)
-; RDX = proposed append size in bytes
+; RCX = tenant ID (0?63)
+; RDX = proposed append m_size in bytes
 ;
 ; Returns: RAX = remaining quota after append (or -1 if would exceed)
 ; =============================================================================
@@ -1127,11 +1127,11 @@ CoT_EnableMultiProducer ENDP
 ; Lock-free multi-producer append using ticket reservation via LOCK XADD.
 ; This is the opt-in path for concurrent debate threads.
 ;
-; Single consumer guarantees ordering — producers reserve slices atomically,
+; Single consumer guarantees ordering ? producers reserve slices atomically,
 ; then each copies data into its reserved slice independently.
 ;
 ; RCX = source data pointer
-; RDX = data size in bytes
+; RDX = data m_size in bytes
 ;
 ; Returns: RAX = new total arena used, or 0 on failure
 ; =============================================================================
@@ -1157,7 +1157,7 @@ CoT_MultiProducerAppend PROC FRAME
     jz      @@mpa_fail
 
     mov     r12, rcx                ; source
-    mov     r13, rdx                ; size
+    mov     r13, rdx                ; m_size
 
     ; Check multi-producer enabled
     cmp     DWORD PTR [g_multiProducerEnabled], MP_ENABLED
@@ -1182,7 +1182,7 @@ CoT_MultiProducerAppend PROC FRAME
     ja      @@mpa_backpressure
 
     ; ---- TICKET RESERVATION (lock-free) ----
-    ; Atomically reserve a slice: old = g_arenaUsed; g_arenaUsed += size
+    ; Atomically reserve a slice: old = g_arenaUsed; g_arenaUsed += m_size
     mov     rax, r13
     lock xadd QWORD PTR [g_arenaUsed], rax
     ; RAX = our unique insertion offset
@@ -1200,7 +1200,7 @@ CoT_MultiProducerAppend PROC FRAME
     mov     rcx, QWORD PTR [g_arenaBase]
     add     rcx, rbx                ; dest = base + offset
     mov     rdx, r12                ; src
-    mov     r8, r13                 ; size
+    mov     r8, r13                 ; m_size
     call    CoT_CopyDispatch
 
     ; Telemetry
@@ -1216,7 +1216,7 @@ CoT_MultiProducerAppend PROC FRAME
     lock inc QWORD PTR [g_telemetry + CoT_Telemetry.BackpressureEvents]
     lea     rcx, szP39_Backpressure
     call    OutputDebugStringA
-    ; Fall through to fail — caller should retry
+    ; Fall through to fail ? caller should retry
 
 @@mpa_fail:
     xor     eax, eax
@@ -1268,3 +1268,4 @@ CoT_SetBackpressure PROC
 CoT_SetBackpressure ENDP
 
 END
+

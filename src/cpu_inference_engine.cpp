@@ -1063,6 +1063,46 @@ bool CPUInferenceEngine::LoadModel(const std::string& model_path)
             }
 
             printf("[CPUInferenceEngine] Model loaded successfully\n");
+
+            // Initialize enhanced streaming loader with IOCP
+            m_enhancedLoader = std::make_unique<EnhancedStreamingGGUFLoader>();
+            if (m_enhancedLoader)
+            {
+                printf("[CPUInferenceEngine] Initializing enhanced streaming loader...\n");
+                if (m_enhancedLoader->Open(effectiveModelPath))
+                {
+                    // Enable IORING for async batch I/O
+                    if (m_enhancedLoader->EnableIOring())
+                    {
+                        printf("[CPUInferenceEngine] IORING async I/O enabled\n");
+                    }
+                    else
+                    {
+                        printf("[CPUInferenceEngine] IORING not available (falling back to synchronous)\n");
+                    }
+
+                    // Enable NVMe direct I/O if available
+                    if (m_enhancedLoader->EnableNVMeDirectIO())
+                    {
+                        printf("[CPUInferenceEngine] NVMe direct I/O enabled\n");
+                    }
+                    else
+                    {
+                        printf("[CPUInferenceEngine] NVMe direct I/O not available\n");
+                    }
+
+                    // Allocate huge pages for tensor staging
+                    if (m_enhancedLoader->AllocateHugePages(1024))
+                    {
+                        printf("[CPUInferenceEngine] Huge pages allocated (1024MB)\n");
+                    }
+                }
+                else
+                {
+                    printf("[CPUInferenceEngine] Enhanced loader init failed (non-critical)\n");
+                }
+            }
+
             return true;
         }
         
@@ -2305,11 +2345,24 @@ void CPUInferenceEngine::TransformerLayer(const float* input, float* output, int
                                           uint32_t deviceId)
 {
     // Fallback math path only; primary production path is RawrXDInference::ForwardTokens.
-    (void)layer_idx;
     (void)deviceId;
     if (!input || !output || seq_len <= 0)
     {
         return;
+    }
+
+    // Prefetch next layer weights while computing current layer
+    if (m_enhancedLoader && layer_idx + 1 < m_numLayers)
+    {
+        int nextLayer = layer_idx + 1;
+        // Prefetch key weight tensors for next layer
+        m_enhancedLoader->PrefetchTensorAsync("layers." + std::to_string(nextLayer) + ".attention.wq.weight");
+        m_enhancedLoader->PrefetchTensorAsync("layers." + std::to_string(nextLayer) + ".attention.wk.weight");
+        m_enhancedLoader->PrefetchTensorAsync("layers." + std::to_string(nextLayer) + ".attention.wv.weight");
+        m_enhancedLoader->PrefetchTensorAsync("layers." + std::to_string(nextLayer) + ".attention.wo.weight");
+        m_enhancedLoader->PrefetchTensorAsync("layers." + std::to_string(nextLayer) + ".feed_forward.w1.weight");
+        m_enhancedLoader->PrefetchTensorAsync("layers." + std::to_string(nextLayer) + ".feed_forward.w2.weight");
+        m_enhancedLoader->PrefetchTensorAsync("layers." + std::to_string(nextLayer) + ".feed_forward.w3.weight");
     }
     int dim = m_embeddingDim > 0 ? m_embeddingDim : 4096;
     size_t sz = 0;

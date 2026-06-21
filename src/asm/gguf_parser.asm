@@ -1,5 +1,5 @@
 ; =============================================================================
-; gguf_parser.asm — Real GGUF Header Parser (Pure x64 MASM)
+; gguf_parser.asm ? Real GGUF Header Parser (Pure x64 MASM)
 ; Reads GGUF magic, version, tensor count, metadata from memory-mapped file
 ; =============================================================================
 ; Exports:
@@ -91,7 +91,7 @@ GGUF_ParseHeader PROC FRAME
     mov r12, rdx                        ; R12 = fileSize
     mov r13, r8                         ; R13 = out
 
-    ; Validate minimum size (magic + version + counts = 24 bytes)
+    ; Validate minimum m_size (magic + version + counts = 24 bytes)
     cmp r12, 24
     jb _gguf_too_small
 
@@ -107,7 +107,7 @@ GGUF_ParseHeader PROC FRAME
     jmp _gguf_done
 
 _gguf_magic_ok:
-    ; Read version (offset 4) — little-endian uint32
+    ; Read version (offset 4) ? little-endian uint32
     mov eax, DWORD PTR [rbx+4]
     cmp eax, 3                          ; Support v3
     jbe _gguf_version_ok
@@ -224,7 +224,7 @@ _tensor_walk:
     mov rcx, rax
     shl rax, 3                          ; *8
     add rsi, rax
-    ; type (uint32)
+    ; m_type (uint32)
     add rsi, 4
     ; offset (uint64)
     add rsi, 8
@@ -264,7 +264,7 @@ _tensor_dims_pad:
     inc edx
     jmp _tensor_dims_pad
 _tensor_type:
-    ; type
+    ; m_type
     mov eax, DWORD PTR [rsi]
     mov DWORD PTR [r14+GTENSOR_TYPE], eax
     add rsi, 4
@@ -278,7 +278,7 @@ _tensor_type:
     add rax, rbx
     mov QWORD PTR [r14+GTENSOR_DATA_PTR], rax
 
-    ; Calculate size (simplified: product of dims * type_size)
+    ; Calculate m_size (simplified: product of dims * type_size)
     ; For F32: 4 bytes per element
     mov eax, DWORD PTR [r14+GTENSOR_TYPE]
     cmp eax, GGML_TYPE_F32
@@ -299,7 +299,7 @@ _tensor_size_q4:
     mov ecx, 1                          ; Approximate
 
 _tensor_calc_size:
-    ; size = dims[0] * dims[1] * dims[2] * dims[3] * type_size
+    ; m_size = dims[0] * dims[1] * dims[2] * dims[3] * type_size
     mov rax, QWORD PTR [r14+GTENSOR_DIMS+0]
     imul rax, QWORD PTR [r14+GTENSOR_DIMS+8]
     imul rax, QWORD PTR [r14+GTENSOR_DIMS+16]
@@ -325,3 +325,4 @@ _tensor_done:
 GGUF_GetTensorInfo ENDP
 
 END
+

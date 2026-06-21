@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_ModelMetadata_Hotpatch.asm — Model Metadata Injection Hotpatch Kernel
+; RawrXD_ModelMetadata_Hotpatch.asm ? Model Metadata Injection Hotpatch Kernel
 ; =============================================================================
 ; Forces Ollama model metadata to populate when the standard API response
 ; lacks fields that GitHub/cloud models provide (family, parameter_size,
@@ -8,14 +8,14 @@
 ; identically to GitHub models.
 ;
 ; Exports:
-;   asm_metadata_hotpatch_init        — Initialize patch tables + default metadata
-;   asm_metadata_hotpatch_shutdown    — Tear down, free code caves
-;   asm_metadata_inject_defaults      — Write default metadata into a ModelConfig buffer
-;   asm_metadata_scan_and_patch       — Scan loaded model list, patch empty fields
-;   asm_metadata_force_agent_capable  — Force "agent" capability flag on a model entry
-;   asm_metadata_get_stats            — Return patch statistics
-;   asm_metadata_set_field            — Set a specific metadata field by ID
-;   asm_metadata_validate_buffer      — Validate a metadata buffer is well-formed
+;   asm_metadata_hotpatch_init        ? Initialize patch tables + default metadata
+;   asm_metadata_hotpatch_shutdown    ? Tear down, free code caves
+;   asm_metadata_inject_defaults      ? Write default metadata into a ModelConfig buffer
+;   asm_metadata_scan_and_patch       ? Scan loaded model list, patch empty fields
+;   asm_metadata_force_agent_capable  ? Force "agent" capability flag on a model entry
+;   asm_metadata_get_stats            ? Return patch statistics
+;   asm_metadata_set_field            ? Set a specific metadata field by ID
+;   asm_metadata_validate_buffer      ? Validate a metadata buffer is well-formed
 ;
 ; Architecture: x64 MASM | Windows ABI | No CRT | No exceptions
 ; Build: ml64.exe /c /Zi /Zd /Fo RawrXD_ModelMetadata_Hotpatch.obj RawrXD_ModelMetadata_Hotpatch.asm
@@ -82,7 +82,7 @@ BUF_DESC_LEN            EQU     104     ; QWORD: description length
 BUF_AGENT_FLAG          EQU     112     ; BYTE:  1 = agent-capable
 BUF_CTX_LEN             EQU     116     ; DWORD: context length
 BUF_MAX_TOKENS          EQU     120     ; DWORD: max output tokens
-BUF_TOTAL_SIZE          EQU     128     ; Total struct size
+BUF_TOTAL_SIZE          EQU     128     ; Total struct m_size
 
 ; Flags
 FLAG_HAS_FAMILY         EQU     00000001h
@@ -95,7 +95,7 @@ FLAG_METADATA_COMPLETE  EQU     0000003Fh   ; All flags set
 
 MAGIC_VALUE             EQU     4154454D52574152h   ; 'RAWRMETA' in little-endian
 
-; Code cave size for default strings
+; Code cave m_size for default strings
 CODE_CAVE_SIZE          EQU     4096
 
 ; Max models in patch table
@@ -143,7 +143,7 @@ g_MetadataLock          QWORD   0
 .code
 
 ; =============================================================================
-; AcquireMetadataLock / ReleaseMetadataLock — Spinlock primitives
+; AcquireMetadataLock / ReleaseMetadataLock ? Spinlock primitives
 ; =============================================================================
 AcquireMetadataLock PROC
     push    rax
@@ -309,7 +309,7 @@ asm_metadata_inject_defaults PROC FRAME
     inc     r13d
 @@skip_family:
 
-    ; --- Parameter size field ---
+    ; --- Parameter m_size field ---
     cmp     QWORD PTR [r12 + BUF_PARAM_SIZE_LEN], 0
     jne     @@skip_params
     lea     rax, [szDefaultParamSize]
@@ -375,7 +375,7 @@ asm_metadata_inject_defaults PROC FRAME
     inc     r13d
 @@skip_maxtok:
 
-    ; Update global stats
+    ; Update global m_stats
     test    r13d, r13d
     jz      @@inject_done
     lock inc QWORD PTR [g_ModelsPatched]
@@ -741,3 +741,4 @@ asm_metadata_validate_buffer PROC FRAME
 asm_metadata_validate_buffer ENDP
 
 END
+

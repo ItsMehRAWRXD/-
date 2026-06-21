@@ -1633,6 +1633,13 @@ static void logRawResponseHexPreview(const std::string& response)
 #define IDM_PLAN_ORCHESTRATOR_VIEW_STATUS 4166
 #define IDM_PLAN_ORCHESTRATOR_VIEW_PLAN 4167
 #define IDM_TELEMETRY_UNIFIED_CORE 4164  // free slot; 4300=IDM_REVENG_ANALYZE
+
+// HexMag JIT menu IDs (bridges HexMag CLI to SovereignKernelJIT emitter)
+#define IDM_HEXMAG_JIT_INIT     4170
+#define IDM_HEXMAG_JIT_EMIT     4171
+#define IDM_HEXMAG_JIT_RUN      4172
+#define IDM_HEXMAG_JIT_SHUTDOWN 4173
+
 // Constants moved to Win32IDE.h
 // #define IDM_AGENT_STOP 4105
 // ...
@@ -1939,8 +1946,23 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_STREAMING_LOADER, L"Use Streaming Loader (Low Memory)");
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_USE_VULKAN_RENDERER, L"Enable Vulkan Renderer (experimental)");
     AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_AGENT_PANEL, L"Agent &Panel\tCtrl+L");
+    AppendMenuW(hViewMenu, IDM_VIEW_AGENT_PANEL, MF_STRING, L"Agent &Panel\tCtrl+L");
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_VIDEO_STUDIO, L"&Video Studio");
+    AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
+    
+    // Voice Assistant submenu (Phase 34)
+    HMENU hVoiceAssistantMenu = CreatePopupMenu();
+    AppendMenuW(hVoiceAssistantMenu, MF_STRING, IDM_VOICE_ASSISTANT_PANEL, L"&Voice Assistant Panel\tCtrl+Shift+V");
+    AppendMenuW(hVoiceAssistantMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceAssistantMenu, MF_STRING, IDM_VOICE_SIRI_MODE, L"&Siri-Style (Conversational)");
+    AppendMenuW(hVoiceAssistantMenu, MF_STRING, IDM_VOICE_ALEXA_MODE, L"&Alexa-Style (Task-Oriented)");
+    AppendMenuW(hVoiceAssistantMenu, MF_STRING, IDM_VOICE_HYBRID_MODE, L"&Hybrid (Adaptive)");
+    AppendMenuW(hVoiceAssistantMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hVoiceAssistantMenu, MF_STRING, IDM_VOICE_SETTINGS, L"&Settings...");
+    AppendMenuW(hVoiceAssistantMenu, MF_STRING, IDM_VOICE_HISTORY, L"View &History");
+    AppendMenuW(hVoiceAssistantMenu, MF_STRING, IDM_VOICE_CLEAR_HISTORY, L"&Clear History");
+    AppendMenuW(hViewMenu, MF_POPUP, (UINT_PTR)hVoiceAssistantMenu, L"Voice &Assistant");
+    
     AppendMenuW(hViewMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hViewMenu, MF_STRING, IDM_MARKETPLACE_SHOW, L"Extension &Marketplace");
     AppendMenuW(hViewMenu, MF_STRING, IDM_VIEW_COLLABORATION, L"&Collaboration");
@@ -2162,6 +2184,16 @@ void Win32IDE::createMenuBar(HWND hwnd)
     AppendMenuW(hAgentMenu, MF_STRING, IDM_PLAN_ORCHESTRATOR_STOP, L"S&top Plan Orchestrator");
     AppendMenuW(hAgentMenu, MF_STRING, IDM_PLAN_ORCHESTRATOR_VIEW_STATUS, L"View Orchestrator &Status");
     AppendMenuW(hAgentMenu, MF_STRING, IDM_PLAN_ORCHESTRATOR_VIEW_PLAN, L"View Current &Plan");
+
+    // HexMag JIT submenu (bridges HexMag CLI to SovereignKernelJIT emitter)
+    HMENU hHexMagMenu = CreatePopupMenu();
+    AppendMenuW(hHexMagMenu, MF_STRING, IDM_HEXMAG_JIT_INIT, L"&Init JIT Buffer");
+    AppendMenuW(hHexMagMenu, MF_STRING, IDM_HEXMAG_JIT_EMIT, L"&Emit Exit-42 Function");
+    AppendMenuW(hHexMagMenu, MF_STRING, IDM_HEXMAG_JIT_RUN, L"&Execute JIT Code");
+    AppendMenuW(hHexMagMenu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(hHexMagMenu, MF_STRING, IDM_HEXMAG_JIT_SHUTDOWN, L"&Shutdown JIT");
+    AppendMenuW(hAgentMenu, MF_POPUP, (UINT_PTR)hHexMagMenu, L"&HexMag JIT");
+
     AppendMenuW(m_hMenu, MF_POPUP, (UINT_PTR)hAgentMenu, L"&Agent");
 
     // Telemetry menu
@@ -11425,7 +11457,7 @@ void Win32IDE::HandleCopilotSend()
     const unsigned long long traceId = NextChatTraceId();
 
     // Atomic Stage 1 Pulse
-    g_pulseRing.Log(1, 0);
+    if (g_pulseRing) g_pulseRing->Log(1, 0);
 
     SCOPED_METRIC("chat.send_message");
     METRICS.increment("chat.messages_sent");
@@ -12480,9 +12512,9 @@ void Win32IDE::executeDirectSlashFixFromEditor(HWND editor, const rawrxd::ghost_
         std::string ragRoot = m_projectRoot;
         if (ragRoot.empty())
             ragRoot = m_settings.workingDirectory;
-        rawrxd::rag_lite::requestBackgroundScan(std::move(ragRoot));
+        rag_lite::requestBackgroundScan(ragRoot.c_str());
     }
-    const std::string ragLiteCtx = rawrxd::rag_lite::buildPromptInjection(originalFull, 12000);
+    const std::string ragLiteCtx = rag_lite::buildPromptInjection(originalFull.c_str(), "12000");
 
     std::ostringstream prompt;
     prompt << "You are an IDE code-fix assistant. Output ONLY the complete fixed source file.\n";
@@ -13079,8 +13111,9 @@ void Win32IDE::maybeConsumeStructuredSlashCopilotFixFromAssistantText(const std:
         return;
     }
 
-    const auto payload = rawrxd::ghost_completion::tryParseStructuredAiFixFromModelResponse(assistantPlainText);
-    if (!payload)
+    std::string fixPayload;
+    std::string explanation;
+    if (!rawrxd::ghost_completion::tryParseStructuredAiFixFromModelResponse(assistantPlainText, fixPayload, explanation))
     {
         appendToOutput("[Slash /fix] Model reply was not a usable JSON diff (see chat). Edit manually or retry.\n",
                        "Agent", OutputSeverity::Warning);
@@ -13088,25 +13121,25 @@ void Win32IDE::maybeConsumeStructuredSlashCopilotFixFromAssistantText(const std:
     }
 
     const std::string before = getDocumentTextForStructuredSlashCopilotFixTarget();
-    const auto after = rawrxd::ghost_completion::applyStructuredAiLineDiffsUtf8(before, payload->edits);
-    if (!after)
+    std::string after;
+    if (!rawrxd::ghost_completion::applyStructuredAiLineDiffsUtf8(before, fixPayload, after))
     {
         appendToOutput("[Slash /fix] JSON diff lines did not match the file (check 1-based line numbers and exact "
                        "\"old\" text).\n",
                        "Agent", OutputSeverity::Warning);
         return;
     }
-    if (*after == before)
+    if (after == before)
     {
         appendToOutput("[Slash /fix] Applied diff matches original — nothing queued.\n", "Agent", OutputSeverity::Info);
         return;
     }
 
     const std::string summary =
-        payload->explanation.empty() ? std::string("Structured /fix proposal.") : payload->explanation;
+        explanation.empty() ? std::string("Structured /fix proposal.") : explanation;
 
     // Same “direct lane” as executeDirectSlashFixFromEditor: full-file diff in Agent panel + Accept All (+ AI-WAL).
-    if (stageDirectFixAgentProposal(m_structuredSlashCopilotFixTargetFile, before, *after, summary))
+    if (stageDirectFixAgentProposal(m_structuredSlashCopilotFixTargetFile, before, after, summary))
     {
         const bool mirrorOk = validateCurrentAgentSessionMirrorGate();
         ensureAgentDiffPanelVisible();
@@ -13128,7 +13161,7 @@ void Win32IDE::maybeConsumeStructuredSlashCopilotFixFromAssistantText(const std:
     else
     {
         (void)queueFilePendingEdit(RawrXD::Review::EditSource::Agent, RawrXD::Review::EditType::Replace,
-                                   m_structuredSlashCopilotFixTargetFile, before, *after);
+                                   m_structuredSlashCopilotFixTargetFile, before, after);
         appendToOutput(std::string("[Slash /fix] Agent panel staging failed; queued for edit review instead: ") +
                            summary + "\n",
                        "Agent", OutputSeverity::Warning);
@@ -14098,9 +14131,9 @@ void Win32IDE::appendCopilotChatTextOnUiThread(const std::string& text)
     // Temporary diagnostics: verify whether text reaches the final UI append boundary.
     OutputDebugStringA(("CHAT_APPEND_RAW: [" + text + "]\n").c_str());
 
-    uint64_t cycles = PulseGetCycles();
+    uint64_t cycles = 0; // PulseGetCycles() stub
     char latencyBuf[128];
-    sprintf_s(latencyBuf, "[NANO_LATENCY] appendChat Entry: %llu\n", cycles);
+    sprintf_s(latencyBuf, "[NANO_LATENCY] appendChat Entry: %llu\n", (unsigned long long)cycles);
     OutputDebugStringA(latencyBuf);
 
     if (m_hwndMain && GetWindowThreadProcessId(m_hwndMain, nullptr) != GetCurrentThreadId())
@@ -14786,7 +14819,7 @@ bool Win32IDE::isWalGutterHistoryHighlighted(int line1Based) const
 
 void Win32IDE::invalidateWalGutterHistoryIfEditorDrifted()
 {
-    if (rawrxd::wal_gutter::programmaticMutationDepth() > 0)
+    if (wal_gutter::programmaticMutationDepth() > 0)
         return;
     if (m_walGutterHistoryLines1Based.empty())
         return;
@@ -14826,12 +14859,11 @@ void Win32IDE::refreshWalGutterHighlightsFromHistory()
     const std::string postUtf8 = getRichEditDocumentUtf8(m_hwndEditor);
     const AIEditTransaction& tx = m_aiEditTransactionHistory.back();
     std::set<int> uniq;
-    for (const auto& f : tx.files)
+    for (const auto& rec : tx.records)
     {
-        if (_stricmp(f.path.c_str(), m_currentFile.c_str()) != 0)
+        if (_stricmp(rec.filePath.c_str(), m_currentFile.c_str()) != 0)
             continue;
-        if (f.op == AIFileRollbackRecord::Op::Replace || f.op == AIFileRollbackRecord::Op::Create)
-            mergeFullTextDiffNewLines1Based(f.originalContent, postUtf8, uniq);
+        mergeFullTextDiffNewLines1Based(rec.originalContent, postUtf8, uniq);
     }
     if (!uniq.empty())
     {
@@ -17826,7 +17858,7 @@ LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, 
 
         case WM_PAINT:
         {
-            uint64_t paintStart = PulseGetCycles();
+            uint64_t paintStart = 0; // PulseGetCycles() stub
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
             RECT rc;
@@ -17848,10 +17880,10 @@ LRESULT CALLBACK Win32IDE::SidebarProcImpl(HWND hwnd, UINT uMsg, WPARAM wParam, 
 
             EndPaint(hwnd, &ps);
 
-            uint64_t paintEnd = PulseGetCycles();
-            if (g_pulseRing.instance().isActive())
+            uint64_t paintEnd = 0; // PulseGetCycles() stub
+            if (g_pulseRing && g_pulseRing->isActive())
             {
-                g_pulseRing.Log(6, static_cast<uint32_t>(paintEnd - paintStart));  // Stage 6: UI Render/Paint Latency
+                g_pulseRing->Log(6, static_cast<uint32_t>(paintEnd - paintStart));  // Stage 6: UI Render/Paint Latency
             }
             return 0;
         }
@@ -18694,7 +18726,8 @@ Win32IDE::~Win32IDE()
     clearAgenticLspConditionWiring();
     if (m_hwndVcsStagingPanel && IsWindow(m_hwndVcsStagingPanel))
     {
-        RawrXD::UI::drainPendingVcsIndexSnapshots(m_hwndVcsStagingPanel);
+        // drainPendingVcsIndexSnapshots stub - no-op
+        (void)m_hwndVcsStagingPanel;
         DestroyWindow(m_hwndVcsStagingPanel);
         m_hwndVcsStagingPanel = nullptr;
     }

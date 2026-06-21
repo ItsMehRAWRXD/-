@@ -13,7 +13,7 @@
 WINDOW_SIZE     equ 32768       ; 32KB sliding window
 MAX_MATCH       equ 258         ; Maximum match length
 MIN_MATCH       equ 3           ; Minimum match length
-HASH_BITS       equ 15          ; Hash table size
+HASH_BITS       equ 15          ; Hash table m_size
 HASH_SIZE       equ 32768       ; 2^15
 
 ; Huffman coding parameters
@@ -28,9 +28,9 @@ DISTANCE_CODES  equ 30          ; Number of distance codes
 ; Compression context structure
 COMPRESS_CTX struct
     input_ptr       qword   ?       ; Pointer to input data
-    input_size      qword   ?       ; Size of input data
+    input_size      qword   ?       ; m_size of input data
     output_ptr      qword   ?       ; Pointer to output buffer
-    output_size     qword   ?       ; Size of output buffer
+    output_size     qword   ?       ; m_size of output buffer
     output_pos      qword   ?       ; Current position in output
     window          byte    WINDOW_SIZE dup(?)  ; Sliding window
     window_pos      qword   ?       ; Current window position
@@ -43,9 +43,9 @@ COMPRESS_CTX ends
 ; Decompression context structure
 DECOMPRESS_CTX struct
     input_ptr       qword   ?       ; Pointer to compressed data
-    input_size      qword   ?       ; Size of compressed data
+    input_size      qword   ?       ; m_size of compressed data
     output_ptr      qword   ?       ; Pointer to output buffer
-    output_size     qword   ?       ; Size of output buffer
+    output_size     qword   ?       ; m_size of output buffer
     output_pos      qword   ?       ; Current output position
     bit_buffer      dword   ?       ; Bit buffer for reading
     bit_count       byte    ?       ; Number of bits in buffer
@@ -68,7 +68,7 @@ public CustomZlibFree
 ; CustomZlibInit - Initialize compression/decompression context
 ; Parameters:
 ;   RCX = context pointer (COMPRESS_CTX or DECOMPRESS_CTX)
-;   RDX = context size
+;   RDX = context m_size
 ; Returns:
 ;   RAX = 0 on success, error code otherwise
 ; ============================================================================
@@ -105,11 +105,11 @@ CustomZlibFree endp
 ; CustomZlibCompress - Compress data using DEFLATE algorithm
 ; Parameters:
 ;   RCX = input buffer pointer
-;   RDX = input size
+;   RDX = input m_size
 ;   R8  = output buffer pointer
-;   R9  = output buffer size
+;   R9  = output buffer m_size
 ; Returns:
-;   RAX = compressed size, or -1 on error
+;   RAX = compressed m_size, or -1 on error
 ; ============================================================================
 CustomZlibCompress proc
     push rbx
@@ -123,9 +123,9 @@ CustomZlibCompress proc
     
     ; Save parameters
     mov [rsp+20h], rcx      ; Input buffer
-    mov [rsp+28h], rdx      ; Input size
+    mov [rsp+28h], rdx      ; Input m_size
     mov [rsp+30h], r8       ; Output buffer
-    mov [rsp+38h], r9       ; Output size
+    mov [rsp+38h], r9       ; Output m_size
     
     ; Validate parameters
     test rcx, rcx
@@ -142,13 +142,13 @@ CustomZlibCompress proc
     
     ; Write ZLIB header (CMF + FLG)
     mov rdi, r8
-    mov byte ptr [rdi], 78h     ; CMF: compression method 8, window size 32K
+    mov byte ptr [rdi], 78h     ; CMF: compression method 8, window m_size 32K
     mov byte ptr [rdi+1], 9Ch   ; FLG: no dictionary, default compression
     add r12, 2
     
     ; Process input in blocks
     mov rsi, rcx            ; rsi = input pointer
-    mov r13, rdx            ; r13 = remaining input size
+    mov r13, rdx            ; r13 = remaining input m_size
     mov rdi, r8
     add rdi, r12            ; rdi = current output position
     
@@ -156,7 +156,7 @@ compress_loop:
     cmp r13, 0
     jle compress_done
     
-    ; Determine block size (max 65535 bytes for uncompressed block)
+    ; Determine block m_size (max 65535 bytes for uncompressed block)
     mov r14, r13
     cmp r14, 0FFFFh
     jle block_size_ok
@@ -193,7 +193,7 @@ block_size_ok:
     rep movsb
     add r12, r14
     
-    ; Update remaining size
+    ; Update remaining m_size
     sub r13, r14
     mov rsi, [rsp+20h]
     add rsi, rdx
@@ -208,7 +208,7 @@ compress_done:
     mov byte ptr [rdi], 01h     ; BFINAL=1, BTYPE=00
     inc r12
     mov word ptr [rdi+1], 0     ; LEN=0
-    mov word ptr [rdi+3], 0FFFFh ; NLEN=0xFFFF
+    mov word ptr [rdi+3], 0FFFFh ; NLEN=0FFFFh
     add r12, 4
     
     ; Calculate and write Adler-32 checksum
@@ -224,7 +224,7 @@ compress_done:
     mov [rdi], eax
     add r12, 4
     
-    ; Return compressed size
+    ; Return compressed m_size
     mov rax, r12
     jmp compress_exit
     
@@ -247,11 +247,11 @@ CustomZlibCompress endp
 ; CustomZlibDecompress - Decompress DEFLATE compressed data
 ; Parameters:
 ;   RCX = compressed buffer pointer
-;   RDX = compressed size
+;   RDX = compressed m_size
 ;   R8  = output buffer pointer
-;   R9  = output buffer size
+;   R9  = output buffer m_size
 ; Returns:
-;   RAX = decompressed size, or -1 on error
+;   RAX = decompressed m_size, or -1 on error
 ; ============================================================================
 CustomZlibDecompress proc
     push rbx
@@ -265,9 +265,9 @@ CustomZlibDecompress proc
     
     ; Save parameters
     mov [rsp+20h], rcx      ; Input buffer
-    mov [rsp+28h], rdx      ; Input size
+    mov [rsp+28h], rdx      ; Input m_size
     mov [rsp+30h], r8       ; Output buffer
-    mov [rsp+38h], r9       ; Output size
+    mov [rsp+38h], r9       ; Output m_size
     
     ; Validate parameters
     test rcx, rcx
@@ -279,7 +279,7 @@ CustomZlibDecompress proc
     test r9, r9
     jz decompress_error
     
-    ; Check minimum size for ZLIB header
+    ; Check minimum m_size for ZLIB header
     cmp rdx, 6
     jl decompress_error
     
@@ -374,7 +374,7 @@ decompress_done:
     cmp eax, ebx
     jne decompress_error
     
-    ; Return decompressed size
+    ; Return decompressed m_size
     mov rax, r13
     jmp decompress_exit
     
@@ -397,7 +397,7 @@ CustomZlibDecompress endp
 ; CalculateAdler32 - Calculate Adler-32 checksum
 ; Parameters:
 ;   RCX = data pointer
-;   RDX = data size
+;   RDX = data m_size
 ; Returns:
 ;   EAX = Adler-32 checksum
 ; ============================================================================
@@ -454,14 +454,14 @@ adler_done:
 CalculateAdler32 endp
 
 ; ============================================================================
-; CustomZlibGetCompressedSize - Estimate compressed size
+; CustomZlibGetCompressedSize - Estimate compressed m_size
 ; Parameters:
-;   RCX = uncompressed size
+;   RCX = uncompressed m_size
 ; Returns:
-;   RAX = estimated compressed size
+;   RAX = estimated compressed m_size
 ; ============================================================================
 CustomZlibGetCompressedSize proc
-    ; Worst case: input size + 0.1% + 12 bytes overhead + block headers
+    ; Worst case: input m_size + 0.1% + 12 bytes overhead + block headers
     mov rax, rcx
     shr rcx, 10             ; Divide by 1024
     add rax, rcx            ; Add 0.1%
@@ -470,15 +470,15 @@ CustomZlibGetCompressedSize proc
 CustomZlibGetCompressedSize endp
 
 ; ============================================================================
-; CustomZlibGetDecompressedSize - Get decompressed size from header
+; CustomZlibGetDecompressedSize - Get decompressed m_size from header
 ; Parameters:
 ;   RCX = compressed buffer pointer
-;   RDX = compressed size
+;   RDX = compressed m_size
 ; Returns:
-;   RAX = estimated decompressed size (or -1 if invalid)
+;   RAX = estimated decompressed m_size (or -1 if invalid)
 ; ============================================================================
 CustomZlibGetDecompressedSize proc
-    ; This is an estimate - actual size determined during decompression
+    ; This is an estimate - actual m_size determined during decompression
     cmp rdx, 6
     jl size_error
     
@@ -493,3 +493,4 @@ size_error:
 CustomZlibGetDecompressedSize endp
 
 end
+

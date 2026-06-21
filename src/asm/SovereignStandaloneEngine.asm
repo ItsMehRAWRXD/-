@@ -26,7 +26,7 @@ MEM_RELEASE             EQU 00008000h
 INVALID_HANDLE_VALUE    EQU -1
 
 ; ============================================================================
-; .data — Initialized data (must be before .code for ml64)
+; .data ? Initialized data (must be before .code for ml64)
 ; ============================================================================
 .data
 align 16
@@ -35,7 +35,7 @@ fixed_response_length equ $ - fixed_response
 warmup_prompt  db "Hello", 0
 
 ; ============================================================================
-; .bss — Uninitialized data
+; .bss ? Uninitialized data
 ; ============================================================================
 _BSS SEGMENT ALIGN(64)
 g_hModelFile    DQ ?
@@ -49,7 +49,7 @@ g_isWarm        DB ?
 _BSS ENDS
 
 ; ============================================================================
-; .code — Executable code
+; .code ? Executable code
 ; ============================================================================
 .code
 
@@ -328,3 +328,4 @@ _skip4:
 Engine_Shutdown ENDP
 
 END
+

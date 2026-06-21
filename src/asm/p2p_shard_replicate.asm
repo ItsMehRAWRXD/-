@@ -17,7 +17,7 @@ extern recv        : proc
 extern GetTickCount64 : proc
 
 ; Swarm Protocol Constants
-SWARM_HEADER_MAGIC  equ 5854494Ah     ; 'TITAN' (0x5854494A)
+SWARM_HEADER_MAGIC  equ 5854494Ah     ; 'TITAN' (05854494Ah)
 SWARM_HEADER_SIZE   equ 56
 REPLICATE_TIMEOUT   equ 5000           ; 5 seconds timeout for replication
 
@@ -93,7 +93,7 @@ RawrXD_P2P_ReplicateShard proc
     ; Calculate remaining
     mov r8, rsi
     sub r8, rbx
-    cmp r8, 48              ; Cap at chunk size
+    cmp r8, 48              ; Cap at chunk m_size
     jbe @do_recv
     mov r8, 48
 
@@ -151,3 +151,4 @@ RawrXD_P2P_ReplicateShard proc
 RawrXD_P2P_ReplicateShard endp
 
 END
+

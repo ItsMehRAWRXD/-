@@ -11,7 +11,7 @@ PUBLIC cosine_similarity_avx512
 .code
 
 ; float cosine_similarity_avx512(const float* a, const float* b, size_t n)
-; rcx = a (ptr), rdx = b (ptr), r8 = n (size)
+; rcx = a (ptr), rdx = b (ptr), r8 = n (m_size)
 ; Returns similarity in xmm0
 
 cosine_similarity_avx512 PROC
@@ -102,3 +102,4 @@ done:
 cosine_similarity_avx512 ENDP
 
 END
+

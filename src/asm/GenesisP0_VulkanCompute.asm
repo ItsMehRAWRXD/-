@@ -32,7 +32,7 @@ PUBLIC Genesis_VulkanCompute_Dispatch
 PUBLIC Genesis_VulkanCompute_Shutdown
 
 ; void* Genesis_VulkanCompute_Init(void* vkInstance, uint64_t optionalSize)
-; RCX = optional vk instance (unused), RDX = optional ring size
+; RCX = optional vk instance (unused), RDX = optional ring m_size
 Genesis_VulkanCompute_Init PROC
     sub rsp, 28h
 
@@ -180,3 +180,4 @@ shutdown_done:
 Genesis_VulkanCompute_Shutdown ENDP
 
 END
+

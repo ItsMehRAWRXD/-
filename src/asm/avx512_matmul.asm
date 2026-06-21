@@ -1,5 +1,5 @@
 ; =============================================================================
-; avx512_matmul.asm — Real AVX-512 FP32 Matrix Multiplication Kernel
+; avx512_matmul.asm ? Real AVX-512 FP32 Matrix Multiplication Kernel
 ; C = A * B, where A is MxK, B is KxN, C is MxN
 ; =============================================================================
 ; Export:
@@ -94,13 +94,13 @@ _loop_k:
     cmp rcx, r14
     jge _done_k
 
-    ; Load A[m, k] — broadcast to all 16 lanes
+    ; Load A[m, k] ? broadcast to all 16 lanes
     mov rdx, r15
     imul rdx, r14
     add rdx, rcx
     vbroadcastss zmm1, REAL4 PTR [rbx + rdx*4]
 
-    ; Load B[k, n..n+15] — 16 floats
+    ; Load B[k, n..n+15] ? 16 floats
     mov rdx, rcx
     imul rdx, r13
     add rdx, rax
@@ -141,3 +141,4 @@ _done_m:
 avx512_matmul_f32 ENDP
 
 END
+

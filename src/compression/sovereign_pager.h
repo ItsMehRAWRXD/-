@@ -25,6 +25,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace sov
 {
@@ -48,6 +49,12 @@ enum class Tier : uint8_t
 };
 
 static constexpr size_t kTierSlotCount = 6;
+
+// Stub function for telemetry reporting
+inline std::string formatPagerLastLoadTelemetryReport()
+{
+    return std::string("[telemetry] Pager last load report not available (stub)");
+}
 
 struct Page
 {

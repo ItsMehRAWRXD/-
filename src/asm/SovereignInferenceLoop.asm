@@ -1,21 +1,21 @@
 ; ============================================================================
-; SovereignInferenceLoop.asm — Pure MASM Inference Loop (No llama Backend)
+; SovereignInferenceLoop.asm ? Pure MASM Inference Loop (No llama Backend)
 ; ============================================================================
 ; Standalone token generation loop using memory-mapped weights.
 ; No external DLL dependencies. Zero HTTP. Zero JSON.
 ;
 ; Exports:
-;   SovInf_Init          — Initialize inference context
-;   SovInf_LoadWeights   — Memory-map GGUF weights file
-;   SovInf_RunLoop      — Main token generation loop
-;   SovInf_GetToken     — Retrieve next generated token
-;   SovInf_Shutdown     — Cleanup
+;   SovInf_Init          ? Initialize inference context
+;   SovInf_LoadWeights   ? Memory-map GGUF weights file
+;   SovInf_RunLoop      ? Main token generation loop
+;   SovInf_GetToken     ? Retrieve next generated token
+;   SovInf_Shutdown     ? Cleanup
 ;
 ; Architecture:
 ;   1. Map GGUF file into address space
 ;   2. Parse header (magic, version, tensor count, metadata)
-;   3. Build tensor index (name → offset, size, type)
-;   4. Run inference: token embedding → attention → FFN → logits
+;   3. Build tensor index (name ? offset, m_size, m_type)
+;   4. Run inference: token embedding ? attention ? FFN ? logits
 ;   5. Sample: softmax + top-k + temperature
 ;   6. Return token ID
 ; ============================================================================
@@ -80,7 +80,7 @@ MAX_TENSOR_NAME         EQU 64
 MAX_TENSORS             EQU 1024
 
 ; ---------------------------------------------------------------------------
-; .data — Initialized data
+; .data ? Initialized data
 ; ---------------------------------------------------------------------------
 .data
 ALIGN 8
@@ -125,7 +125,7 @@ g_temperature       dd 03f733333h    ; 0.95f
 .code
 
 ; ============================================================================
-; SovInf_Init — Initialize inference context
+; SovInf_Init ? Initialize inference context
 ; Returns RAX = 1 on success
 ; ============================================================================
 SovInf_Init PROC FRAME
@@ -139,7 +139,7 @@ SovInf_Init PROC FRAME
     je      _init_already
 
     ; Allocate KV cache: numLayers * 2 * maxSeqLen * numKVHeads * headDim * sizeof(float)
-    ; = 32 * 2 * 4096 * 32 * 128 * 4 = ~4.2GB — use smaller for demo
+    ; = 32 * 2 * 4096 * 32 * 128 * 4 = ~4.2GB ? use smaller for demo
     ; Demo: 32 * 2 * 512 * 32 * 128 * 4 = ~536MB
     mov     rcx, 0
     mov     rdx, 20000000h          ; 512MB for KV cache
@@ -179,7 +179,7 @@ _init_done:
 SovInf_Init ENDP
 
 ; ============================================================================
-; SovInf_LoadWeights — RCX = LPCWSTR path to GGUF file
+; SovInf_LoadWeights ? RCX = LPCWSTR path to GGUF file
 ; Returns RAX = 1 on success
 ; ============================================================================
 SovInf_LoadWeights PROC FRAME
@@ -208,7 +208,7 @@ SovInf_LoadWeights PROC FRAME
     je      _load_fail
     mov     [g_hModelFile], rax
 
-    ; Get file size
+    ; Get file m_size
     lea     rdx, [rsp+32]             ; LARGE_INTEGER* fileSize
     mov     rcx, [g_hModelFile]
     call    GetFileSizeEx
@@ -261,10 +261,10 @@ _version_ok:
     mov     [g_tensorCount], eax
 
     ; metadata_kv_count (uint64 at offset 16)
-    ; Skip metadata for now — parse tensor info directly
+    ; Skip metadata for now ? parse tensor info directly
 
     ; Parse tensor info array
-    ; Each tensor info: name_len (uint64), name[name_len], type (uint32), dims (uint32), shape[4] (uint64 each), offset (uint64)
+    ; Each tensor info: name_len (uint64), name[name_len], m_type (uint32), dims (uint32), shape[4] (uint64 each), offset (uint64)
     mov     rdi, rsi
     add     rdi, 24                   ; Skip header (magic + version + tensor_count + meta_count)
 
@@ -280,7 +280,7 @@ _skip_meta_loop:
     ; value_type (uint32)
     mov     eax, [rdi]
     add     rdi, 4
-    ; Skip value based on type
+    ; Skip value based on m_type
     cmp     eax, 4                    ; uint32
     je      _skip_4
     cmp     eax, 5                    ; uint64
@@ -342,7 +342,7 @@ _parse_tensor_loop:
     mov     byte ptr [rdi], 0
     mov     rdi, rsi                ; Restore rdi to after name
     add     rdi, r13
-    ; type
+    ; m_type
     mov     eax, [rdi]
     mov     r15, OFFSET g_tensorTypes
     mov     [r15 + rcx * 4], eax
@@ -350,7 +350,7 @@ _parse_tensor_loop:
     ; ndims
     mov     eax, [rdi]
     add     rdi, 4
-    ; shape[4] — skip for now
+    ; shape[4] ? skip for now
     add     rdi, 32
     ; offset
     mov     rax, [rdi]
@@ -358,7 +358,7 @@ _parse_tensor_loop:
     mov     [r15 + rcx * 8], rax
     add     rdi, 8
 
-    ; Calculate size (simplified: use offset difference)
+    ; Calculate m_size (simplified: use offset difference)
     mov     r13, rcx
     inc     r13
     cmp     r13d, r12d
@@ -397,7 +397,7 @@ _load_done:
 SovInf_LoadWeights ENDP
 
 ; ============================================================================
-; SovInf_RunLoop — Run one token generation step
+; SovInf_RunLoop ? Run one token generation step
 ; RCX = pointer to input token IDs (uint32 array)
 ; RDX = number of input tokens
 ; Returns RAX = generated token ID
@@ -460,7 +460,7 @@ _embed_done:
     ; === FFN (simplified) ===
     ; For demo: identity pass-through
 
-    ; === Logits → Token ===
+    ; === Logits ? Token ===
     ; For demo: return (last_token + 1) % vocab_size
     mov     r15, OFFSET g_tokenBuffer
     mov     r14, r12
@@ -494,7 +494,7 @@ _loop_done:
 SovInf_RunLoop ENDP
 
 ; ============================================================================
-; SovInf_GetToken — Returns RAX = last generated token ID
+; SovInf_GetToken ? Returns RAX = last generated token ID
 ; ============================================================================
 SovInf_GetToken PROC
     mov     eax, [g_currentToken]
@@ -502,7 +502,7 @@ SovInf_GetToken PROC
 SovInf_GetToken ENDP
 
 ; ============================================================================
-; SovInf_Shutdown — Cleanup all resources
+; SovInf_Shutdown ? Cleanup all resources
 ; ============================================================================
 SovInf_Shutdown PROC FRAME
     push    rbx
@@ -567,3 +567,4 @@ _no_embed:
 SovInf_Shutdown ENDP
 
 END
+

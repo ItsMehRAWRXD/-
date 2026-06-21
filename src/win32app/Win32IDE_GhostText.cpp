@@ -3476,7 +3476,7 @@ void Win32IDE::renderGhostText(HDC hdc)
 // KEY HANDLER — intercepts Tab/Esc in editor subclass
 // ============================================================================
 
-bool Win32IDE::handleGhostTextKey(UINT vk)
+bool Win32IDE::handleGhostTextKey(UINT vk, bool /*ctrlDown*/, bool /*shiftDown*/)
 {
     if (vk == VK_ESCAPE)
     {

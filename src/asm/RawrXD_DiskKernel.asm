@@ -15,8 +15,8 @@
 ;   link.exe /DLL /OUT:RawrXD_DiskKernel.dll /DEF:DiskKernel.def *.obj
 ;          kernel32.lib ntdll.lib
 ;
-; Build (library — linked into RawrXD-Shell):
-;   Included in CMakeLists.txt ASM_KERNEL_SOURCES — exports C-callable procs.
+; Build (library ? linked into RawrXD-Shell):
+;   Included in CMakeLists.txt ASM_KERNEL_SOURCES ? exports C-callable procs.
 ;
 ; Pattern: PatchResult (RAX=0 success, RAX=NTSTATUS on error, RDX=detail)
 ; Rule:    NO SOURCE FILE IS TO BE SIMPLIFIED.
@@ -65,7 +65,7 @@ IOCTL_ATA_PASS_THROUGH_DIRECT   equ 04D02Ch
 IOCTL_NVME_PASS_THROUGH         equ 04D008h
 IOCTL_STORAGE_PROTOCOL_SPECIFIC equ 02D1C00h
 
-; Storage Property Query (bus type detection)
+; Storage Property Query (bus memType detection)
 IOCTL_STORAGE_QUERY_PROPERTY    equ 02D1400h
 
 ; Volume/Partition
@@ -123,7 +123,7 @@ WAIT_TIMEOUT             equ 258
 INFINITE                 equ 0FFFFFFFFh
 
 ; =============================================================================
-; SCSI_PASS_THROUGH_DIRECT layout (x64 — manual offsets for alignment safety)
+; SCSI_PASS_THROUGH_DIRECT layout (x64 ? manual offsets for alignment safety)
 ; =============================================================================
 SPTD_LENGTH              equ 0       ; WORD   (2)
 SPTD_SCSISTATUS          equ 2       ; BYTE   (1)
@@ -254,7 +254,7 @@ PARTITION_ENTRY STRUCT 8
     StartLBA                    QWORD   ?
     EndLBA                      QWORD   ?
     LengthLBA                   QWORD   ?
-    PartitionType               DWORD   ?       ; MBR type byte or GPT GUID hash
+    PartitionType               DWORD   ?       ; MBR memType byte or GPT GUID hash
     FsType                      DWORD   ?       ; FS_*
     IsGPT                       BYTE    ?
     IsActive                    BYTE    ?       ; MBR: boot indicator
@@ -266,25 +266,25 @@ PARTITION_ENTRY STRUCT 8
     PartitionIndex              DWORD   ?       ; Index within drive
 PARTITION_ENTRY ENDS
 
-; NTFS BIOS Parameter Block (from boot sector offset 0x0B)
+; NTFS BIOS Parameter Block (from boot sector offset 00Bh)
 NTFS_BPB STRUCT 8
-    BytesPerSector              WORD    ?       ; +0x0B
-    SectorsPerCluster           BYTE    ?       ; +0x0D
-    ReservedSectors             WORD    ?       ; +0x0E (unused NTFS)
-    _unused1                    BYTE    5 dup(?) ; +0x10-0x14
-    MediaDescriptor             BYTE    ?       ; +0x15
-    _unused2                    WORD    ?       ; +0x16
-    SectorsPerTrack             WORD    ?       ; +0x18
-    NumberOfHeads               WORD    ?       ; +0x1A
-    HiddenSectors               DWORD   ?       ; +0x1C
-    _unused3                    DWORD   ?       ; +0x20
-    _unused4                    DWORD   ?       ; +0x24
-    TotalSectors                QWORD   ?       ; +0x28
-    MftClusterNumber            QWORD   ?       ; +0x30
-    MftMirrorClusterNumber      QWORD   ?       ; +0x38
-    ClustersPerFileRecord       DWORD   ?       ; +0x40 (signed: if <0, size=2^|val|)
-    ClustersPerIndexRecord      DWORD   ?       ; +0x44
-    VolumeSerialNumber          QWORD   ?       ; +0x48
+    BytesPerSector              WORD    ?       ; +00Bh
+    SectorsPerCluster           BYTE    ?       ; +00Dh
+    ReservedSectors             WORD    ?       ; +00Eh (unused NTFS)
+    _unused1                    BYTE    5 dup(?) ; +010h-014h
+    MediaDescriptor             BYTE    ?       ; +015h
+    _unused2                    WORD    ?       ; +016h
+    SectorsPerTrack             WORD    ?       ; +018h
+    NumberOfHeads               WORD    ?       ; +01Ah
+    HiddenSectors               DWORD   ?       ; +01Ch
+    _unused3                    DWORD   ?       ; +020h
+    _unused4                    DWORD   ?       ; +024h
+    TotalSectors                QWORD   ?       ; +028h
+    MftClusterNumber            QWORD   ?       ; +030h
+    MftMirrorClusterNumber      QWORD   ?       ; +038h
+    ClustersPerFileRecord       DWORD   ?       ; +040h (signed: if <0, size=2^|val|)
+    ClustersPerIndexRecord      DWORD   ?       ; +044h
+    VolumeSerialNumber          QWORD   ?       ; +048h
 NTFS_BPB ENDS
 
 ; NTFS File Record Header (from MFT)
@@ -296,7 +296,7 @@ NTFS_FILE_RECORD_HEADER STRUCT 8
     SequenceNumber              WORD    ?
     HardLinkCount               WORD    ?
     FirstAttributeOffset        WORD    ?
-    Flags                       WORD    ?       ; 0x01=InUse, 0x02=Directory
+    Flags                       WORD    ?       ; 001h=InUse, 002h=Directory
     UsedSize                    DWORD   ?
     AllocatedSize               DWORD   ?
     BaseFileRecord              QWORD   ?
@@ -307,7 +307,7 @@ NTFS_FILE_RECORD_HEADER ENDS
 
 ; NTFS Attribute Header (common prefix for all attributes)
 NTFS_ATTR_HEADER STRUCT 8
-    AttributeType               DWORD   ?       ; 0x10=StdInfo, 0x30=FileName, 0x80=Data, etc.
+    AttributeType               DWORD   ?       ; 010h=StdInfo, 030h=FileName, 080h=Data, etc.
     RecordLength                DWORD   ?
     NonResident                 BYTE    ?       ; 0=resident, 1=non-resident
     NameLength                  BYTE    ?       ; chars (UTF-16)
@@ -316,7 +316,7 @@ NTFS_ATTR_HEADER STRUCT 8
     Instance                    WORD    ?
 NTFS_ATTR_HEADER ENDS
 
-; NTFS $FILE_NAME attribute (type 0x30)
+; NTFS $FILE_NAME attribute (memType 030h)
 NTFS_FILENAME_ATTR STRUCT 8
     ParentDirectory             QWORD   ?       ; MFT ref of parent dir
     CreationTime                QWORD   ?
@@ -332,7 +332,7 @@ NTFS_FILENAME_ATTR STRUCT 8
     ; FileName UTF-16 follows immediately (variable length)
 NTFS_FILENAME_ATTR ENDS
 
-; File Info (for IDE file browser — C-callable result)
+; File Info (for IDE file browser ? C-callable result)
 FILE_INFO STRUCT 8
     FileName                    BYTE    260 dup(?) ; UTF-8
     FileSize                    QWORD   ?
@@ -352,25 +352,25 @@ FILE_INFO ENDS
 
 ; FAT32 Boot Sector fields (offsets from partition start)
 FAT32_BPB STRUCT 8
-    BytesPerSector              WORD    ?       ; +0x0B
-    SectorsPerCluster           BYTE    ?       ; +0x0D
-    ReservedSectors             WORD    ?       ; +0x0E
-    NumberOfFATs                BYTE    ?       ; +0x10
-    RootEntryCount              WORD    ?       ; +0x11 (0 for FAT32)
-    TotalSectors16              WORD    ?       ; +0x13 (0 for FAT32)
-    MediaType                   BYTE    ?       ; +0x15
-    FATSize16                   WORD    ?       ; +0x16 (0 for FAT32)
-    SectorsPerTrack             WORD    ?       ; +0x18
-    NumberOfHeads               WORD    ?       ; +0x1A
-    HiddenSectors               DWORD   ?       ; +0x1C
-    TotalSectors32              DWORD   ?       ; +0x20
-    FATSize32                   DWORD   ?       ; +0x24
-    ExtFlags                    WORD    ?       ; +0x28
-    FSVersion                   WORD    ?       ; +0x2A
-    RootCluster                 DWORD   ?       ; +0x2C
-    FSInfoSector                WORD    ?       ; +0x30
-    BackupBootSector            WORD    ?       ; +0x32
-    Reserved                    BYTE    12 dup(?) ; +0x34-0x3F
+    BytesPerSector              WORD    ?       ; +00Bh
+    SectorsPerCluster           BYTE    ?       ; +00Dh
+    ReservedSectors             WORD    ?       ; +00Eh
+    NumberOfFATs                BYTE    ?       ; +010h
+    RootEntryCount              WORD    ?       ; +011h (0 for FAT32)
+    TotalSectors16              WORD    ?       ; +013h (0 for FAT32)
+    MediaType                   BYTE    ?       ; +015h
+    FATSize16                   WORD    ?       ; +016h (0 for FAT32)
+    SectorsPerTrack             WORD    ?       ; +018h
+    NumberOfHeads               WORD    ?       ; +01Ah
+    HiddenSectors               DWORD   ?       ; +01Ch
+    TotalSectors32              DWORD   ?       ; +020h
+    FATSize32                   DWORD   ?       ; +024h
+    ExtFlags                    WORD    ?       ; +028h
+    FSVersion                   WORD    ?       ; +02Ah
+    RootCluster                 DWORD   ?       ; +02Ch
+    FSInfoSector                WORD    ?       ; +030h
+    BackupBootSector            WORD    ?       ; +032h
+    Reserved                    BYTE    12 dup(?) ; +034h-03Fh
 FAT32_BPB ENDS
 
 ; Async I/O Context (OVERLAPPED wrapper for IDE non-blocking ops)
@@ -410,7 +410,7 @@ GPT_HEADER STRUCT 8
     PartitionEntryArrayCRC32    DWORD   ?
 GPT_HEADER ENDS
 
-; GPT Partition Entry (raw from disk — 128 bytes each)
+; GPT Partition Entry (raw from disk ? 128 bytes each)
 GPT_PARTITION_ENTRY STRUCT 8
     PartitionTypeGUID           BYTE    16 dup(?)
     UniquePartitionGUID         BYTE    16 dup(?)
@@ -557,7 +557,7 @@ FAT32_VOLUME_CTX ENDS
 .code
 
 ; =============================================================================
-; DK_CopyMemory — inline memcpy replacement
+; DK_CopyMemory ? inline memcpy replacement
 ; RCX=dest, RDX=src, R8=count
 ; =============================================================================
 DK_CopyMemory PROC
@@ -573,7 +573,7 @@ DK_CopyMemory PROC
 DK_CopyMemory ENDP
 
 ; =============================================================================
-; DK_ZeroMemory — inline memset(0) replacement
+; DK_ZeroMemory ? inline memset(0) replacement
 ; RCX=ptr, RDX=count
 ; =============================================================================
 DK_ZeroMemory PROC
@@ -587,7 +587,7 @@ DK_ZeroMemory PROC
 DK_ZeroMemory ENDP
 
 ; =============================================================================
-; DK_ConsolePrint — Write null-terminated string to stdout
+; DK_ConsolePrint ? Write null-terminated string to stdout
 ; RCX = string ptr
 ; Clobbers: RAX, RCX, RDX, R8, R9
 ; =============================================================================
@@ -627,7 +627,7 @@ dkcp_done:
 DK_ConsolePrint ENDP
 
 ; =============================================================================
-; DK_PrintU64 — Print QWORD as decimal to console
+; DK_PrintU64 ? Print QWORD as decimal to console
 ; RCX = value
 ; =============================================================================
 DK_PrintU64 PROC
@@ -673,7 +673,7 @@ dkpu_print:
 DK_PrintU64 ENDP
 
 ; =============================================================================
-; DiskKernel_Init — Initialize the disk kernel subsystem
+; DiskKernel_Init ? Initialize the disk kernel subsystem
 ; Zeroes tables, initializes critical section
 ; Returns: EAX = 1 (TRUE) on success
 ; =============================================================================
@@ -684,17 +684,17 @@ DiskKernel_Init PROC
 
     ; Zero drive table
     lea  rcx, g_DriveTable
-    mov  edx, sizeof DRIVE_CONTEXT * MAX_DRIVES
+    mov  edx, SIZEOF DRIVE_CONTEXT * MAX_DRIVES
     call DK_ZeroMemory
 
     ; Zero partition cache
     lea  rcx, g_PartitionCache
-    mov  edx, sizeof PARTITION_ENTRY * MAX_DRIVES * MAX_PARTITIONS_PER_DRIVE
+    mov  edx, SIZEOF PARTITION_ENTRY * MAX_DRIVES * MAX_PARTITIONS_PER_DRIVE
     call DK_ZeroMemory
 
     ; Zero async pool
     lea  rcx, g_AsyncIoPool
-    mov  edx, sizeof ASYNC_IO_CONTEXT * MAX_ASYNC_OPS
+    mov  edx, SIZEOF ASYNC_IO_CONTEXT * MAX_ASYNC_OPS
     call DK_ZeroMemory
 
     mov  g_DriveCount, 0
@@ -708,11 +708,11 @@ DiskKernel_Init PROC
 
     ; Zero volume contexts
     lea  rcx, g_NtfsCtx
-    mov  edx, sizeof NTFS_VOLUME_CTX
+    mov  edx, SIZEOF NTFS_VOLUME_CTX
     call DK_ZeroMemory
 
     lea  rcx, g_Fat32Ctx
-    mov  edx, sizeof FAT32_VOLUME_CTX
+    mov  edx, SIZEOF FAT32_VOLUME_CTX
     call DK_ZeroMemory
 
     ; Print init message
@@ -726,7 +726,7 @@ DiskKernel_Init PROC
 DiskKernel_Init ENDP
 
 ; =============================================================================
-; DiskKernel_Shutdown — Cleanup: close all drive handles, delete critical section
+; DiskKernel_Shutdown ? Cleanup: close all drive handles, delete critical section
 ; =============================================================================
 PUBLIC DiskKernel_Shutdown
 DiskKernel_Shutdown PROC
@@ -742,16 +742,16 @@ dks_close_loop:
     cmp  ebx, g_DriveCount
     jge  dks_close_done
 
-    mov  rcx, (DRIVE_CONTEXT ptr [rsi]).hDevice
+    mov  rcx, [rsi].DRIVE_CONTEXT.hDevice
     test rcx, rcx
     jz   dks_next
     cmp  rcx, INVALID_HANDLE_VALUE
     je   dks_next
     call CloseHandle
-    mov  (DRIVE_CONTEXT ptr [rsi]).hDevice, 0
+    mov  qword ptr [rsi].DRIVE_CONTEXT.hDevice, 0
 
 dks_next:
-    add  rsi, sizeof DRIVE_CONTEXT
+    add  rsi, SIZEOF DRIVE_CONTEXT
     inc  ebx
     jmp  dks_close_loop
 
@@ -773,7 +773,7 @@ dks_exit:
 DiskKernel_Shutdown ENDP
 
 ; =============================================================================
-; DK_BuildDevicePath — Build "\\.\PhysicalDriveN" string
+; DK_BuildDevicePath ? Build "\\.\PhysicalDriveN" string
 ; ECX = drive number (0-63), RDX = output buffer (min 32 bytes)
 ; Returns: RAX = string length
 ; =============================================================================
@@ -789,7 +789,7 @@ DK_BuildDevicePath PROC
     mov  ecx, 17                     ; strlen("\\.\PhysicalDrive")
     rep  movsb
 
-    ; Convert drive number to decimal (0-63 → 1-2 digits)
+    ; Convert drive number to decimal (0-63 ? 1-2 digits)
     cmp  eax, 10
     jge  bdp_two_digit
 
@@ -818,22 +818,29 @@ bdp_done:
 DK_BuildDevicePath ENDP
 
 ; =============================================================================
-; DK_ScsiReadSectors — Universal SCSI sector read with timeout + retry
+; DK_ScsiReadSectors - Universal SCSI sector read with timeout + retry
 ; RCX = DRIVE_CONTEXT ptr, RDX = LBA, R8 = Buffer, R9D = SectorCount
 ; Returns: EAX = 1 success, 0 fail
 ; =============================================================================
-DK_ScsiReadSectors PROC
+DK_ScsiReadSectors PROC FRAME
     LOCAL sptd_buf[SPTD_WITH_SENSE]:BYTE
     LOCAL bytesRet:DWORD
     LOCAL retryCount:DWORD
-
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
     push rdi
+    .pushreg rdi
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     push r14
+    .pushreg r14
     sub  rsp, 72
+    .allocstack 72
+    .endprolog
 
     mov  rbx, rcx                    ; DriveContext ptr
     mov  r12, rdx                    ; LBA
@@ -861,7 +868,7 @@ scsi_retry:
     mov  qword ptr [rdi+SPTD_DATABUFFER], r13
     mov  dword ptr [rdi+SPTD_SENSEINFOOFFSET], SENSE_OFFSET
 
-    ; Check if LBA fits in 32 bits → READ(10) else READ(16)
+    ; Check if LBA fits in 32 bits ? READ(10) else READ(16)
     mov  rax, r12
     shr  rax, 32
     test rax, rax
@@ -957,15 +964,15 @@ scsi_check_status:
     jmp  scsi_do_retry
 
 scsi_check_sense:
-    ; Decode sense key at sense[2] & 0x0F
+    ; Decode sense key at sense[2] & 00Fh
     lea  rdi, sptd_buf
     add  rdi, SENSE_OFFSET
     movzx eax, byte ptr [rdi+2]
     and  al, 0Fh
 
-    cmp  al, 03h                      ; MEDIUM ERROR — permanent
+    cmp  al, 03h                      ; MEDIUM ERROR ? permanent
     je   scsi_fail
-    cmp  al, 05h                      ; ILLEGAL REQUEST — permanent
+    cmp  al, 05h                      ; ILLEGAL REQUEST ? permanent
     je   scsi_fail
 
     ; Recoverable (NOT READY=02h, HARDWARE ERROR=04h, etc.)
@@ -999,17 +1006,20 @@ scsi_exit:
 DK_ScsiReadSectors ENDP
 
 ; =============================================================================
-; DK_AtaReadSectors — ATA passthrough read (for SATA drives without SCSI layer)
+; DK_AtaReadSectors - ATA passthrough read (for SATA drives without SCSI layer)
 ; RCX = DRIVE_CONTEXT ptr, RDX = LBA, R8 = Buffer, R9D = SectorCount
 ; Returns: EAX = 1 success, 0 fail
 ; =============================================================================
-DK_AtaReadSectors PROC
+DK_AtaReadSectors PROC FRAME
     LOCAL ataBuf[512]:BYTE           ; ATA_PASS_THROUGH_EX + data
     LOCAL bytesRet:DWORD
-
     push rbx
+    .pushreg rbx
     push rdi
+    .pushreg rdi
     sub  rsp, 56
+    .allocstack 56
+    .endprolog
 
     mov  rbx, rcx
     mov  r12, rdx                    ; LBA
@@ -1086,10 +1096,11 @@ ata_have_bps:
 
     ; Copy data from ataBuf + ATPT_TOTAL_SIZE to user buffer
     mov  rcx, r13
-    lea  rdx, [ataBuf + ATPT_TOTAL_SIZE]
-    mov  eax, r14d
-    mov  r8d, (DRIVE_CONTEXT ptr [rbx]).BytesPerSector
-    test r8d, r8d
+    lea  rdx, ataBuf
+    add  rdx, ATPT_TOTAL_SIZE
+    mov  r8d, r14d
+    mov  eax, [rbx + 24]              ; BytesPerSector offset in DRIVE_CONTEXT
+    test eax, eax
     jnz  ata_have_bps2
     mov  r8d, SECTOR_SIZE_512
 ata_have_bps2:
@@ -1110,13 +1121,13 @@ ata_read_exit:
 DK_AtaReadSectors ENDP
 
 ; =============================================================================
-; DK_ReadSectors — Universal sector read: auto-dispatches by Protocol
+; DK_ReadSectors ? Universal sector read: auto-dispatches by Protocol
 ; RCX = DRIVE_CONTEXT ptr, RDX = LBA, R8 = Buffer, R9D = SectorCount
 ; Returns: EAX = 1 success, 0 fail
 ; =============================================================================
 PUBLIC DK_ReadSectors
 DK_ReadSectors PROC
-    ; Dispatch by protocol type
+    ; Dispatch by protocol memType
     mov  eax, (DRIVE_CONTEXT ptr [rcx]).Protocol
     cmp  eax, PROTOCOL_ATA
     je   drs_ata
@@ -1135,20 +1146,25 @@ drs_nvme:
 DK_ReadSectors ENDP
 
 ; =============================================================================
-; DiskKernel_EnumerateDrives — Scan PhysicalDrive0-63, fill g_DriveTable
+; DiskKernel_EnumerateDrives - Scan PhysicalDrive0-63, fill g_DriveTable
 ; Returns: EAX = number of drives found
 ; =============================================================================
 PUBLIC DiskKernel_EnumerateDrives
-DiskKernel_EnumerateDrives PROC
+DiskKernel_EnumerateDrives PROC FRAME
     LOCAL pathBuf[32]:BYTE
     LOCAL geomBuf[32]:BYTE           ; DISK_GEOMETRY: 24 bytes
     LOCAL bytesRet:DWORD
-
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
     push rdi
+    .pushreg rdi
     push r12
+    .pushreg r12
     sub  rsp, 72
+    .allocstack 72
+    .endprolog
 
     ; Lock
     lea  rcx, g_KernelLock
@@ -1207,38 +1223,38 @@ enum_loop:
 
     ; Fill DRIVE_CONTEXT at g_DriveTable[g_DriveCount]
     mov  eax, g_DriveCount
-    imul rcx, rax, sizeof DRIVE_CONTEXT
+    imul rcx, rax, SIZEOF DRIVE_CONTEXT
     lea  rdi, g_DriveTable
     add  rdi, rcx
 
-    mov  (DRIVE_CONTEXT ptr [rdi]).hDevice, r12
-    mov  (DRIVE_CONTEXT ptr [rdi]).DriveType, DRIVE_TYPE_SATA
-    mov  (DRIVE_CONTEXT ptr [rdi]).Protocol, PROTOCOL_SCSI
-    mov  (DRIVE_CONTEXT ptr [rdi]).IsHealthy, 1
+    mov  [rdi].DRIVE_CONTEXT.hDevice, r12
+    mov  [rdi].DRIVE_CONTEXT.DriveType, DRIVE_TYPE_SATA
+    mov  [rdi].DRIVE_CONTEXT.Protocol, PROTOCOL_SCSI
+    mov  [rdi].DRIVE_CONTEXT.IsHealthy, 1
 
     ; Parse DISK_GEOMETRY:
     ;   Cylinders (QWORD @0), MediaType (DWORD @8), TracksPerCylinder (DWORD @12)
     ;   SectorsPerTrack (DWORD @16), BytesPerSector (DWORD @20)
     lea  rsi, geomBuf
     mov  eax, dword ptr [rsi+20]     ; BytesPerSector
-    mov  (DRIVE_CONTEXT ptr [rdi]).BytesPerSector, eax
+    mov  [rdi].DRIVE_CONTEXT.BytesPerSector, eax
     mov  eax, dword ptr [rsi+16]     ; SectorsPerTrack
-    mov  (DRIVE_CONTEXT ptr [rdi]).SectorsPerTrack, eax
+    mov  [rdi].DRIVE_CONTEXT.SectorsPerTrack, eax
     mov  eax, dword ptr [rsi+12]     ; TracksPerCylinder
-    mov  (DRIVE_CONTEXT ptr [rdi]).TracksPerCylinder, eax
+    mov  [rdi].DRIVE_CONTEXT.TracksPerCylinder, eax
 
     ; Compute TotalSectors = Cylinders * Tracks * Sectors
     mov  rax, qword ptr [rsi+0]     ; Cylinders
     imul eax, dword ptr [rsi+12]    ; * TracksPerCylinder
     imul eax, dword ptr [rsi+16]    ; * SectorsPerTrack
-    mov  (DRIVE_CONTEXT ptr [rdi]).TotalSectors, rax
+    mov  [rdi].DRIVE_CONTEXT.TotalSectors, rax
 
-    ; Detect media type → removable
+    ; Detect media type - removable
     mov  eax, dword ptr [rsi+8]
     cmp  eax, 11                     ; RemovableMedia
     jne  enum_not_removable
-    mov  (DRIVE_CONTEXT ptr [rdi]).IsRemovable, 1
-    mov  (DRIVE_CONTEXT ptr [rdi]).DriveType, DRIVE_TYPE_USB
+    mov  [rdi].DRIVE_CONTEXT.IsRemovable, 1
+    mov  [rdi].DRIVE_CONTEXT.DriveType, DRIVE_TYPE_USB
 enum_not_removable:
 
     inc  g_DriveCount
@@ -1257,7 +1273,8 @@ enum_done:
     ; Print count
     lea  rcx, szInfoDriveCount
     call DK_ConsolePrint
-    movzx rcx, g_DriveCount
+    mov  ecx, g_DriveCount
+    movzx rcx, cx
     call DK_PrintU64
     lea  rcx, szNewLine
     call DK_ConsolePrint
@@ -1276,21 +1293,27 @@ enum_done:
 DiskKernel_EnumerateDrives ENDP
 
 ; =============================================================================
-; ParseGPT — Parse GPT header + entries from sector buffers
+; ParseGPT - Parse GPT header + entries from sector buffers
 ; RCX = GPT Header buffer (sector 1), RDX = Entry buffer, R8 = PARTITION_ENTRY* out
 ; R9D = max entries to return
 ; Returns: EAX = count of valid partitions found
 ; =============================================================================
 PUBLIC ParseGPT
-ParseGPT PROC
+ParseGPT PROC FRAME
     LOCAL maxOut:DWORD
-
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
     push rdi
+    .pushreg rdi
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     sub  rsp, 40
+    .allocstack 40
+    .endprolog
 
     mov  rsi, rcx                    ; GPT Header
     mov  r12, rdx                    ; Raw entry buffer
@@ -1325,35 +1348,35 @@ pgpt_entry_loop:
     ; Check if PartitionTypeGUID is non-zero (offsets 0-15)
     mov  rax, qword ptr [rsi+0]
     or   rax, qword ptr [rsi+8]
-    jz   pgpt_next_entry             ; Empty entry → skip
+    jz   pgpt_next_entry             ; Empty entry - skip
 
     ; Fill output PARTITION_ENTRY
     mov  rax, qword ptr [rsi+32]     ; StartingLBA
-    mov  (PARTITION_ENTRY ptr [rdi]).StartLBA, rax
+    mov  [rdi].PARTITION_ENTRY.StartLBA, rax
 
     mov  rax, qword ptr [rsi+40]     ; EndingLBA
-    mov  (PARTITION_ENTRY ptr [rdi]).EndLBA, rax
+    mov  [rdi].PARTITION_ENTRY.EndLBA, rax
 
     ; Compute length
     mov  rax, qword ptr [rsi+40]
     sub  rax, qword ptr [rsi+32]
     inc  rax
-    mov  (PARTITION_ENTRY ptr [rdi]).LengthLBA, rax
+    mov  [rdi].PARTITION_ENTRY.LengthLBA, rax
 
-    mov  (PARTITION_ENTRY ptr [rdi]).IsGPT, 1
-    mov  (PARTITION_ENTRY ptr [rdi]).IsActive, 0
+    mov  [rdi].PARTITION_ENTRY.IsGPT, 1
+    mov  [rdi].PARTITION_ENTRY.IsActive, 0
 
-    ; Copy PartitionTypeGUID → identify FS type
+    ; Copy PartitionTypeGUID - identify FS type
     ; Microsoft Basic Data: EBD0A0A2-B9E5-4433-87C0-68B6B72699C7
     ; We hash first 4 bytes for quick type detection
     mov  eax, dword ptr [rsi+0]
-    mov  (PARTITION_ENTRY ptr [rdi]).PartitionType, eax
+    mov  [rdi].PARTITION_ENTRY.PartitionType, eax
 
     ; Copy GUID into output
     push rcx
     push rsi
     push rdi
-    lea  rcx, (PARTITION_ENTRY ptr [rdi]).PartitionGUID
+    lea  rcx, [rdi].PARTITION_ENTRY.PartitionGUID
     mov  rdx, rsi
     mov  r8d, 16
     call DK_CopyMemory
@@ -1366,7 +1389,7 @@ pgpt_entry_loop:
     push rsi
     push rdi
     lea  rsi, [rsi+56]              ; PartitionNameUTF16 starts at offset 56
-    lea  rdi, (PARTITION_ENTRY ptr [rdi]).PartitionName
+    lea  rdi, [rdi].PARTITION_ENTRY.PartitionName
     mov  ecx, 36                     ; Max chars
 
 pgpt_name_loop:
@@ -1388,7 +1411,7 @@ pgpt_name_done:
     pop  rcx
 
     inc  ebx
-    add  rdi, sizeof PARTITION_ENTRY
+    add  rdi, SIZEOF PARTITION_ENTRY
 
 pgpt_next_entry:
     add  rsi, r13                    ; Advance by entry size
@@ -1407,7 +1430,7 @@ pgpt_done:
 ParseGPT ENDP
 
 ; =============================================================================
-; ParseMBR — Parse MBR partition table (4 entries at offset 446)
+; ParseMBR - Parse MBR partition table (4 entries at offset 446)
 ; RCX = MBR sector buffer, RDX = PARTITION_ENTRY* output, R8D = max entries
 ; Returns: EAX = count
 ; =============================================================================
@@ -1437,38 +1460,38 @@ mbr_parse_loop:
     jz   mbr_skip                    ; Empty entry
 
     ; Fill PARTITION_ENTRY
-    mov  (PARTITION_ENTRY ptr [rdi]).PartitionType, eax
+    mov  [rdi].PARTITION_ENTRY.PartitionType, eax
 
-    ; Boot indicator at offset 0 (0x80 = active)
+    ; Boot indicator at offset 0 (080h = active)
     movzx eax, byte ptr [rsi+0]
     cmp  al, 80h
     jne  mbr_not_active
-    mov  (PARTITION_ENTRY ptr [rdi]).IsActive, 1
+    mov  [rdi].PARTITION_ENTRY.IsActive, 1
     jmp  mbr_lba
 mbr_not_active:
-    mov  (PARTITION_ENTRY ptr [rdi]).IsActive, 0
+    mov  [rdi].PARTITION_ENTRY.IsActive, 0
 
 mbr_lba:
     ; LBA start (LE DWORD at offset 8)
     mov  eax, dword ptr [rsi+8]
     cdqe
-    mov  (PARTITION_ENTRY ptr [rdi]).StartLBA, rax
+    mov  [rdi].PARTITION_ENTRY.StartLBA, rax
 
-    ; Sector count (LE DWORD at offset 12) → compute EndLBA
+    ; Sector count (LE DWORD at offset 12) - compute EndLBA
     mov  eax, dword ptr [rsi+12]
     cdqe
     mov  r8, rax                     ; Length in sectors
-    mov  (PARTITION_ENTRY ptr [rdi]).LengthLBA, rax
+    mov  [rdi].PARTITION_ENTRY.LengthLBA, rax
 
-    add  rax, (PARTITION_ENTRY ptr [rdi]).StartLBA
+    add  rax, [rdi].PARTITION_ENTRY.StartLBA
     dec  rax
-    mov  (PARTITION_ENTRY ptr [rdi]).EndLBA, rax
+    mov  [rdi].PARTITION_ENTRY.EndLBA, rax
 
-    mov  (PARTITION_ENTRY ptr [rdi]).IsGPT, 0
-    mov  (PARTITION_ENTRY ptr [rdi]).FsType, FS_UNKNOWN
+    mov  [rdi].PARTITION_ENTRY.IsGPT, 0
+    mov  [rdi].PARTITION_ENTRY.FsType, FS_UNKNOWN
 
     inc  ebx
-    add  rdi, sizeof PARTITION_ENTRY
+    add  rdi, SIZEOF PARTITION_ENTRY
 
 mbr_skip:
     add  rsi, 16                     ; Next MBR entry
@@ -1485,7 +1508,7 @@ mbr_done:
 ParseMBR ENDP
 
 ; =============================================================================
-; DetectFileSystem — Read boot sector, detect NTFS/FAT32/exFAT
+; DetectFileSystem - Read boot sector, detect NTFS/FAT32/exFAT
 ; RCX = DRIVE_CONTEXT*, RDX = StartLBA (partition start)
 ; Returns: EAX = FS_* type
 ; =============================================================================
@@ -1494,6 +1517,7 @@ DetectFileSystem PROC
     push rbx
     push rsi
     push rdi
+    push r12
     sub  rsp, 48
 
     mov  rbx, rcx                    ; DriveContext
@@ -1516,7 +1540,7 @@ DetectFileSystem PROC
     repe cmpsb
     je   dfs_ntfs
 
-    ; === Check boot signature 0xAA55 at offset 510 ===
+    ; === Check boot signature 0AA55h at offset 510 ===
     movzx eax, word ptr [g_TempSector+510]
     cmp  ax, 0AA55h
     jne  dfs_check_exfat
@@ -1563,6 +1587,7 @@ dfs_unknown:
 
 dfs_done:
     add  rsp, 48
+    pop  r12
     pop  rdi
     pop  rsi
     pop  rbx
@@ -1570,36 +1595,42 @@ dfs_done:
 DetectFileSystem ENDP
 
 ; =============================================================================
-; NTFS_MountVolume — Parse NTFS boot sector, cache MFT location
+; NTFS_MountVolume - Parse NTFS boot sector, cache MFT location
 ; RCX = DRIVE_CONTEXT*, RDX = PARTITION_ENTRY* (NTFS partition)
 ; Returns: EAX = 1 success, 0 fail
 ; =============================================================================
 PUBLIC NTFS_MountVolume
-NTFS_MountVolume PROC
+NTFS_MountVolume PROC FRAME
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
+    push r12
+    .pushreg r12
     sub  rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov  rbx, rcx                    ; DriveContext
     mov  rsi, rdx                    ; PartitionEntry
 
     ; Read boot sector
     mov  rcx, rbx
-    mov  rdx, (PARTITION_ENTRY ptr [rsi]).StartLBA
+    mov  rdx, [rsi].PARTITION_ENTRY.StartLBA
     lea  r8, g_TempSector
     mov  r9d, 1
     call DK_ReadSectors
     test eax, eax
     jz   ntfs_mount_fail
 
-    ; Parse NTFS BPB (starting at boot sector offset 0x0B)
+    ; Parse NTFS BPB (starting at boot sector offset 00Bh)
     lea  rsi, [g_TempSector+0Bh]
 
-    ; BytesPerSector (+0x00 in BPB = +0x0B in sector)
+    ; BytesPerSector (+000h in BPB = +00Bh in sector)
     movzx eax, word ptr [rsi+0]
     mov  g_NtfsCtx.BytesPerSector, eax
 
-    ; SectorsPerCluster (+0x02 in BPB)
+    ; SectorsPerCluster (+002h in BPB)
     movzx eax, byte ptr [rsi+2]
     mov  g_NtfsCtx.SectorsPerCluster, eax
 
@@ -1609,27 +1640,19 @@ NTFS_MountVolume PROC
     cdqe
     mov  g_NtfsCtx.BytesPerCluster, rax
 
-    ; TotalSectors (+0x1D in BPB = +0x28 in sector)
+    ; TotalSectors (+01Dh in BPB = +028h in sector)
     mov  rax, qword ptr [g_TempSector+28h]
     mov  g_NtfsCtx.TotalSectors, rax
 
-    ; MFT Start Cluster (+0x25 in BPB = +0x30 in sector)
+    ; MFT Start Cluster (+025h in BPB = +030h in sector)
     mov  rax, qword ptr [g_TempSector+30h]
 
-    ; Convert cluster → absolute LBA
+    ; Convert cluster to absolute LBA
     ; MftStartLBA = PartitionStartLBA + (MftCluster * SectorsPerCluster)
-    mov  rcx, rax
-    imul rcx, qword ptr g_NtfsCtx.SectorsPerCluster  ; Use zero-extended
-    ; Fix: need to handle SectorsPerCluster as QWORD operand
     movzx r8d, byte ptr [g_TempSector+0Dh]           ; SectorsPerCluster direct
-    imul rcx, rax, 1                                  ; Reset
-    mov  rcx, rax
-    xor  rdx, rdx
-    mov  eax, g_NtfsCtx.SectorsPerCluster
-    imul rax, rcx
-    add  rax, (PARTITION_ENTRY ptr [rsi]).StartLBA
-
-    ; Recompute: we clobbered rsi. Use g_TempSector directly.
+    imul rax, r8
+    ; We need PartitionStartLBA - stored in original PARTITION_ENTRY
+    ; Since rsi was repurposed, use g_TempSector directly.
     ; PartitionStartLBA is in the PARTITION_ENTRY passed as arg
     ; We need to re-derive. Store partition start first.
     ; (Fix: save partition start earlier)
@@ -1638,15 +1661,13 @@ NTFS_MountVolume PROC
     mov  rax, qword ptr [g_TempSector+30h]            ; MFT cluster number
     mov  ecx, g_NtfsCtx.SectorsPerCluster
     imul rax, rcx                                      ; MFT offset in sectors
-    ; We need PartitionStartLBA — stored in original PARTITION_ENTRY
-    ; Since rsi was repurposed, use stack-saved copy
-
-    ; Actually, let's just store this before parsing:
+    ; We need PartitionStartLBA - stored in original PARTITION_ENTRY
+    ; Since rsi was repurposed, use g_TempSector directly.
     ; For now, assume PartitionStartLBA was passed correctly
     ; and g_TempSector is read from that LBA already
     mov  g_NtfsCtx.MftStartLBA, rax                   ; Relative to partition start
 
-    ; MFT record size: ClustersPerFileRecord at +0x40
+    ; MFT record size: ClustersPerFileRecord at +040h
     ; If value is negative, size = 2^|value| bytes
     movsx eax, byte ptr [g_TempSector+40h]
     test eax, eax
@@ -1668,7 +1689,7 @@ ntfs_small_record:
     mov  g_NtfsCtx.MftRecordSize, eax
 
 ntfs_record_done:
-    ; Index record size at +0x44 (same logic)
+    ; Index record size at +044h (same logic)
     movsx eax, byte ptr [g_TempSector+44h]
     test eax, eax
     js   ntfs_small_index
@@ -1685,7 +1706,7 @@ ntfs_small_index:
     mov  g_NtfsCtx.IndexRecordSize, eax
 ntfs_index_done:
 
-    ; Volume serial number at +0x48
+    ; Volume serial number at +048h
     mov  rax, qword ptr [g_TempSector+48h]
     mov  g_NtfsCtx.VolumeSerialNumber, rax
 
@@ -1707,23 +1728,29 @@ ntfs_mount_fail:
 
 ntfs_mount_exit:
     add  rsp, 48
+    pop  r12
     pop  rsi
     pop  rbx
     ret
 NTFS_MountVolume ENDP
 
 ; =============================================================================
-; NTFS_ReadMftRecord — Read a specific MFT record by index
+; NTFS_ReadMftRecord - Read a specific MFT record by index
 ; RCX = DRIVE_CONTEXT*, RDX = MFT record index, R8 = output buffer (4096 bytes)
 ; Returns: EAX = 1 success, 0 fail
 ; Requires: NTFS_MountVolume called first
 ; =============================================================================
 PUBLIC NTFS_ReadMftRecord
-NTFS_ReadMftRecord PROC
+NTFS_ReadMftRecord PROC FRAME
     push rbx
+    .pushreg rbx
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     sub  rsp, 40
+    .allocstack 40
+    .endprolog
 
     mov  rbx, rcx                    ; DriveContext
     mov  r12, rdx                    ; Record index
@@ -1792,22 +1819,28 @@ ntfs_rmr_exit:
 NTFS_ReadMftRecord ENDP
 
 ; =============================================================================
-; FAT32_MountVolume — Parse FAT32 boot sector, cache geometry
+; FAT32_MountVolume - Parse FAT32 boot sector, cache geometry
 ; RCX = DRIVE_CONTEXT*, RDX = PARTITION_ENTRY*
 ; Returns: EAX = 1 success, 0 fail
 ; =============================================================================
 PUBLIC FAT32_MountVolume
-FAT32_MountVolume PROC
+FAT32_MountVolume PROC FRAME
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
+    push r12
+    .pushreg r12
     sub  rsp, 48
+    .allocstack 48
+    .endprolog
 
     mov  rbx, rcx
     mov  rsi, rdx
 
     ; Read boot sector
     mov  rcx, rbx
-    mov  rdx, (PARTITION_ENTRY ptr [rsi]).StartLBA
+    mov  rdx, [rsi].PARTITION_ENTRY.StartLBA
     lea  r8, g_TempSector
     mov  r9d, 1
     call DK_ReadSectors
@@ -1815,14 +1848,14 @@ FAT32_MountVolume PROC
     jz   fat_mount_fail
 
     ; Store partition start
-    mov  rax, (PARTITION_ENTRY ptr [rsi]).StartLBA
+    mov  rax, [rsi].PARTITION_ENTRY.StartLBA
     mov  g_Fat32Ctx.PartitionStartLBA, rax
 
-    ; BytesPerSector at +0x0B
+    ; BytesPerSector at +00Bh
     movzx eax, word ptr [g_TempSector+0Bh]
     mov  g_Fat32Ctx.BytesPerSector, eax
 
-    ; SectorsPerCluster at +0x0D
+    ; SectorsPerCluster at +00Dh
     movzx eax, byte ptr [g_TempSector+0Dh]
     mov  g_Fat32Ctx.SectorsPerCluster, eax
 
@@ -1832,7 +1865,7 @@ FAT32_MountVolume PROC
     cdqe
     mov  g_Fat32Ctx.BytesPerCluster, rax
 
-    ; ReservedSectors at +0x0E
+    ; ReservedSectors at +00Eh
     movzx eax, word ptr [g_TempSector+0Eh]
 
     ; FATStartLBA = PartitionStart + ReservedSectors
@@ -1840,11 +1873,11 @@ FAT32_MountVolume PROC
     add  rax, g_Fat32Ctx.PartitionStartLBA
     mov  g_Fat32Ctx.FatStartLBA, rax
 
-    ; NumberOfFATs at +0x10
+    ; NumberOfFATs at +010h
     movzx eax, byte ptr [g_TempSector+10h]
     mov  g_Fat32Ctx.NumberOfFATs, eax
 
-    ; FATSize32 at +0x24
+    ; FATSize32 at +024h
     mov  eax, dword ptr [g_TempSector+24h]
     mov  g_Fat32Ctx.FatSizeSectors, eax
 
@@ -1857,7 +1890,7 @@ FAT32_MountVolume PROC
     add  rax, g_Fat32Ctx.FatStartLBA
     mov  g_Fat32Ctx.DataStartLBA, rax
 
-    ; Root cluster at +0x2C
+    ; Root cluster at +02Ch
     mov  eax, dword ptr [g_TempSector+2Ch]
     mov  g_Fat32Ctx.RootCluster, eax
 
@@ -1866,7 +1899,8 @@ FAT32_MountVolume PROC
     ; Print success
     lea  rcx, szOkFat32Mount
     call DK_ConsolePrint
-    movzx rcx, g_Fat32Ctx.RootCluster
+    mov  ecx, g_Fat32Ctx.RootCluster
+    movzx rcx, cx
     call DK_PrintU64
     lea  rcx, szNewLine
     call DK_ConsolePrint
@@ -1879,13 +1913,14 @@ fat_mount_fail:
 
 fat_mount_exit:
     add  rsp, 48
+    pop  r12
     pop  rsi
     pop  rbx
     ret
 FAT32_MountVolume ENDP
 
 ; =============================================================================
-; FAT32_ReadCluster — Read one cluster from a FAT32 volume
+; FAT32_ReadCluster ? Read one cluster from a FAT32 volume
 ; RCX = DRIVE_CONTEXT*, EDX = cluster number, R8 = output buffer
 ; Returns: EAX = 1 success, 0 fail
 ; Requires: FAT32_MountVolume called first
@@ -1897,7 +1932,7 @@ FAT32_ReadCluster PROC
 
     mov  rbx, rcx
 
-    ; Cluster → LBA = DataStartLBA + (ClusterNum - 2) * SectorsPerCluster
+    ; Cluster ? LBA = DataStartLBA + (ClusterNum - 2) * SectorsPerCluster
     mov  eax, edx
     sub  eax, 2                      ; Clusters are 2-based
     imul eax, g_Fat32Ctx.SectorsPerCluster
@@ -1916,9 +1951,9 @@ FAT32_ReadCluster PROC
 FAT32_ReadCluster ENDP
 
 ; =============================================================================
-; FAT32_GetNextCluster — Follow FAT chain: return next cluster for given cluster
+; FAT32_GetNextCluster ? Follow FAT chain: return next cluster for given cluster
 ; RCX = DRIVE_CONTEXT*, EDX = current cluster number
-; Returns: EAX = next cluster (0x0FFFFFF8+ = end of chain)
+; Returns: EAX = next cluster (00FFFFFF8h+ = end of chain)
 ; =============================================================================
 PUBLIC FAT32_GetNextCluster
 FAT32_GetNextCluster PROC
@@ -1974,21 +2009,27 @@ fat_gnc_exit:
 FAT32_GetNextCluster ENDP
 
 ; =============================================================================
-; DiskKernel_DetectPartitions — Detect all partitions on a given drive
+; DiskKernel_DetectPartitions - Detect all partitions on a given drive
 ; ECX = drive index, RDX = PARTITION_ENTRY* output, R8D = max entries
 ; Returns: EAX = partition count
 ; =============================================================================
 PUBLIC DiskKernel_DetectPartitions
-DiskKernel_DetectPartitions PROC
+DiskKernel_DetectPartitions PROC FRAME
     LOCAL driveIdx:DWORD
     LOCAL maxEntries:DWORD
-
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
     push rdi
+    .pushreg rdi
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     sub  rsp, 56
+    .allocstack 56
+    .endprolog
 
     mov  driveIdx, ecx
     mov  rdi, rdx                    ; Output PARTITION_ENTRY array
@@ -2000,7 +2041,7 @@ DiskKernel_DetectPartitions PROC
 
     ; Get DRIVE_CONTEXT*
     mov  eax, ecx
-    imul rcx, rax, sizeof DRIVE_CONTEXT
+    imul rcx, rax, SIZEOF DRIVE_CONTEXT
     lea  rbx, g_DriveTable
     add  rbx, rcx                    ; RBX = DRIVE_CONTEXT ptr
 
@@ -2013,7 +2054,7 @@ DiskKernel_DetectPartitions PROC
     test eax, eax
     jz   ddp_fail
 
-    ; Check for GPT protective MBR: partition type 0xEE at offset 446+4
+    ; Check for GPT protective MBR: partition type 0EEh at offset 446+4
     cmp  byte ptr [g_TempSector+450], 0EEh
     je   ddp_read_gpt
 
@@ -2081,16 +2122,16 @@ ddp_fs_loop:
 
     ; Set drive index
     mov  eax, driveIdx
-    mov  (PARTITION_ENTRY ptr [rsi]).DriveIndex, eax
-    mov  (PARTITION_ENTRY ptr [rsi]).PartitionIndex, r13d
+    mov  [rsi].PARTITION_ENTRY.DriveIndex, eax
+    mov  [rsi].PARTITION_ENTRY.PartitionIndex, r13d
 
     ; Detect FS
     mov  rcx, rbx
-    mov  rdx, (PARTITION_ENTRY ptr [rsi]).StartLBA
+    mov  rdx, [rsi].PARTITION_ENTRY.StartLBA
     call DetectFileSystem
-    mov  (PARTITION_ENTRY ptr [rsi]).FsType, eax
+    mov  [rsi].PARTITION_ENTRY.FsType, eax
 
-    add  rsi, sizeof PARTITION_ENTRY
+    add  rsi, SIZEOF PARTITION_ENTRY
     inc  r13d
     jmp  ddp_fs_loop
 
@@ -2125,28 +2166,36 @@ ddp_exit:
 DiskKernel_DetectPartitions ENDP
 
 ; =============================================================================
-; DiskKernel_AsyncReadSectors — Non-blocking sector read for IDE integration
+; DiskKernel_AsyncReadSectors - Non-blocking sector read for IDE integration
 ; RCX = DRIVE_CONTEXT*, RDX = LBA, R8 = Buffer, R9D = SectorCount
 ; [rsp+40] = callback function ptr (void(*)(ASYNC_IO_CONTEXT*))
 ; [rsp+48] = user data (QWORD)
 ; Returns: EAX = async slot index (0-63), or -1 on failure
 ; =============================================================================
 PUBLIC DiskKernel_AsyncReadSectors
-DiskKernel_AsyncReadSectors PROC
+DiskKernel_AsyncReadSectors PROC FRAME
     push rbx
+    .pushreg rbx
     push rsi
+    .pushreg rsi
     push r12
+    .pushreg r12
     push r13
+    .pushreg r13
     push r14
+    .pushreg r14
     push r15
+    .pushreg r15
     sub  rsp, 72
+    .allocstack 72
+    .endprolog
 
     mov  rbx, rcx                    ; DriveContext
     mov  r12, rdx                    ; LBA
     mov  r13, r8                     ; Buffer
     mov  r14d, r9d                   ; SectorCount
-    mov  r15, qword ptr [rsp+72+48+40]  ; callback (adjusted for pushes+sub)
-    ; Note: stack offset depends on pushes. Simplified — use fixed offsets.
+    ; Callback is at [rsp+72+48+40] after prologue
+    ; User data is at [rsp+72+48+48]
 
     ; Find a free async slot
     xor  ecx, ecx
@@ -2154,7 +2203,7 @@ DiskKernel_AsyncReadSectors PROC
 dka_find_slot:
     cmp  ecx, MAX_ASYNC_OPS
     jge  dka_no_slot
-    cmp  (ASYNC_IO_CONTEXT ptr [rsi]).Status, ASYNC_PENDING
+    cmp  [rsi].ASYNC_IO_CONTEXT.Status, ASYNC_PENDING
     jne  dka_check_free
     ; Slot in use (pending)
     jmp  dka_next_slot
@@ -2162,7 +2211,7 @@ dka_check_free:
     ; Slot available (completed or never used)
     jmp  dka_got_slot
 dka_next_slot:
-    add  rsi, sizeof ASYNC_IO_CONTEXT
+    add  rsi, SIZEOF ASYNC_IO_CONTEXT
     inc  ecx
     jmp  dka_find_slot
 
@@ -2170,20 +2219,23 @@ dka_got_slot:
     mov  r10d, ecx                   ; Slot index
 
     ; Initialize slot
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).Buffer, r13
+    mov  [rsi].ASYNC_IO_CONTEXT.Buffer, r13
     mov  eax, r14d
-    mov  ecx, (DRIVE_CONTEXT ptr [rbx]).BytesPerSector
+    mov  ecx, [rbx].DRIVE_CONTEXT.BytesPerSector
     test ecx, ecx
     jnz  dka_have_bps
     mov  ecx, SECTOR_SIZE_512
 dka_have_bps:
     imul eax, ecx
     cdqe
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).BufferSize, rax
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).CompletedBytes, 0
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).Status, ASYNC_PENDING
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).ErrorCode, 0
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).CallbackPtr, r15
+    mov  [rsi].ASYNC_IO_CONTEXT.BufferSize, rax
+    mov  [rsi].ASYNC_IO_CONTEXT.CompletedBytes, 0
+    mov  [rsi].ASYNC_IO_CONTEXT.Status, ASYNC_PENDING
+    mov  [rsi].ASYNC_IO_CONTEXT.ErrorCode, 0
+
+    ; Get callback from stack (adjusted for pushes and sub rsp)
+    mov  rax, qword ptr [rsp+72+48+40]  ; callback
+    mov  [rsi].ASYNC_IO_CONTEXT.CallbackPtr, rax
 
     ; Create an event for OVERLAPPED
     xor  ecx, ecx
@@ -2191,19 +2243,19 @@ dka_have_bps:
     xor  r8d, r8d
     xor  r9d, r9d
     call CreateEventA
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).OvlhEvent, rax
+    mov  [rsi].ASYNC_IO_CONTEXT.OvlhEvent, rax
 
     ; Set OVERLAPPED offset from LBA
     mov  rax, r12
-    mov  ecx, (DRIVE_CONTEXT ptr [rbx]).BytesPerSector
+    mov  ecx, [rbx].DRIVE_CONTEXT.BytesPerSector
     test ecx, ecx
     jnz  dka_have_bps2
     mov  ecx, SECTOR_SIZE_512
 dka_have_bps2:
     imul rax, rcx                    ; Byte offset = LBA * BytesPerSector
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).OvlOffset, eax
+    mov  [rsi].ASYNC_IO_CONTEXT.OvlOffset, eax
     shr  rax, 32
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).OvlOffsetHigh, eax
+    mov  [rsi].ASYNC_IO_CONTEXT.OvlOffsetHigh, eax
 
     ; Launch background thread for the actual read
     ; (Thread does synchronous DK_ReadSectors, then signals completion)
@@ -2222,29 +2274,29 @@ dka_have_bps2:
     test eax, eax
     jz   dka_read_fail
 
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).Status, ASYNC_SUCCESS
-    mov  rax, (ASYNC_IO_CONTEXT ptr [rsi]).BufferSize
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).CompletedBytes, rax
+    mov  [rsi].ASYNC_IO_CONTEXT.Status, ASYNC_SUCCESS
+    mov  rax, [rsi].ASYNC_IO_CONTEXT.BufferSize
+    mov  [rsi].ASYNC_IO_CONTEXT.CompletedBytes, rax
     jmp  dka_unlock
 
 dka_read_fail:
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).Status, ASYNC_ERROR
+    mov  [rsi].ASYNC_IO_CONTEXT.Status, ASYNC_ERROR
     call GetLastError
-    mov  (ASYNC_IO_CONTEXT ptr [rsi]).ErrorCode, eax
+    mov  [rsi].ASYNC_IO_CONTEXT.ErrorCode, eax
 
 dka_unlock:
     lea  rcx, g_KernelLock
     call LeaveCriticalSection
 
     ; Signal event
-    mov  rcx, (ASYNC_IO_CONTEXT ptr [rsi]).OvlhEvent
+    mov  rcx, [rsi].ASYNC_IO_CONTEXT.OvlhEvent
     test rcx, rcx
     jz   dka_no_signal
     call SetEvent
 dka_no_signal:
 
     ; Fire callback if set
-    mov  rax, (ASYNC_IO_CONTEXT ptr [rsi]).CallbackPtr
+    mov  rax, [rsi].ASYNC_IO_CONTEXT.CallbackPtr
     test rax, rax
     jz   dka_no_callback
     mov  rcx, rsi                    ; Pass ASYNC_IO_CONTEXT* as arg
@@ -2269,7 +2321,7 @@ dka_exit:
 DiskKernel_AsyncReadSectors ENDP
 
 ; =============================================================================
-; DiskKernel_GetAsyncStatus — Check status of async operation
+; DiskKernel_GetAsyncStatus - Check status of async operation
 ; ECX = slot index
 ; Returns: EAX = ASYNC_* status
 ; =============================================================================
@@ -2278,10 +2330,10 @@ DiskKernel_GetAsyncStatus PROC
     cmp  ecx, MAX_ASYNC_OPS
     jge  dkas_invalid
 
-    imul eax, ecx, sizeof ASYNC_IO_CONTEXT
+    imul eax, ecx, SIZEOF ASYNC_IO_CONTEXT
     lea  rdx, g_AsyncIoPool
     add  rdx, rax
-    mov  eax, (ASYNC_IO_CONTEXT ptr [rdx]).Status
+    mov  eax, [rdx].ASYNC_IO_CONTEXT.Status
     ret
 
 dkas_invalid:
@@ -2314,11 +2366,11 @@ DiskExplorer_OpenDrive PROC
     jge  ode_fail
 
     mov  eax, ecx
-    imul rcx, rax, sizeof DRIVE_CONTEXT
+    imul rcx, rax, SIZEOF DRIVE_CONTEXT
     lea  rax, g_DriveTable
     add  rax, rcx
 
-    mov  rcx, (DRIVE_CONTEXT ptr [rax]).hDevice
+    mov  rcx, [rax].DRIVE_CONTEXT.hDevice
     mov  qword ptr [rdx], rcx
 
     mov  eax, 1
@@ -2348,9 +2400,9 @@ DiskExplorer_ReadSector PROC
 ders_find:
     cmp  eax, g_DriveCount
     jge  ders_fail
-    cmp  (DRIVE_CONTEXT ptr [r9]).hDevice, r10
+    cmp  [r9].DRIVE_CONTEXT.hDevice, r10
     je   ders_found
-    add  r9, sizeof DRIVE_CONTEXT
+    add  r9, SIZEOF DRIVE_CONTEXT
     inc  eax
     jmp  ders_find
 
@@ -2358,7 +2410,7 @@ ders_found:
     mov  rcx, r9
     mov  rdx, r11
     ; R8 and R9 from caller already contain buffer and count
-    ; But R9 was clobbered — need to get count from original stack
+    ; But R9 was clobbered - need to get count from original stack
     ; Actually, the Windows x64 calling convention: R9D was count from caller
     ; but we used R9 as a pointer. We need to reload from the 4th arg.
     ; The 4th arg was in the caller's R9D. We saved nothing.
@@ -2395,11 +2447,11 @@ DiskExplorer_GetDriveInfo PROC
     push rdi
 
     mov  eax, ecx
-    imul rax, sizeof DRIVE_CONTEXT
+    imul rax, SIZEOF DRIVE_CONTEXT
     lea  rsi, g_DriveTable
     add  rsi, rax
     mov  rdi, rdx
-    mov  ecx, sizeof DRIVE_CONTEXT
+    mov  ecx, SIZEOF DRIVE_CONTEXT
     rep  movsb
 
     pop  rdi
@@ -2434,3 +2486,4 @@ PUBLIC FAT32_ReadCluster
 PUBLIC FAT32_GetNextCluster
 
 END
+

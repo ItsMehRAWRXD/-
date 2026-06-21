@@ -1,5 +1,5 @@
 ; =============================================================================
-; ums_micro_scheduler.asm — Non-Preemptive Kernel Scheduler for AVX-512
+; ums_micro_scheduler.asm ? Non-Preemptive Kernel Scheduler for AVX-512
 ; =============================================================================
 ; Uses the Windows Thread Pool API (TP_CALLBACK_ENVIRON) with
 ; SetThreadpoolCallbackRunsLong to hint the OS scheduler that inference
@@ -8,18 +8,18 @@
 ; Problem: Windows default scheduler quantum is 15.6ms.  An AVX-512 inference
 ; kernel that loads 32 ZMM registers (2048 bytes of state) gets preempted
 ; mid-GEMM, forcing a full XSAVE/XRSTOR of ~2.5KB.  On Zen4 this costs
-; ~800 cycles per context switch — at 50+ switches/sec during inference,
+; ~800 cycles per context switch ? at 50+ switches/sec during inference,
 ; that's measurable throughput loss.
 ;
 ; Solution: Create a dedicated thread pool with RunsLong + priority hints,
 ; plus explicit MXCSR bracketing per work item via mxcsr_determinism.asm.
 ;
 ; EXPORTS:
-;   RawrXD_Sched_Init()                    → Creates the pool + env
-;   RawrXD_Sched_Shutdown()                → Tears down the pool
-;   RawrXD_Sched_SubmitKernel(pfnKernel, pContext) → Submits inference work
-;   RawrXD_Sched_SetAffinity(coreMask)     → Pins pool threads to CCDs
-;   RawrXD_Sched_GetStats(pStats)          → Returns counters
+;   RawrXD_Sched_Init()                    ? Creates the pool + env
+;   RawrXD_Sched_Shutdown()                ? Tears down the pool
+;   RawrXD_Sched_SubmitKernel(pfnKernel, pContext) ? Submits inference work
+;   RawrXD_Sched_SetAffinity(coreMask)     ? Pins pool threads to CCDs
+;   RawrXD_Sched_GetStats(pStats)          ? Returns counters
 ;
 ; ABI: Win64 (Microsoft calling convention)
 ; Build: ml64.exe /c /Zi /Zd ums_micro_scheduler.asm
@@ -28,7 +28,7 @@ OPTION CASEMAP:NONE
 
 INCLUDE rawr_globals.inc
 
-; ── Windows Thread Pool API function pointers (delay-loaded) ──
+; ?? Windows Thread Pool API function pointers (delay-loaded) ??
 ; We use GetProcAddress to avoid hard linking against kernel32 exports
 ; that may not exist on Server Core or Wine.
 
@@ -40,7 +40,7 @@ g_UmsCleanupGroup       QWORD 0        ; PTP_CLEANUP_GROUP
 g_UmsCallbackEnv        BYTE  64 DUP(0) ; TP_CALLBACK_ENVIRON (48 bytes, padded to 64)
 g_UmsInitialized        DWORD 0        ; 0=no, 1=yes
 
-; Stats (cache-line padded — ALIGN 16 is ml64 .DATA max)
+; m_stats (cache-line padded ? ALIGN 16 is ml64 .DATA max)
 ALIGN 16
 g_UmsStat_Submitted     QWORD 0
 g_UmsStat_Completed     QWORD 0
@@ -92,12 +92,12 @@ EXTERN RawrXD_MXCSR_LockPerformance:PROC
 EXTERN RawrXD_MXCSR_Save:PROC
 EXTERN RawrXD_MXCSR_Restore:PROC
 
-; ── Internal: resolve one API ────────────────────────────────────────────────
+; ?? Internal: resolve one API ????????????????????????????????????????????????
 ; rcx=hModule, rdx=pszName, r8=ptr to store result
 ; Returns: EAX=1 success, 0 fail
 resolveApi PROC
     push    r8
-    ; GetProcAddress(hModule, lpProcName) — rcx already hModule, rdx already name
+    ; GetProcAddress(hModule, lpProcName) ? rcx already hModule, rdx already name
     sub     rsp, 32                     ; shadow space
     call    QWORD PTR [GetProcAddress]
     add     rsp, 32
@@ -144,7 +144,7 @@ RawrXD_Sched_Init PROC FRAME
     cmp     DWORD PTR [g_UmsInitialized], 1
     je      @@init_ok
 
-    ; ── Load kernel32 ──
+    ; ?? Load kernel32 ??
     lea     rcx, [szKernel32]
     call    GetModuleHandleA
     test    rax, rax
@@ -152,7 +152,7 @@ RawrXD_Sched_Init PROC FRAME
     mov     QWORD PTR [g_hKernel32], rax
     mov     rbx, rax                    ; rbx = hKernel32
 
-    ; ── Resolve CreateThreadpool ──
+    ; ?? Resolve CreateThreadpool ??
     mov     rcx, rbx
     lea     rdx, [szCreateThreadpool]
     lea     r8,  [g_pCreateThreadpool]
@@ -160,7 +160,7 @@ RawrXD_Sched_Init PROC FRAME
     test    eax, eax
     jz      @@init_fail
 
-    ; ── Resolve remaining APIs ──
+    ; ?? Resolve remaining APIs ??
     ; SetThreadpoolThreadMinimum
     mov     rcx, rbx
     lea     rdx, [szSetTPThreadMin]
@@ -265,8 +265,8 @@ RawrXD_Sched_Init PROC FRAME
     test    eax, eax
     jz      @@init_fail
 
-    ; ── Create the pool ──
-    ; CreateThreadpool(NULL) — NULL = default reserved parameter
+    ; ?? Create the pool ??
+    ; CreateThreadpool(NULL) ? NULL = default reserved parameter
     xor     rcx, rcx
     call    QWORD PTR [g_pCreateThreadpool]
     test    rax, rax
@@ -278,21 +278,21 @@ RawrXD_Sched_Init PROC FRAME
     mov     rcx, r12
     mov     edx, 2
     call    QWORD PTR [g_pSetThreadpoolThreadMinimum]
-    ; Ignore return — non-fatal if min can't be set
+    ; Ignore return ? non-fatal if min can't be set
 
     ; Set max threads = 4 (half CCD for Zen4 8-core, leaves 4 for GUI/OS)
     mov     rcx, r12
     mov     edx, 4
     call    QWORD PTR [g_pSetThreadpoolThreadMaximum]
 
-    ; ── Create cleanup group ──
+    ; ?? Create cleanup group ??
     call    QWORD PTR [g_pCreateThreadpoolCleanupGroup]
     test    rax, rax
     jz      @@init_fail_pool
     mov     QWORD PTR [g_UmsCleanupGroup], rax
     mov     r13, rax                    ; r13 = cleanup group
 
-    ; ── Initialize callback environment ──
+    ; ?? Initialize callback environment ??
     lea     rcx, [g_UmsCallbackEnv]
     call    QWORD PTR [g_pInitializeThreadpoolEnvironment]
 
@@ -301,7 +301,7 @@ RawrXD_Sched_Init PROC FRAME
     mov     rdx, r12
     call    QWORD PTR [g_pSetThreadpoolCallbackPool]
 
-    ; Set RunsLong hint — prevents OS from thinking work items are short
+    ; Set RunsLong hint ? prevents OS from thinking work items are short
     ; and avoids aggressive preemption that trashes ZMM state
     lea     rcx, [g_UmsCallbackEnv]
     call    QWORD PTR [g_pSetThreadpoolCallbackRunsLong]
@@ -324,7 +324,7 @@ RawrXD_Sched_Init PROC FRAME
     ret
 
 @@init_fail_pool:
-    ; Pool was created but cleanup group failed — close pool
+    ; Pool was created but cleanup group failed ? close pool
     mov     rcx, r12
     call    QWORD PTR [g_pCloseThreadpool]
     mov     QWORD PTR [g_UmsPool], 0
@@ -400,7 +400,7 @@ RawrXD_Sched_Shutdown ENDP
 ; The actual MXCSR bracketing happens in the C++ callback wrapper.
 ; =============================================================================
 
-; Work item context — packed into 16 bytes for simple allocation
+; Work item context ? packed into 16 bytes for simple allocation
 ; (We store it inline in a small static pool to avoid heap allocs on hot path)
 WORK_SLOT_SIZE  EQU 32                  ; pfnKernel(8) + pContext(8) + mxcsrSave(4) + pad(12)
 MAX_WORK_SLOTS  EQU 64                  ; max concurrent in-flight work items
@@ -496,7 +496,7 @@ RawrXD_Sched_SubmitKernel PROC FRAME
 RawrXD_Sched_SubmitKernel ENDP
 
 ; =============================================================================
-; Thread pool work callback — called by Windows on a pool thread.
+; Thread pool work callback ? called by Windows on a pool thread.
 ; Signature: void CALLBACK (PTP_CALLBACK_INSTANCE, PVOID Context, PTP_WORK)
 ;   rcx = Instance (unused)
 ;   rdx = Context = pointer to work slot [pfnKernel, pContext]
@@ -547,7 +547,7 @@ rawrxd_tp_work_callback ENDP
 
 ; =============================================================================
 ; void RawrXD_Sched_SetAffinity(UINT64 coreMask)
-;   rcx = processor affinity mask (e.g., 0xF0 for cores 4-7)
+;   rcx = processor affinity mask (e.g., 0F0h for cores 4-7)
 ;
 ; Sets the current thread's affinity.  Call from pool threads to pin
 ; inference to specific CCDs on Zen4 (avoids cross-CCD L3 latency).
@@ -606,3 +606,4 @@ RawrXD_Sched_IsReady PROC
 RawrXD_Sched_IsReady ENDP
 
 END
+

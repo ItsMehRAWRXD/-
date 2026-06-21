@@ -143,7 +143,7 @@ asm_hwsynth_gen_jtag_header PROC
     test r8, r8
     jz   _err
     
-    ; Stub JTAG header (Magic 0x5258444A - RXDJ)
+    ; Stub JTAG header (Magic 05258444Ah - RXDJ)
     mov eax, 5258444Ah
     mov [r8], eax
     
@@ -161,3 +161,4 @@ _err:
 asm_hwsynth_gen_jtag_header ENDP
 
 END
+

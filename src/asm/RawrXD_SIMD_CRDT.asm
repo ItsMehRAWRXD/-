@@ -1,5 +1,5 @@
 ; =========================================================================================
-; RawrXD_SIMD_CRDT.asm - Lock-free SIMD-Accelerated Convergent Replicated Data Type
+; RawrXD_SIMD_CRDT.asm - Lock-free SIMD-Accelerated Convergent Replicated Data memType
 ; Part of RawrXD-Win32IDE Sovereign V2 Distributed Memory Index
 ; =========================================================================================
 
@@ -21,9 +21,9 @@ RawrXD_SIMD_CRDT_Merge proc
     ; Pointer increments
     mov r9, 0
 @@simd_loop:
-    ; Load 4 timestamp/counter pairs = 32 bytes (YMM size)
-    vmovdqu ymm0, [rcx + r9] ; Local
-    vmovdqu ymm1, [rdx + r9] ; Remote
+    ; Load 4 timestamp/counter pairs = 32 bytes (YMM blockSize)
+    vmovdqu ymm0, ymmword ptr [rcx + r9] ; Local
+    vmovdqu ymm1, ymmword ptr [rdx + r9] ; Remote
     
     ; Vectorized comparison: RDX[i] > RCX[i]
     vpcmpgtq ymm2, ymm1, ymm0
@@ -32,7 +32,7 @@ RawrXD_SIMD_CRDT_Merge proc
     vpblendvb ymm0, ymm0, ymm1, ymm2
     
     ; Store back to local index
-    vmovdqu [rcx + r9], ymm0
+    vmovdqu ymmword ptr [rcx + r9], ymm0
     
     add r9, 32
     cmp r9, r8
@@ -43,3 +43,4 @@ RawrXD_SIMD_CRDT_Merge proc
 RawrXD_SIMD_CRDT_Merge endp
 
 end
+

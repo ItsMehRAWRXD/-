@@ -1,11 +1,11 @@
 ; =============================================================================
-; RawrXD_TerminalPipe.asm — Terminal Pipe + Observation Ring Buffer + Tool
+; RawrXD_TerminalPipe.asm ? Terminal Pipe + Observation Ring Buffer + Tool
 ;                            Dispatch Jump Table
 ; =============================================================================
 ; Production x64 MASM module for the Agentic Orchestrator "Level 2" nervous
 ; system.  Replaces the C++ CreateProcess/pipe/ReadFile hot path with
-; zero‑overhead Win32 syscall wrappers, a lock‑free circular observation
-; buffer, and a branch‑free tool dispatch jump table.
+; zero?overhead Win32 syscall wrappers, a lock?free circular observation
+; buffer, and a branch?free tool dispatch jump table.
 ;
 ; Build (standalone verify):
 ;   ml64.exe /c /Zi /Zd /I src\asm RawrXD_TerminalPipe.asm
@@ -47,7 +47,7 @@ EXTERNDEF MessageBoxA:PROC
 ; Constants
 ; ---------------------------------------------------------------------------
 ; Observation ring buffer
-OBS_RING_SIZE           EQU 4096        ; power‑of‑2 for fast masking
+OBS_RING_SIZE           EQU 4096        ; power?of?2 for fast masking
 OBS_RING_MASK           EQU (OBS_RING_SIZE - 1)
 OBS_SNAPSHOT_SIZE       EQU 2048        ; max chars returned to LLM context
 
@@ -117,7 +117,7 @@ PROCESS_INFORMATION ENDS
 
 ; Tool entry for the dispatch jump table
 TOOL_DISPATCH_ENTRY STRUCT
-    nameHash    QWORD ?                 ; FNV‑1a hash of tool name
+    nameHash    QWORD ?                 ; FNV?1a hash of tool name
     handler     QWORD ?                 ; pointer to handler proc
 TOOL_DISPATCH_ENTRY ENDS
 
@@ -205,7 +205,7 @@ RawrXD_ObsRing_Init ENDP
 ; =====================================================================
 ; RawrXD_ObsRing_Push
 ; =====================================================================
-; Append bytes to the observation ring (thread‑safe).
+; Append bytes to the observation ring (thread?safe).
 ; RCX = pointer to data
 ; RDX = byte count
 ; Returns RAX = bytes actually written.
@@ -231,12 +231,12 @@ RawrXD_ObsRing_Push PROC FRAME
     lea     rcx, g_obsLock
     call    EnterCriticalSection
 
-    ; Write byte‑by‑byte into ring (simple & correct; hot‑path is < 4 KB)
+    ; Write byte?by?byte into ring (simple & correct; hot?path is < 4 KB)
     xor     rbx, rbx            ; bytes written counter
     test    rdi, rdi
     jz      @push_unlock
 
-    lea     r8, g_obsRing       ; RIP‑relative base address
+    lea     r8, g_obsRing       ; RIP?relative base address
 
 @push_loop:
     cmp     rbx, rdi
@@ -280,7 +280,7 @@ RawrXD_ObsRing_Push ENDP
 ; Copy the last N bytes (up to OBS_SNAPSHOT_SIZE) from the ring into
 ; g_obsSnapshot and return a pointer + length.
 ; No args.
-; Returns: RAX = pointer to snapshot buffer (null‑terminated)
+; Returns: RAX = pointer to snapshot buffer (null?terminated)
 ;          RDX = byte count copied (excluding NUL)
 ; =====================================================================
 RawrXD_ObsRing_Snapshot PROC FRAME
@@ -304,7 +304,7 @@ RawrXD_ObsRing_Snapshot PROC FRAME
     ; Compute available bytes
     mov     rax, g_obsHead
     sub     rax, g_obsTail
-    ; Clamp to snapshot size - 1 (leave room for NUL)
+    ; Clamp to snapshot m_size - 1 (leave room for NUL)
     mov     rcx, OBS_SNAPSHOT_SIZE - 1
     cmp     rax, rcx
     cmova   rax, rcx
@@ -316,7 +316,7 @@ RawrXD_ObsRing_Snapshot PROC FRAME
 
     ; Copy into g_obsSnapshot
     lea     rdi, g_obsSnapshot
-    lea     r8, g_obsRing       ; RIP‑relative base address
+    lea     r8, g_obsRing       ; RIP?relative base address
     xor     rcx, rcx
 @snap_loop:
     cmp     rcx, rbx
@@ -330,7 +330,7 @@ RawrXD_ObsRing_Snapshot PROC FRAME
     jmp     @snap_loop
 
 @snap_done:
-    ; NUL‑terminate
+    ; NUL?terminate
     mov     BYTE PTR [rdi + rbx], 0
 
     ; LeaveCriticalSection
@@ -379,7 +379,7 @@ RawrXD_ObsRing_Destroy ENDP
 ; Execute a command line and capture stdout+stderr into the observation
 ; ring buffer.  This is the "Level 2 perception" hot path.
 ;
-; RCX = pointer to null‑terminated command string (ANSI)
+; RCX = pointer to null?terminated command string (ANSI)
 ; RDX = timeout in milliseconds (0 = INFINITE)
 ; Returns: RAX = child exit code, or -1 on CreateProcess failure
 ; =====================================================================
@@ -399,10 +399,10 @@ RawrXD_TermPipe_Execute PROC FRAME
     push    r15
     .pushreg r15
     mov     rbp, rsp
-    ; 7 pushes + return addr = 64 bytes (16‑aligned)
+    ; 7 pushes + return addr = 64 bytes (16?aligned)
     ; Need space for: SECURITY_ATTRIBUTES (24) + STARTUPINFOA (104) +
     ; PROCESS_INFORMATION (24) + locals (64) + shadow (32) = 248
-    ; Round up to 256 (256 mod 16 = 0 → stays aligned)
+    ; Round up to 256 (256 mod 16 = 0 ? stays aligned)
     sub     rsp, 256
     .allocstack 256
     .endprolog
@@ -605,9 +605,9 @@ RawrXD_TermPipe_Execute PROC FRAME
     xor     edx, edx            ; 0 ms = poll
     call    WaitForSingleObject
     cmp     eax, WAIT_TIMEOUT
-    je      @read_loop          ; still running → keep draining
+    je      @read_loop          ; still running ? keep draining
 
-    ; Process exited — do one final drain
+    ; Process exited ? do one final drain
     ; (ReadFile will return FALSE once pipe is empty + child gone)
 
     ; GetExitCodeProcess
@@ -664,7 +664,7 @@ RawrXD_TermPipe_Execute ENDP
 ; =====================================================================
 ; RawrXD_HITL_Gate
 ; =====================================================================
-; Human‑In‑The‑Loop safety gate.  Shows a Yes/No message box.
+; Human?In?The?Loop safety gate.  Shows a Yes/No message box.
 ; RCX = hWndParent (0 for desktop)
 ; RDX = pointer to description string (ANSI)
 ; Returns: RAX = 1 if approved, 0 if denied
@@ -694,10 +694,10 @@ RawrXD_HITL_Gate PROC FRAME
 RawrXD_HITL_Gate ENDP
 
 ; =====================================================================
-; FNV‑1a 64‑bit Hash  (internal helper)
+; FNV?1a 64?bit Hash  (internal helper)
 ; =====================================================================
-; RCX = pointer to null‑terminated string
-; Returns RAX = 64‑bit hash
+; RCX = pointer to null?terminated string
+; Returns RAX = 64?bit hash
 ; =====================================================================
 FNV1a_Hash64 PROC FRAME
     push    rbp
@@ -726,7 +726,7 @@ FNV1a_Hash64 ENDP
 ; RawrXD_ToolTable_Register
 ; =====================================================================
 ; Register a tool handler in the dispatch jump table.
-; RCX = pointer to tool name (null‑terminated ANSI)
+; RCX = pointer to tool name (null?terminated ANSI)
 ; RDX = pointer to handler proc
 ; Returns: RAX = slot index, or -1 if table full
 ; =====================================================================
@@ -787,8 +787,8 @@ RawrXD_ToolTable_Register ENDP
 ; Look up a tool by name hash and jump to its handler.  This replaces
 ; the C++ if/else-if chain with a table scan + indirect call.
 ;
-; RCX = pointer to tool name (null‑terminated ANSI)
-; RDX = pointer to argument struct (tool‑specific, passed through)
+; RCX = pointer to tool name (null?terminated ANSI)
+; RDX = pointer to argument struct (tool?specific, passed through)
 ; Returns: RAX = handler return value, or -1 if tool not found
 ; =====================================================================
 RawrXD_ToolTable_Dispatch PROC FRAME
@@ -847,7 +847,7 @@ RawrXD_ToolTable_Dispatch ENDP
 ; =====================================================================
 ; RawrXD_TermPipe_ExecuteWithHITL
 ; =====================================================================
-; High‑level entry:  HITL gate → execute → observation snapshot.
+; High?level entry:  HITL gate ? execute ? observation snapshot.
 ; Wraps the full "Act + Observe" half of the agentic loop.
 ;
 ; RCX = hWndParent (for MessageBox; 0 = desktop)
@@ -907,3 +907,4 @@ RawrXD_TermPipe_ExecuteWithHITL PROC FRAME
 RawrXD_TermPipe_ExecuteWithHITL ENDP
 
 END
+

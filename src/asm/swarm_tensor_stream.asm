@@ -1,21 +1,21 @@
 ; =============================================================================
-; swarm_tensor_stream.asm — Zero-copy tensor network streaming
+; swarm_tensor_stream.asm ? Zero-copy tensor network streaming
 ; =============================================================================
 ; Target: x64, AVX-512 for optional compression before transmit
 ; Implements: scatter/gather layer shards across TCP sockets for
 ;             Phase 21 Distributed Swarm Inference (800B model sharding)
 ;
 ; Wire Protocol:
-;   8-byte header: [magic:4][type:2][size:2] + variable payload
-;   Magic: 'RAWR' = 0x52574152
+;   8-byte header: [magic:4][m_type:2][m_size:2] + variable payload
+;   Magic: 'RAWR' = 052574152h
 ;   TCP Port 7947 for data, UDP Port 7946 for discovery
 ;
 ; Responsibilities:
-;   1. swarm_stream_layer — Serialize a layer to a TCP socket with header framing
-;   2. swarm_receive_header — Non-blocking header read for event loop integration
-;   3. swarm_compute_layer_crc32 — CRC32 checksum for layer data integrity
-;   4. swarm_compress_chunk_rle — Simple RLE compression for sparse layers
-;   5. swarm_build_discovery_packet — Construct UDP discovery beacon
+;   1. swarm_stream_layer ? Serialize a layer to a TCP socket with header framing
+;   2. swarm_receive_header ? Non-blocking header read for event loop integration
+;   3. swarm_compute_layer_crc32 ? CRC32 checksum for layer data integrity
+;   4. swarm_compress_chunk_rle ? Simple RLE compression for sparse layers
+;   5. swarm_build_discovery_packet ? Construct UDP discovery beacon
 ;
 ; Architecture: x64 MASM | Windows ABI | No exceptions | No CRT
 ; Dependencies: ws2_32.dll (via C++ winsock2 init)
@@ -55,7 +55,7 @@ MSG_SHUTDOWN            EQU     0FFFFh          ; Shutdown signal
 ; Header layout (32 bytes)
 ; [0:3]   magic       (uint32_t)
 ; [4:5]   msg_type    (uint16_t)
-; [6:7]   header_size (uint16_t) — always 32
+; [6:7]   header_size (uint16_t) ? always 32
 ; [8:15]  payload_size (uint64_t)
 ; [16:19] quant_type  (uint32_t)
 ; [20:23] crc32       (uint32_t)
@@ -70,20 +70,20 @@ EXTERN __imp_send:PROC
 EXTERN __imp_recv:PROC
 
 ; =============================================================================
-; swarm_stream_layer — Serialize layer to TCP socket with header + chunked data
+; swarm_stream_layer ? Serialize layer to TCP socket with header + chunked data
 ; =============================================================================
 ; int64_t swarm_stream_layer(
-;     uint64_t socket_handle,   ; RCX — SOCKET (from accept/connect)
-;     void* layer_data,         ; RDX — pointer to layer tensor data
-;     uint64_t layer_size,      ; R8  — total layer size in bytes
-;     uint32_t quant_type       ; R9D — quantization type for metadata
+;     uint64_t socket_handle,   ; RCX ? SOCKET (from accept/connect)
+;     void* layer_data,         ; RDX ? pointer to layer tensor data
+;     uint64_t layer_size,      ; R8  ? total layer m_size in bytes
+;     uint32_t quant_type       ; R9D ? quantization m_type for metadata
 ; );
 ;
 ; Returns: RAX = total bytes sent (header + payload), -1 on error
 ; Clobbers: R10-R15, XMM0-XMM3
 ;
 ; Protocol:
-;   1. Build 32-byte header with magic, MSG_LAYER_PAYLOAD, payload size, quant type
+;   1. Build 32-byte header with magic, MSG_LAYER_PAYLOAD, payload m_size, quant m_type
 ;   2. Compute CRC32 of layer data
 ;   3. Send header (32 bytes)
 ;   4. Stream payload in 64KB chunks via send()
@@ -125,13 +125,13 @@ swarm_stream_layer PROC PUBLIC FRAME
     test    r13, r13
     jz      @@stream_error
 
-    ; ─── Compute CRC32 of layer data ───
+    ; ??? Compute CRC32 of layer data ???
     mov     rcx, r13            ; data pointer
-    mov     rdx, r14            ; size
+    mov     rdx, r14            ; m_size
     call    swarm_compute_layer_crc32
     mov     ebx, eax            ; Save CRC32 in EBX
 
-    ; ─── Build header on stack [rsp+0..31] ───
+    ; ??? Build header on stack [rsp+0..31] ???
     mov     DWORD PTR [rsp+0], RAWX_MAGIC           ; magic
     mov     WORD PTR [rsp+4], MSG_LAYER_PAYLOAD      ; msg_type
     mov     WORD PTR [rsp+6], HEADER_SIZE            ; header_size = 32
@@ -140,7 +140,7 @@ swarm_stream_layer PROC PUBLIC FRAME
     mov     DWORD PTR [rsp+20], ebx                  ; crc32
     mov     QWORD PTR [rsp+24], 0                    ; reserved
 
-    ; ─── Send header (32 bytes) ───
+    ; ??? Send header (32 bytes) ???
     ; int send(SOCKET s, const char* buf, int len, int flags);
     ; Windows x64 ABI: RCX=socket, RDX=buf, R8=len, R9=flags
     mov     rcx, r12
@@ -156,7 +156,7 @@ swarm_stream_layer PROC PUBLIC FRAME
     ; Track total bytes sent
     mov     rsi, HEADER_SIZE    ; total_sent = 32 (header already sent)
 
-    ; ─── Stream payload in 64KB chunks ───
+    ; ??? Stream payload in 64KB chunks ???
     mov     rdi, r14            ; remaining = layer_size
     mov     rbx, r13            ; current_ptr = layer_data
 
@@ -166,15 +166,15 @@ ALIGN 16
     test    rdi, rdi
     jz      @@stream_success
 
-    ; Compute chunk size = min(remaining, CHUNK_SIZE)
+    ; Compute chunk m_size = min(remaining, CHUNK_SIZE)
     mov     r8, CHUNK_SIZE
     cmp     rdi, r8
-    cmovb   r8, rdi             ; r8 = actual chunk size
+    cmovb   r8, rdi             ; r8 = actual chunk m_size
 
     ; send(socket, current_ptr, chunk_size, 0)
     mov     rcx, r12            ; socket
     mov     rdx, rbx            ; buffer
-    ; r8 already set to chunk size
+    ; r8 already set to chunk m_size
     xor     r9d, r9d            ; flags = 0
     call    QWORD PTR [__imp_send]
 
@@ -213,11 +213,11 @@ ALIGN 16
 swarm_stream_layer ENDP
 
 ; =============================================================================
-; swarm_receive_header — Read and validate a 32-byte header from socket
+; swarm_receive_header ? Read and validate a 32-byte header from socket
 ; =============================================================================
 ; int swarm_receive_header(
-;     uint64_t socket_handle,    ; RCX — SOCKET
-;     void* header_buffer        ; RDX — pointer to 32-byte output buffer
+;     uint64_t socket_handle,    ; RCX ? SOCKET
+;     void* header_buffer        ; RDX ? pointer to 32-byte output buffer
 ; );
 ;
 ; Returns: RAX = 0 success (valid header), 1 incomplete read, -1 error/invalid
@@ -267,12 +267,12 @@ swarm_receive_header PROC PUBLIC FRAME
     ; Verify header_size field matches
     movzx   eax, WORD PTR [rsi+6]
     cmp     eax, HEADER_SIZE
-    jne     @@recv_error        ; Unexpected header size
+    jne     @@recv_error        ; Unexpected header m_size
 
     ; Verify msg_type is in valid range
     movzx   eax, WORD PTR [rsi+4]
     cmp     eax, MSG_SHUTDOWN
-    ja      @@recv_error        ; Unknown message type (unless shutdown)
+    ja      @@recv_error        ; Unknown message m_type (unless shutdown)
 
     ; Header is valid
     xor     rax, rax            ; Return 0 = success
@@ -295,11 +295,11 @@ swarm_receive_header PROC PUBLIC FRAME
 swarm_receive_header ENDP
 
 ; =============================================================================
-; swarm_compute_layer_crc32 — CRC32 checksum of layer data
+; swarm_compute_layer_crc32 ? CRC32 checksum of layer data
 ; =============================================================================
 ; uint32_t swarm_compute_layer_crc32(
-;     const void* data,          ; RCX — data pointer
-;     uint64_t size              ; RDX — data size in bytes
+;     const void* data,          ; RCX ? data pointer
+;     uint64_t m_size              ; RDX ? data m_size in bytes
 ; );
 ;
 ; Returns: EAX = CRC32C value
@@ -335,7 +335,7 @@ ALIGN 16
 
 @@crc_bytes:
     ; Process remaining bytes (0-7)
-    and     rdx, 7              ; remaining = size % 8
+    and     rdx, 7              ; remaining = m_size % 8
     test    rdx, rdx
     jz      @@crc_finalize
 
@@ -358,16 +358,16 @@ ALIGN 16
 swarm_compute_layer_crc32 ENDP
 
 ; =============================================================================
-; swarm_compress_chunk_rle — RLE compression for sparse layer data
+; swarm_compress_chunk_rle ? RLE compression for sparse layer data
 ; =============================================================================
 ; uint64_t swarm_compress_chunk_rle(
-;     const void* src,           ; RCX — source data
-;     uint64_t src_size,         ; RDX — source size in bytes
-;     void* dst,                 ; R8  — destination buffer (must be >= src_size * 2)
-;     uint64_t dst_capacity      ; R9  — destination buffer capacity
+;     const void* src,           ; RCX ? source data
+;     uint64_t src_size,         ; RDX ? source m_size in bytes
+;     void* dst,                 ; R8  ? destination buffer (must be >= src_size * 2)
+;     uint64_t dst_capacity      ; R9  ? destination buffer capacity
 ; );
 ;
-; Returns: RAX = compressed size in bytes, 0 if compression would expand data
+; Returns: RAX = compressed m_size in bytes, 0 if compression would expand data
 ;
 ; Format: [count:1][value:1] pairs for repeated bytes
 ;         count=0 means literal run follows: [0][length:1][bytes...]
@@ -429,7 +429,7 @@ ALIGN 16
     ; Check if we have room in dst
     lea     r10, [r9+2]
     cmp     r10, r12
-    jge     @@rle_zero          ; Overflow — abandon compression
+    jge     @@rle_zero          ; Overflow ? abandon compression
 
     ; Write [count+1][value]
     inc     edx                 ; Total count (including first byte)
@@ -443,9 +443,9 @@ ALIGN 16
 @@rle_done:
     ; Check if compression actually saved space
     cmp     r9, rbx
-    jge     @@rle_zero          ; Compressed is bigger — return 0
+    jge     @@rle_zero          ; Compressed is bigger ? return 0
 
-    mov     rax, r9             ; Return compressed size
+    mov     rax, r9             ; Return compressed m_size
     jmp     @@rle_exit
 
 @@rle_zero:
@@ -462,18 +462,18 @@ ALIGN 16
 swarm_compress_chunk_rle ENDP
 
 ; =============================================================================
-; swarm_build_discovery_packet — Build UDP discovery beacon
+; swarm_build_discovery_packet ? Build UDP discovery beacon
 ; =============================================================================
 ; uint32_t swarm_build_discovery_packet(
-;     void* buffer,              ; RCX — output buffer (min 128 bytes)
-;     uint32_t buffer_size,      ; EDX — buffer capacity
-;     uint64_t total_vram,       ; R8  — total VRAM in bytes
-;     uint64_t free_vram,        ; R9  — free VRAM in bytes
+;     void* buffer,              ; RCX ? output buffer (min 128 bytes)
+;     uint32_t buffer_size,      ; EDX ? buffer capacity
+;     uint64_t total_vram,       ; R8  ? total VRAM in bytes
+;     uint64_t free_vram,        ; R9  ? free VRAM in bytes
 ;     [rsp+40] uint32_t role     ; node role (0=Coordinator, 1=Worker, 2=Hybrid)
 ;     [rsp+48] uint32_t max_layers ; max layers this node can host
 ; );
 ;
-; Returns: EAX = packet size in bytes, 0 on error
+; Returns: EAX = packet m_size in bytes, 0 on error
 ;
 ; Packet layout (64 bytes):
 ;   [0:3]   magic ('RAWR')
@@ -526,7 +526,7 @@ swarm_build_discovery_packet PROC PUBLIC FRAME
     mov     QWORD PTR [rbx+48], rax
     mov     QWORD PTR [rbx+56], rax
 
-    ; Return packet size
+    ; Return packet m_size
     mov     eax, 64
     pop     rbx
     ret
@@ -539,3 +539,4 @@ swarm_build_discovery_packet PROC PUBLIC FRAME
 swarm_build_discovery_packet ENDP
 
 END
+

@@ -48,7 +48,7 @@ main_loop:
     vmulps ymm3, ymm3, ymm6
     vcvtps2dq ymm3, ymm3
 
-    ; Pack into ARGB (0xFF, R, G, B)
+    ; Pack into ARGB (0FFh, R, G, B)
     ; This is a simplified pack for the stub
     ; [Placeholder for logic to shift and OR R,G,B components into rdx]
     
@@ -69,3 +69,4 @@ const_1   dd 1.0
 map_weights_to_colors_avx2 ENDP
 
 END
+

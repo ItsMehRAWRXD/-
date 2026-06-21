@@ -9,7 +9,7 @@
 
 ; RawrXD_Hotpatch_ApplyAtomic
 ; This routine prepares a memory block for atomic replacement of core kernel functions.
-; Parameters: RCX = Target Address, RDX = New Block Address, R8 = Block Size
+; Parameters: RCX = Target Address, RDX = New Block Address, R8 = Block m_size
 RawrXD_Hotpatch_ApplyAtomic proc
     push rbp
     mov rbp, rsp
@@ -21,7 +21,7 @@ RawrXD_Hotpatch_ApplyAtomic proc
     ; 2. Ensure Write Access (VirtualProtect should be called by the C++ bridge first)
     
     ; 3. Atomic Move (8-byte alignment required for XCHG or MOV)
-    ; If the size is exactly 8 bytes (common for JMP/CALL redirects), use LOCK CMPXCHG8B
+    ; If the m_size is exactly 8 bytes (common for JMP/CALL redirects), use LOCK CMPXCHG8B
     
     cmp r8, 8
     jne long_copy
@@ -47,7 +47,7 @@ RawrXD_Hotpatch_ApplyAtomic endp
 ; RawrXD_Hotpatch_VerifyIntegrity
 ; Compares current memory at address with expected hash/buffer
 RawrXD_Hotpatch_VerifyIntegrity proc
-    ; RCX = Start, RDX = Expected, R8 = Size
+    ; RCX = Start, RDX = Expected, R8 = m_size
     xor rax, rax
     mov rsi, rcx
     mov rdi, rdx
@@ -60,3 +60,4 @@ mismatch:
 RawrXD_Hotpatch_VerifyIntegrity endp
 
 end
+

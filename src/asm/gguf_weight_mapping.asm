@@ -7,7 +7,7 @@
 .DATA
 
 ; GGUF Header offsets (v3 format)
-GGUF_MAGIC              EQU 0x46554747      ; "GGUF" little-endian
+GGUF_MAGIC              EQU 046554747h      ; "GGUF" little-endian
 GGUF_VERSION            EQU 3
 GGUF_TENSOR_COUNT_OFF   EQU 24            ; After header
 GGUF_KV_COUNT_OFF       EQU 32
@@ -31,7 +31,7 @@ GGML_TYPE_Q5_1          EQU 7
 GGML_TYPE_Q8_0          EQU 8
 GGML_TYPE_Q8_1          EQU 9
 
-; Type sizes in bytes
+; m_type sizes in bytes
 SIZE_F32                EQU 4
 SIZE_F16                EQU 2
 SIZE_Q4_0               EQU 18            ; 32 weights + 2 scales per block
@@ -49,7 +49,7 @@ OFF_FFN_GATE            EQU 134221824     ; Gate projection (SwiGLU)
 OFF_FFN_UP              EQU 167772160     ; Up projection
 OFF_FFN_DOWN            EQU 201326592     ; Down projection
 
-; Block size for 7B model (32 layers)
+; Block m_size for 7B model (32 layers)
 BLOCK_SIZE_7B           EQU 536870912     ; 512MB per block
 
 .CODE
@@ -91,7 +91,7 @@ MapGGUFToMASMLayout PROC
     
     ; Skip to tensor info (after header + KV pairs)
     mov     rcx, QWORD PTR [r12 + GGUF_KV_COUNT_OFF]
-    shl     rcx, 4              ; Rough estimate for KV size
+    shl     rcx, 4              ; Rough estimate for KV m_size
     lea     r12, [r12 + 64 + rcx]  ; Skip header
     
 @@tensor_loop:
@@ -105,16 +105,16 @@ MapGGUFToMASMLayout PROC
     
     ; Map to MASM layout
     mov     [r13 + 0], eax      ; Name length
-    mov     [r13 + 4], ecx      ; Type
+    mov     [r13 + 4], ecx      ; m_type
     mov     [r13 + 8], rdx      ; Offset
     
-    ; Calculate aligned size for SDMA
+    ; Calculate aligned m_size for SDMA
     call    CalculateAlignedSize
-    mov     [r13 + 16], rax     ; Aligned size
+    mov     [r13 + 16], rax     ; Aligned m_size
     
     ; Advance
     add     r12, TENSOR_INFO_SIZE
-    add     r13, 32             ; Output entry size
+    add     r13, 32             ; Output entry m_size
     inc     r15
     jmp     @@tensor_loop
     
@@ -140,14 +140,14 @@ MapGGUFToMASMLayout ENDP
 ; ============================================================================
 ; CalculateAlignedSize
 ; 
-; Calculates SDMA-aligned size for tensor
+; Calculates SDMA-aligned m_size for tensor
 ; 
 ; Parameters:
-;   ECX = GGML type
+;   ECX = GGML m_type
 ;   RDX = Element count
 ; 
 ; Returns:
-;   RAX = Aligned size in bytes
+;   RAX = Aligned m_size in bytes
 ; ============================================================================
 CalculateAlignedSize PROC
     cmp     ecx, GGML_TYPE_F32
@@ -196,7 +196,7 @@ CalculateAlignedSize ENDP
 ; 
 ; Parameters:
 ;   RCX = Layer index (0-31)
-;   RDX = Component type (0=attn_norm, 1=q, 2=k, 3=v, 4=o, 5=ffn_norm, etc.)
+;   RDX = Component m_type (0=attn_norm, 1=q, 2=k, 3=v, 4=o, 5=ffn_norm, etc.)
 ; 
 ; Returns:
 ;   RAX = Byte offset from model base
@@ -288,3 +288,4 @@ GetTransformerBlockOffset PROC
 GetTransformerBlockOffset ENDP
 
 END
+

@@ -322,7 +322,7 @@ void Win32IDE::initEmojiSupport() {
 // Command Router
 // ============================================================================
 
-bool Win32IDE::handleEmojiCommand(int commandId) {
+bool Win32IDE::handleEmojiCommand(int commandId, LPARAM /*lParam*/) {
     if (!m_emojiSupportInitialized) initEmojiSupport();
     switch (commandId) {
         case IDM_EMOJI_PICKER:  cmdEmojiPicker();  return true;

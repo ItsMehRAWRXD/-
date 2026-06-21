@@ -31,6 +31,15 @@
 #ifndef IDM_TELEMETRY_UNIFIED_CORE
 #define IDM_TELEMETRY_UNIFIED_CORE 4164
 #endif
+// HexMag JIT menu IDs
+#ifndef IDM_HEXMAG_JIT_INIT
+#define IDM_HEXMAG_JIT_INIT     4170
+#define IDM_HEXMAG_JIT_EMIT     4171
+#define IDM_HEXMAG_JIT_RUN      4172
+#define IDM_HEXMAG_JIT_SHUTDOWN 4173
+#endif
+
+#include "../agent/hexmag_client.hpp"
 
 // Forward declarations for free-function handlers defined in their own .cpp files
 void HandleAutonomousCommunicator(void* idePtr);
@@ -1587,6 +1596,43 @@ void Win32IDE::handleAgentCommand(int commandId)
             break;
         case IDM_AGENT_AUTONOMOUS_COMMUNICATOR:
             HandleAutonomousCommunicator(this);
+            break;
+
+        // --- HexMag JIT (bridges HexMag CLI to SovereignKernelJIT emitter) ---
+        case IDM_HEXMAG_JIT_INIT:
+        {
+            int rc = HexMagJIT_Init(4096);
+            if (rc == 0)
+                appendToOutput("[HexMagJIT] Buffer initialized (4096 bytes RWX)\n", "Agent", OutputSeverity::Info);
+            else
+                appendToOutput("[HexMagJIT] Init failed\n", "Errors", OutputSeverity::Error);
+            break;
+        }
+        case IDM_HEXMAG_JIT_EMIT:
+        {
+            int bytes = HexMagJIT_EmitExit42();
+            if (bytes > 0)
+                appendToOutput("[HexMagJIT] Emitted " + std::to_string(bytes) + " bytes (exit-42 function)\n", "Agent",
+                               OutputSeverity::Info);
+            else
+                appendToOutput("[HexMagJIT] Emit failed\n", "Errors", OutputSeverity::Error);
+            break;
+        }
+        case IDM_HEXMAG_JIT_RUN:
+        {
+            int result = HexMagJIT_Execute();
+            if (result == 42)
+                appendToOutput("[HexMagJIT] Execution succeeded (returned 42)\n", "Agent", OutputSeverity::Info);
+            else if (result == -2)
+                appendToOutput("[HexMagJIT] Execution crashed (exception)\n", "Errors", OutputSeverity::Error);
+            else
+                appendToOutput("[HexMagJIT] Execution returned: " + std::to_string(result) + "\n", "Agent",
+                               OutputSeverity::Warning);
+            break;
+        }
+        case IDM_HEXMAG_JIT_SHUTDOWN:
+            HexMagJIT_Shutdown();
+            appendToOutput("[HexMagJIT] Shutdown complete\n", "Agent", OutputSeverity::Info);
             break;
 
         // --- Copilot Chat Actions (Global GUI commands) ---

@@ -185,3 +185,4 @@ VC_Done:
 NLShell_ValidateCommand ENDP
 
 END
+

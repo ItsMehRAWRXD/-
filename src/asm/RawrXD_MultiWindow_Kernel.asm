@@ -185,66 +185,66 @@ szSharedMemName         DW 'R','a','w','r','X','D','_','M','W','_','I','P','C', 
 ; =============================================================================
 ; TASK DESCRIPTOR (128 bytes, cache-line aligned)
 ; =============================================================================
-; Offset  Size  Field
-; 0x00    8     task_id
-; 0x08    4     task_type (TASK_*)
-; 0x0C    4     task_state (STATE_*)
-; 0x10    4     priority (PRIORITY_*)
-; 0x14    4     window_id (owner window)
-; 0x18    8     callback_fn (function pointer)
-; 0x20    8     user_data (opaque pointer)
-; 0x28    8     model_id (which model to use)
-; 0x30    8     submit_time (QPC tick)
-; 0x38    8     start_time
-; 0x40    8     end_time
-; 0x48    8     result_ptr (output buffer)
-; 0x50    4     result_size
-; 0x54    4     error_code
-; 0x58    8     next_task (linked list)
-; 0x60    8     depends_on (dependency task_id, 0=none)
-; 0x68    8     progress (0-10000 = 0.00%-100.00%)
-; 0x70    8     flags (bitfield)
-; 0x78    8     reserved
+; Offset  m_size  Field
+; 000h    8     task_id
+; 008h    4     task_type (TASK_*)
+; 00Ch    4     task_state (STATE_*)
+; 010h    4     priority (PRIORITY_*)
+; 014h    4     window_id (owner window)
+; 018h    8     callback_fn (function pointer)
+; 020h    8     user_data (opaque pointer)
+; 028h    8     model_id (which model to use)
+; 030h    8     submit_time (QPC tick)
+; 038h    8     start_time
+; 040h    8     end_time
+; 048h    8     result_ptr (output buffer)
+; 050h    4     result_size
+; 054h    4     error_code
+; 058h    8     next_task (linked list)
+; 060h    8     depends_on (dependency task_id, 0=none)
+; 068h    8     progress (0-10000 = 0.00%-100.00%)
+; 070h    8     flags (bitfield)
+; 078h    8     reserved
 
 TASK_DESC_SIZE          EQU 128
 
 ; =============================================================================
 ; WINDOW STATE (256 bytes)
 ; =============================================================================
-; Offset  Size  Field
-; 0x00    8     window_id
-; 0x08    4     window_type (TASK_* reused)
-; 0x0C    4     window_state (0=hidden, 1=normal, 2=maximized, 3=minimized)
-; 0x10    4     pos_x
-; 0x14    4     pos_y
-; 0x18    4     width
-; 0x1C    4     height
-; 0x20    4     z_order
-; 0x24    4     flags
-; 0x28    8     model_id (selected model for this window)
-; 0x30    8     active_task_id
-; 0x38    8     task_count (total tasks in this window)
-; 0x40    8     create_time
-; 0x48    64    title (ASCII, null-terminated)
-; 0x88    8     parent_window_id (0=root)
-; 0x90    8     ring_buffer_ptr (per-window message ring)
-; 0x98    8     ring_head
-; 0xA0    8     ring_tail
-; 0xA8    56    reserved
+; Offset  m_size  Field
+; 000h    8     window_id
+; 008h    4     window_type (TASK_* reused)
+; 00Ch    4     window_state (0=hidden, 1=normal, 2=maximized, 3=minimized)
+; 010h    4     pos_x
+; 014h    4     pos_y
+; 018h    4     width
+; 01Ch    4     height
+; 020h    4     z_order
+; 024h    4     flags
+; 028h    8     model_id (selected model for this window)
+; 030h    8     active_task_id
+; 038h    8     task_count (total tasks in this window)
+; 040h    8     create_time
+; 048h    64    title (ASCII, null-terminated)
+; 088h    8     parent_window_id (0=root)
+; 090h    8     ring_buffer_ptr (per-window message ring)
+; 098h    8     ring_head
+; 0A0h    8     ring_tail
+; 0A8h    56    reserved
 
 WINDOW_STATE_SIZE       EQU 256
 
 ; =============================================================================
 ; RING BUFFER ENTRY (256 bytes)
 ; =============================================================================
-; Offset  Size  Field
-; 0x00    4     msg_type
-; 0x04    4     src_window
-; 0x08    4     dst_window
-; 0x0C    4     payload_size
-; 0x10    8     timestamp
-; 0x18    8     sequence_num
-; 0x20    224   payload
+; Offset  m_size  Field
+; 000h    4     msg_type
+; 004h    4     src_window
+; 008h    4     dst_window
+; 00Ch    4     payload_size
+; 010h    8     timestamp
+; 018h    8     sequence_num
+; 020h    224   payload
 
 RING_ENTRY_TOTAL        EQU 256
 
@@ -605,7 +605,7 @@ SubmitTask PROC
     lea     rcx, [g_PQ_Head]
     mov     edx, [rcx + rax*4]              ; current head for this priority
 
-    ; Overflow check (FIX #7): if (head+1) mod SIZE == tail, queue is full
+    ; Overflow check (FIX #7): if (head+1) mod m_size == tail, queue is full
     lea     ecx, [edx + 1]
     and     ecx, (RING_BUFFER_SIZE - 1)      ; next_head
     lea     r8, [g_PQ_Tail]
@@ -760,7 +760,7 @@ CancelTask PROC
     ; Found! Mark as cancelled (FIX #5: do NOT decrement active count here;
     ; worker will handle it when the cancelled task is dequeued and skipped)
     mov     DWORD PTR [r9+0Ch], STATE_CANCELLED
-    ; REMOVED: lock dec DWORD PTR [g_ActiveTaskCount] — prevents double-decrement
+    ; REMOVED: lock dec DWORD PTR [g_ActiveTaskCount] ? prevents double-decrement
 
     lea     rcx, [g_TaskQueueCS]
     call    LeaveCriticalSection
@@ -1091,18 +1091,18 @@ SendIPCMessage PROC
 SendIPCMessage ENDP
 
 ; =============================================================================
-; GET KERNEL STATS
+; GET KERNEL m_stats
 ; =============================================================================
 ; void __fastcall GetKernelStats(KernelStats* out)
 ; rcx = pointer to output struct (64 bytes)
-; [0x00] activeWindows (4)
-; [0x04] activeTasks (4)
-; [0x08] totalProcessed (8)
-; [0x10] totalFailed (8)
-; [0x18] uptimeMs (8)
-; [0x20] workerCount (4)
-; [0x24] queueDepth[5] (20 bytes = 5*4)
-; [0x38] reserved (8)
+; [000h] activeWindows (4)
+; [004h] activeTasks (4)
+; [008h] totalProcessed (8)
+; [010h] totalFailed (8)
+; [018h] uptimeMs (8)
+; [020h] workerCount (4)
+; [024h] queueDepth[5] (20 bytes = 5*4)
+; [038h] reserved (8)
 ; =============================================================================
 ALIGN 16
 GetKernelStats PROC
@@ -1359,7 +1359,7 @@ SetupSharedMemory PROC
     push    rbx
     sub     rsp, 48
 
-    ; CreateFileMappingW(INVALID_HANDLE, NULL, PAGE_READWRITE, 0, size, name)
+    ; CreateFileMappingW(INVALID_HANDLE, NULL, PAGE_READWRITE, 0, m_size, name)
     mov     rcx, INVALID_HANDLE
     xor     edx, edx                        ; lpSecurityAttribs
     mov     r8d, PAGE_READWRITE
@@ -1507,7 +1507,7 @@ WriteRingEntry PROC
     mov     rax, [g_TotalTasksProcessed]
     mov     [rcx+18h], rax                   ; sequence_num
 
-    ; Zero payload region (224 bytes from offset 0x20)
+    ; Zero payload region (224 bytes from offset 020h)
     push    rcx
     lea     rcx, [rcx+20h]
     xor     edx, edx
@@ -1587,11 +1587,11 @@ IsTaskComplete PROC
     test    rax, rax
     jz      @itc_next_slot
 
-    ; Compare task_id (offset 0x00)
+    ; Compare task_id (offset 000h)
     cmp     [rax], r12
     jne     @itc_next_slot
 
-    ; Found! Check state (offset 0x0C)
+    ; Found! Check state (offset 00Ch)
     mov     edx, DWORD PTR [rax+0Ch]
     cmp     edx, STATE_COMPLETE
     je      @itc_yes
@@ -1633,15 +1633,15 @@ IsTaskComplete ENDP
 ; =============================================================================
 ; Records ring buffer transitions for post-mortem / replay analysis.
 ; Entry format (64 bytes):
-;   [0x00] 8  timestamp (QPC)
-;   [0x08] 4  operation (1=SUBMIT, 2=DEQUEUE, 3=COMPLETE, 4=CANCEL, 5=IPC)
-;   [0x0C] 4  priority
-;   [0x10] 8  task_id
-;   [0x18] 4  head_before
-;   [0x1C] 4  tail_before
-;   [0x20] 4  count_before
-;   [0x24] 4  thread_id
-;   [0x28] 24 reserved
+;   [000h] 8  timestamp (QPC)
+;   [008h] 4  operation (1=SUBMIT, 2=DEQUEUE, 3=COMPLETE, 4=CANCEL, 5=IPC)
+;   [00Ch] 4  priority
+;   [010h] 8  task_id
+;   [018h] 4  head_before
+;   [01Ch] 4  tail_before
+;   [020h] 4  count_before
+;   [024h] 4  thread_id
+;   [028h] 24 reserved
 ;
 ; ecx = operation, edx = priority, r8 = task_id
 ALIGN 16
@@ -1660,7 +1660,7 @@ WriteReplayEntry PROC
     mov     rax, 1
     lock xadd QWORD PTR [rcx], rax           ; rax = our slot index
 
-    ; Wrap to replay ring size
+    ; Wrap to replay ring m_size
     and     rax, (SHM_REPLAY_MAX - 1)
 
     ; Calculate address = shared_base + SHM_REPLAY_BASE + slot * 64
@@ -1972,3 +1972,4 @@ PUBLIC IsTaskComplete
 PUBLIC WriteReplayEntry
 
 END
+

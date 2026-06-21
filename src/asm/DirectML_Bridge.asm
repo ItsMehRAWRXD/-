@@ -1,5 +1,5 @@
 ; ============================================================================
-; DirectML_Bridge.asm — DirectML GPU Inference Bridge (x64 MASM)
+; DirectML_Bridge.asm ? DirectML GPU Inference Bridge (x64 MASM)
 ; ============================================================================
 ; Bridges CPU inference to DirectML GPU acceleration.
 ; Exports: DML_CreateContext, DML_ReleaseContext, DML_RunInference
@@ -15,6 +15,7 @@ EXTERNDEF GetProcAddress:PROC
 EXTERNDEF FreeLibrary:PROC
 EXTERNDEF VirtualAlloc:PROC
 EXTERNDEF VirtualFree:PROC
+EXTERNDEF RtlCopyMemory:PROC
 
 ; ============================================================================
 ; PUBLIC EXPORTS
@@ -54,7 +55,7 @@ g_dml_context       QWORD 0
 .code
 
 ; ============================================================================
-; DML_CreateContext — Initialize DirectML context
+; DML_CreateContext ? Initialize DirectML context
 ; RCX = device_id (0 = default)
 ; Returns RAX = context handle, 0 on failure
 ; ============================================================================
@@ -76,7 +77,7 @@ DML_CreateContext PROC FRAME
     mov g_dml_handle, rax
 
     ; Allocate context structure
-    mov rcx, 64         ; Size of context
+    mov rcx, 64         ; m_size of context
     mov rdx, MEM_COMMIT OR MEM_RESERVE
     mov r8, PAGE_READWRITE
     xor r9, r9
@@ -116,7 +117,7 @@ DML_CreateContext PROC FRAME
 DML_CreateContext ENDP
 
 ; ============================================================================
-; DML_ReleaseContext — Release DirectML context
+; DML_ReleaseContext ? Release DirectML context
 ; RCX = context handle
 ; Returns RAX = 0 on success
 ; ============================================================================
@@ -152,7 +153,7 @@ DML_ReleaseContext PROC FRAME
 DML_ReleaseContext ENDP
 
 ; ============================================================================
-; DML_RunInference — Run inference on DirectML
+; DML_RunInference ? Run inference on DirectML
 ; RCX = context, RDX = input_buffer, R8 = input_size
 ; R9 = output_buffer, [rsp+28h] = output_size
 ; Returns RAX = 0 on success, error code on failure
@@ -204,10 +205,11 @@ DML_RunInference PROC FRAME
 DML_RunInference ENDP
 
 ; ============================================================================
-; DML_IsAvailable — Check if DirectML is available
+; DML_IsAvailable ? Check if DirectML is available
 ; Returns RAX = 1 if available, 0 if not
 ; ============================================================================
 DML_IsAvailable PROC FRAME
+    .ENDPROLOG
     cmp g_dml_initialized, 0
     setne al
     movzx rax, al

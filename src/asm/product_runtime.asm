@@ -5,13 +5,22 @@
 ; Zero JSON parsing - Direct memory-mapped structs
 ; =============================================================================
 OPTION CASEMAP:NONE
-OPTION WIN64:3
 
-include \masm64\include64\windows.inc
-include \masm64\include64\kernel32.inc
-include \masm64\include64\shlwapi.inc
-include \masm64\include64\crypt32.inc
-include \masm64\include64\bcrypt.inc
+include masm64_compat.inc
+include rawrxd_win64.inc
+
+includelib kernel32.lib
+includelib shlwapi.lib
+includelib crypt32.lib
+includelib bcrypt.lib
+
+; ============= EXTERNALS =============
+EXTERNDEF BCryptOpenAlgorithmProvider:PROC
+EXTERNDEF BCryptCreateHash:PROC
+EXTERNDEF BCryptHashData:PROC
+EXTERNDEF BCryptFinishHash:PROC
+EXTERNDEF BCryptDestroyHash:PROC
+EXTERNDEF BCryptCloseAlgorithmProvider:PROC
 
 ; ============= EQUATES =============
 MAX_EXTENSIONS        equ 256
@@ -56,7 +65,7 @@ FileAssociation struct
 FileAssociation ends
 
 BuiltInExtension struct
-    name            db 64 dup(?)    ; ms-vscode.js-debug
+    extName         db 64 dup(?)    ; ms-vscode.js-debug
     version         db 32 dup(?)
     sha256          db 64 dup(?)    ; SHA256 hash for verification
     repo            db 256 dup(?)   ; Source repo
@@ -97,7 +106,7 @@ dataFolderName  db ".rawrxd",0
 LocalGallery:
 serviceUrl      db "http://localhost:11434/v1/extensions",0  ; Local Ollama-style
 itemUrl         db "http://localhost:11434/v1/extension/",0
-controlUrl      db "",0                                      ; No remote control
+controlUrl      db 0                                            ; No remote control (empty string)
 cacheEnabled    dd 1
 
 ; Telemetry Blocked (replaces Statsig with local null sink)
@@ -132,7 +141,7 @@ dd 1
 
 db 0  ; Terminator
 
-; Extension Recommendations (file type → extension)
+; Extension Recommendations (file memType ? extension)
 RecommendationTable:
 ; Python
 db "*.py",0
@@ -193,7 +202,7 @@ dd 10, 0
 
 db 0  ; Terminator
 
-; File Associations (ext → language → keywords)
+; File Associations (ext ? language ? keywords)
 FileAssociationTable:
 db "py",0, "python",0, "Python python3 pip venv conda",0
 db "rs",0, "rust",0, "Rust cargo rustc",0
@@ -239,7 +248,7 @@ ProductRuntime_Init proc
 
     ; Clear config structure
     lea rdi, g_ProductConfig
-    mov rcx, sizeof ProductConfig / 8
+    mov rcx, SIZEOF ProductConfig / 8
     xor eax, eax
     rep stosq
 
@@ -267,13 +276,13 @@ ProductRuntime_Init proc
     ; Load gallery config (LOCAL MODE)
     lea rsi, LocalGallery
     lea rdi, (ProductConfig ptr [g_ProductConfig]).gallery
-    mov ecx, sizeof ExtensionGallery
+    mov ecx, SIZEOF ExtensionGallery
     call memcpy
 
     ; Load telemetry config (BLOCKED)
     lea rsi, BlockedTelemetry
     lea rdi, (ProductConfig ptr [g_ProductConfig]).telemetry
-    mov ecx, sizeof TelemetryConfig
+    mov ecx, SIZEOF TelemetryConfig
     call memcpy
 
     ; Parse built-in extensions
@@ -308,25 +317,25 @@ ParseBuiltinExtensions proc
     je @@done
 
     ; Copy name
-    lea rdx, (BuiltInExtension ptr [rdi]).name
-    call strcpy_dest
+    lea rdx, (BuiltInExtension ptr [rdi]).extName
+    call strcpy_dest_inner
 
     ; Copy version
     lea rdx, (BuiltInExtension ptr [rdi]).version
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; Copy SHA256
     lea rdx, (BuiltInExtension ptr [rdi]).sha256
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; Copy repo
     lea rdx, (BuiltInExtension ptr [rdi]).repo
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; Set active and increment
     mov (BuiltInExtension ptr [rdi]).active, 1
     inc ebx
-    add rdi, sizeof BuiltInExtension
+    add rdi, SIZEOF BuiltInExtension
 
     cmp ebx, 16
     jb @@parse_loop
@@ -334,15 +343,6 @@ ParseBuiltinExtensions proc
 @@done:
     mov (ProductConfig ptr [g_ProductConfig]).builtinCount, ebx
     add rsp, 28h
-    ret
-
-strcpy_dest:
-    mov al, [rsi]
-    mov [rdx], al
-    inc rsi
-    inc rdx
-    test al, al
-    jnz strcpy_dest
     ret
 ParseBuiltinExtensions endp
 
@@ -362,15 +362,15 @@ ParseRecommendations proc
 
     ; filePattern
     lea rdx, (ExtensionRecommendation ptr [rdi]).filePattern
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; languageId
     lea rdx, (ExtensionRecommendation ptr [rdi]).languageId
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; extensionId
     lea rdx, (ExtensionRecommendation ptr [rdi]).extensionId
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; priority
     mov eax, dword ptr [rsi]
@@ -383,7 +383,7 @@ ParseRecommendations proc
     add rsi, 4
 
     inc ebx
-    add rdi, sizeof ExtensionRecommendation
+    add rdi, SIZEOF ExtensionRecommendation
 
     cmp ebx, MAX_RECOMMENDATIONS
     jb @@parse_loop
@@ -410,18 +410,18 @@ ParseFileAssociations proc
 
     ; ext
     lea rdx, (FileAssociation ptr [rdi]).ext
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; langId
     lea rdx, (FileAssociation ptr [rdi]).langId
-    call strcpy_dest
+    call strcpy_dest_inner
 
     ; keywords
     lea rdx, (FileAssociation ptr [rdi]).keywords
-    call strcpy_dest
+    call strcpy_dest_inner
 
     inc ebx
-    add rdi, sizeof FileAssociation
+    add rdi, SIZEOF FileAssociation
 
     cmp ebx, MAX_FILE_ASSOCIATIONS
     jb @@parse_loop
@@ -464,7 +464,7 @@ ProductRuntime_GetRecommendation proc
     test eax, eax
     jnz @@found
 
-    add rdi, sizeof ExtensionRecommendation
+    add rdi, SIZEOF ExtensionRecommendation
     jmp @@search_loop
 
 @@found:
@@ -491,19 +491,30 @@ ProductRuntime_VerifyChecksum proc
     sub rsp, 88h
 
     ; Open file
-    invoke CreateFileA, rcx, GENERIC_READ, FILE_SHARE_READ, 0,
-            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0
+        mov qword ptr [rsp+28h], 0
+    mov qword ptr [rsp+20h], FILE_ATTRIBUTE_NORMAL
+    mov r9d, OPEN_EXISTING
+    xor r8d, r8d
+    mov edx, FILE_SHARE_READ
+    mov edx, GENERIC_READ
+    call CreateFileA
     cmp rax, INVALID_HANDLE_VALUE
     je @@failed
     mov rbx, rax
 
     ; Get file size
     lea rdx, [rsp+20h]
-    invoke GetFileSizeEx, rbx, rdx
+        mov rdx, rbx
+    lea r8, [rsp+20h]
+    call GetFileSizeEx
 
     ; Allocate buffer
     mov rcx, [rsp+20h]
-    call malloc
+        call GetProcessHeap
+    mov rcx, rax
+    mov rdx, 0
+    mov r8, [rsp+20h]
+    call HeapAlloc
     mov r12, rax
 
     ; Read file
@@ -560,13 +571,13 @@ ProductRuntime_GetTelemetryEndpoint:
 @@statsig:
     lea rax, szStatsigNull
     mov rsi, rax
-    jmp @@copy
+    jmp @@copy_telem
     
 @@proxy:
     lea rax, szEventsNull
     mov rsi, rax
     
-@@copy:
+@@copy_telem:
     mov rdi, rdx
     call strcpy
     mov eax, TELEMETRY_DISABLED
@@ -574,13 +585,11 @@ ProductRuntime_GetTelemetryEndpoint:
 
 ; -----------------------------------------------------------------------------
 ; Get Gallery URL (LOCAL MODE)
-; rcx = URL type (1=service, 2=item, 3=control)
+; rcx = URL memType (1=service, 2=item, 3=control)
 ; rdx = output buffer
 ; -----------------------------------------------------------------------------
 ProductRuntime_GetGalleryUrl proc
     sub rsp, 28h
-
-    lea rsi, (ProductConfig ptr [g_ProductConfig]).gallery
 
     cmp ecx, 1
     je @@service
@@ -593,17 +602,23 @@ ProductRuntime_GetGalleryUrl proc
     jmp @@done
 
 @@service:
-    add rsi, offset ExtensionGallery.serviceUrl
-    jmp @@copy
+    lea rsi, g_ProductConfig
+    add rsi, ProductConfig.gallery
+    add rsi, ExtensionGallery.serviceUrl
+    jmp @@copy_gallery
 
 @@item:
-    add rsi, offset ExtensionGallery.itemUrl
-    jmp @@copy
+    lea rsi, g_ProductConfig
+    add rsi, ProductConfig.gallery
+    add rsi, ExtensionGallery.itemUrl
+    jmp @@copy_gallery
 
 @@control:
-    add rsi, offset ExtensionGallery.controlUrl
+    lea rsi, g_ProductConfig
+    add rsi, ProductConfig.gallery
+    add rsi, ExtensionGallery.controlUrl
 
-@@copy:
+@@copy_gallery:
     mov rdi, rdx
     call strcpy
     mov eax, 1
@@ -710,50 +725,93 @@ CalculateSHA256 proc
     
     ; Open algorithm provider
     lea rcx, [rsp+20h]    ; hAlgorithm
-    lea rdx, [rsp+28h]    ; BCRYPT_SHA256_ALGORITHM
-    lea r8, [rsp+30h]     ; MS_PRIMITIVE_PROVIDER
+    lea rdx, @@BCRYPT_SHA256_ALGORITHM
+    lea r8, @@MS_PRIMITIVE_PROVIDER
     xor r9, r9
     mov qword ptr [rsp+40h], 0
+    sub rsp, 20h
     call BCryptOpenAlgorithmProvider
+    add rsp, 20h
     
     ; Create hash
-    lea rcx, [rsp+20h]    ; hAlgorithm
+    mov rcx, [rsp+20h]    ; hAlgorithm
     lea rdx, [rsp+38h]    ; hHash
     xor r8, r8
     xor r9, r9
     mov qword ptr [rsp+40h], 0
+    sub rsp, 20h
     call BCryptCreateHash
+    add rsp, 20h
     
     ; Hash data
     mov rcx, [rsp+38h]    ; hHash
     mov rdx, r12          ; buffer
     mov r8, r13           ; size
     xor r9, r9
+    sub rsp, 20h
     call BCryptHashData
+    add rsp, 20h
     
     ; Finish hash
     mov rcx, [rsp+38h]    ; hHash
     mov rdx, r14          ; output
     mov r8, 32            ; SHA256_SIZE
     xor r9, r9
+    sub rsp, 20h
     call BCryptFinishHash
+    add rsp, 20h
     
     ; Cleanup
     mov rcx, [rsp+38h]
+    sub rsp, 20h
     call BCryptDestroyHash
+    add rsp, 20h
     mov rcx, [rsp+20h]
+    sub rsp, 20h
     call BCryptCloseAlgorithmProvider
+    add rsp, 20h
     
     add rsp, 88h
     ret
     
-BCRYPT_SHA256_ALGORITHM:
-    dw 'S','H','A','2','5','6',0
-MS_PRIMITIVE_PROVIDER:
-    dw 'M','i','c','r','o','s','o','f','t',' ','P','r','i','m','i','t','i','v','e',' ','P','r','o','v','i','d','e','r',0
+@@BCRYPT_SHA256_ALGORITHM:
+    db 'S','H','A','2','5','6',0
+@@MS_PRIMITIVE_PROVIDER:
+    db 'M','i','c','r','o','s','o','f','t',' ','P','r','i','m','i','t','i','v','e',' ','P','r','o','v','i','d','e','r',0
 CalculateSHA256 endp
 
 ; ============= STRING UTILS =============
+strcpy proc
+    ; rcx = dest, rdx = src
+    push rdi
+    push rsi
+    mov rdi, rcx
+    mov rsi, rdx
+@@copy_loop:
+    lodsb
+    stosb
+    test al, al
+    jnz @@copy_loop
+    mov rax, rcx
+    pop rsi
+    pop rdi
+    ret
+strcpy endp
+
+strcpy_dest_inner proc
+    ; rsi = source, rdx = dest - copies string until null
+    push rax
+@@copy_inner_loop:
+    mov al, [rsi]
+    mov [rdx], al
+    inc rsi
+    inc rdx
+    test al, al
+    jnz @@copy_inner_loop
+    pop rax
+    ret
+strcpy_dest_inner endp
+
 strcmp proc
     ; rcx = s1, rdx = s2
     mov r8, rcx
@@ -782,12 +840,30 @@ memcpy proc
 memcpy endp
 
 malloc proc
-    invoke HeapAlloc, GetProcessHeap(), 0, rcx
+    mov rcx, [GetProcessHeap]
+    sub rsp, 28h
+    call GetProcessHeap
+    add rsp, 28h
+    mov rcx, rax
+    xor rdx, rdx
+    mov r8, rcx
+    sub rsp, 20h
+    call HeapAlloc
+    add rsp, 20h
     ret
 malloc endp
 
 free proc
-    invoke HeapFree, GetProcessHeap(), 0, rcx
+    mov rcx, [GetProcessHeap]
+    sub rsp, 28h
+    call GetProcessHeap
+    add rsp, 28h
+    mov rcx, rax
+    xor rdx, rdx
+    mov r8, rcx
+    sub rsp, 20h
+    call HeapFree
+    add rsp, 20h
     ret
 free endp
 

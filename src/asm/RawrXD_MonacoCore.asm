@@ -1,30 +1,30 @@
 ; ============================================================================
-; RawrXD_MonacoCore.asm — Native Monaco-Equivalent Editor Engine
+; RawrXD_MonacoCore.asm ? Native Monaco-Equivalent Editor Engine
 ; ============================================================================
 ;
-; Phase 28: MonacoCore — Pure x64 MASM editor kernel
+; Phase 28: MonacoCore ? Pure x64 MASM editor kernel
 ;
 ; Architecture:
-;   Gap Buffer      — O(1) insert/delete at cursor
-;   ASM Tokenizer   — Branch-predicted state machine (no regex)
-;   Direct2D Bridge — Exports called by C++ MonacoCoreEngine for rendering
+;   Gap Buffer      ? O(1) insert/delete at cursor
+;   ASM Tokenizer   ? Branch-predicted state machine (no regex)
+;   Direct2D Bridge ? Exports called by C++ MonacoCoreEngine for rendering
 ;
 ; Assemble: ml64.exe /c /Fo RawrXD_MonacoCore.obj RawrXD_MonacoCore.asm
 ; Link:     Linked as object into RawrXD-Win32IDE (not a DLL)
 ;
 ; Exports:
-;   MC_GapBuffer_Init       — Initialize gap buffer with capacity
-;   MC_GapBuffer_Destroy    — Free gap buffer memory
-;   MC_GapBuffer_MoveGap    — Reposition gap for insertion
-;   MC_GapBuffer_Insert     — Insert text at position
-;   MC_GapBuffer_Delete     — Delete range from buffer
-;   MC_GapBuffer_GetLine    — Extract line content
-;   MC_GapBuffer_Length     — Get logical content length
-;   MC_GapBuffer_LineCount  — Count newlines in buffer
-;   MC_TokenizeLine         — Tokenize a single line (ASM-optimized)
-;   MC_IsRegister           — Check if token is CPU register
-;   MC_IsInstruction        — Check if token is CPU instruction
-;   MC_IsDirective          — Check if token is ASM directive
+;   MC_GapBuffer_Init       ? Initialize gap buffer with capacity
+;   MC_GapBuffer_Destroy    ? Free gap buffer memory
+;   MC_GapBuffer_MoveGap    ? Reposition gap for insertion
+;   MC_GapBuffer_Insert     ? Insert text at position
+;   MC_GapBuffer_Delete     ? Delete range from buffer
+;   MC_GapBuffer_GetLine    ? Extract line content
+;   MC_GapBuffer_Length     ? Get logical content length
+;   MC_GapBuffer_LineCount  ? Count newlines in buffer
+;   MC_TokenizeLine         ? Tokenize a single line (ASM-optimized)
+;   MC_IsRegister           ? Check if token is CPU register
+;   MC_IsInstruction        ? Check if token is CPU instruction
+;   MC_IsDirective          ? Check if token is ASM directive
 ;
 ; ABI:      Windows x64 (RCX, RDX, R8, R9 + shadow space)
 ; Callee-save: RBX, RBP, RSI, RDI, R12-R15, XMM6-XMM15
@@ -32,13 +32,13 @@
 ; Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
 ; ============================================================================
 
-; Use basic includes only — no masm64rt dependency for portability
+; Use basic includes only ? no masm64rt dependency for portability
 option casemap:none
 
 ; ============================================================================
 ; Constants
 ; ============================================================================
-MC_GAP_MIN_SIZE       equ 256         ; Minimum gap size after grow
+MC_GAP_MIN_SIZE       equ 256         ; Minimum gap m_size after grow
 MC_MAX_LINE_LENGTH    equ 4096        ; Max extractable line
 MC_TAB_SIZE           equ 4
 
@@ -60,7 +60,7 @@ TOKEN_WHITESPACE      equ 11
 ; Structures (must match C++ layout in include/RawrXD_MonacoCore.h)
 ; ============================================================================
 
-; MC_GapBuffer — 40 bytes
+; MC_GapBuffer ? 40 bytes
 ; struct MC_GapBuffer {
 ;     uint8_t* pBuffer;    // +0   (8 bytes)
 ;     uint32_t gapStart;   // +8   (4 bytes)
@@ -79,7 +79,7 @@ GB_capacity     equ 16
 GB_used         equ 20
 GB_lineCount    equ 24
 
-; MC_Token — 16 bytes
+; MC_Token ? 16 bytes
 ; struct MC_Token {
 ;     uint32_t startCol;   // +0
 ;     uint32_t length;     // +4
@@ -377,7 +377,7 @@ MC_GapBuffer_EnsureGap proc
     mov rbx, rcx                    ; RBX = pGB
     mov esi, edx                    ; ESI = needed
 
-    ; Current gap size
+    ; Current gap m_size
     mov eax, [rbx + GB_gapEnd]
     sub eax, [rbx + GB_gapStart]
     cmp eax, esi
@@ -713,7 +713,7 @@ MC_GapBuffer_GetLine proc
 @getline_copy_byte:
     mov dl, [r15 + rax]
     cmp dl, 0Ah
-    je @getline_terminate            ; Hit newline — end of line
+    je @getline_terminate            ; Hit newline ? end of line
     cmp dl, 0Dh
     je @getline_skip_cr              ; Skip CR in CRLF
     mov [rdi], dl
@@ -827,7 +827,7 @@ MC_TokenizeLine proc
     jmp @tok_skip_ws
 
 @tok_classify:
-    ; Check first character to determine token type
+    ; Check first character to determine token m_type
     
     ; Comment: ; or //
     cmp al, ';'
@@ -1203,7 +1203,7 @@ MC_IsRegister proc
     ; Check r10-r15 with suffix (r10d, r10w, r10b)
     cmp al, 'r'
     je @isreg_check_rNN
-    ; Check e** with suffix (eax, etc. — already handled in 3-char)
+    ; Check e** with suffix (eax, etc. ? already handled in 3-char)
     jmp @isreg_no
 
 @isreg_check_xmm:
@@ -1514,3 +1514,4 @@ public MC_IsInstruction
 public MC_IsDirective
 
 end
+

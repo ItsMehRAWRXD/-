@@ -1,5 +1,5 @@
 ; ============================================================================
-; agent_autonomy_dispatch.asm — Sovereign Agent Logic (Batch 21)
+; agent_autonomy_dispatch.asm ? Sovereign Agent Logic (Batch 21)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -75,3 +75,4 @@ Shield_VerifyAgentPlan PROC FRAME
 Shield_VerifyAgentPlan ENDP
 
 END
+

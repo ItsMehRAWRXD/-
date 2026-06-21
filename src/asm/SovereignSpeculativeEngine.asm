@@ -1,5 +1,5 @@
 ; ============================================================================
-; SovereignSpeculativeEngine.asm — Thin x64 MASM wrapper around LlamaNativeBridge
+; SovereignSpeculativeEngine.asm ? Thin x64 MASM wrapper around LlamaNativeBridge
 ; Exports C-callable functions that delegate to RawrXD_LlamaNative.cpp
 ; Assemble: ml64.exe /c /FoSovereignSpeculativeEngine.obj SovereignSpeculativeEngine.asm
 ; Link:     link.exe /DLL /OUT:SovereignSpeculativeEngine.dll *.obj
@@ -56,7 +56,7 @@ IF GR_SUCCESS NE 72
     .ERR <GenerationResult success offset mismatch>
 ENDIF
 IF GR_SIZE NE 336
-    .ERR <GenerationResult size mismatch>
+    .ERR <GenerationResult m_size mismatch>
 ENDIF
 IF ST_ISLOADED NE 8
     .ERR <State isLoaded offset mismatch>
@@ -65,7 +65,7 @@ IF ST_TOKPERSEC NE 16
     .ERR <State tokensPerSec offset mismatch>
 ENDIF
 IF ST_SIZE NE 32
-    .ERR <State size mismatch>
+    .ERR <State m_size mismatch>
 ENDIF
 
 ; ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ lastErrorPtr    dq 0
 .code
 
 ; ============================================================================
-; SpecEngine_Initialize — RCX = LPCWSTR modelPath
+; SpecEngine_Initialize ? RCX = LPCWSTR modelPath
 ; Returns RAX = 1 on success, 0 on failure
 ; ============================================================================
 SpecEngine_Initialize PROC FRAME
@@ -102,7 +102,7 @@ SpecEngine_Initialize PROC FRAME
     test    rax, rax
     jz      _init_fail
 
-    ; bridge->Initialize(nullptr) — use exe directory for DLLs
+    ; bridge->Initialize(nullptr) ? use exe directory for DLLs
     mov     rcx, hBridge
     xor     rdx, rdx
     call    ?Initialize@LlamaNativeBridge@@QEAA_NPEB_W@Z
@@ -155,7 +155,7 @@ _unload_done:
 SpecEngine_Unload ENDP
 
 ; ============================================================================
-; SpecEngine_IsLoaded — returns RAX = 0/1
+; SpecEngine_IsLoaded ? returns RAX = 0/1
 ; ============================================================================
 SpecEngine_IsLoaded PROC
     xor     rax, rax
@@ -182,7 +182,7 @@ _kv_done:
 SpecEngine_ClearKVCache ENDP
 
 ; ============================================================================
-; SpecEngine_SetKVQuant — RCX = quant level (0=none, 1=Q8_0, 2=Q4_0, 3=Q4_K)
+; SpecEngine_SetKVQuant ? RCX = quant level (0=none, 1=Q8_0, 2=Q4_0, 3=Q4_K)
 ; Stores the requested quantization level; bridge applies it on next load.
 ; ============================================================================
 SpecEngine_SetKVQuant PROC FRAME
@@ -214,7 +214,7 @@ SpecEngine_GetTokensPerSec PROC
 SpecEngine_GetTokensPerSec ENDP
 
 ; ============================================================================
-; SpecEngine_Infer_Speculative — RCX=prompt, RDX=output, R8=max_out, R9=tok_count
+; SpecEngine_Infer_Speculative ? RCX=prompt, RDX=output, R8=max_out, R9=tok_count
 ; Returns RAX = 1 on success
 ; Delegates to bridge->Generate() and copies result text to output buffer.
 ; ============================================================================
@@ -268,10 +268,10 @@ SpecEngine_Infer_Speculative PROC FRAME
     jz      _infer_fail
 
     ; Copy text from std::string at [rsp+32]
-    ; Small string optimization: if size <= 15, data is inline at +0
-    ; Otherwise data ptr is at +0, size at +8, capacity at +16
+    ; Small string optimization: if m_size <= 15, data is inline at +0
+    ; Otherwise data ptr is at +0, m_size at +8, capacity at +16
     mov     rax, [rsp+32]               ; text data ptr (or SSO inline)
-    mov     rdx, [rsp+32+8]             ; text size
+    mov     rdx, [rsp+32+8]             ; text m_size
     cmp     rdx, rbx
     cmova   rdx, rbx                    ; Clamp to max_out
     dec     rdx                         ; Leave room for null
@@ -308,3 +308,4 @@ _infer_exit:
 SpecEngine_Infer_Speculative ENDP
 
 END
+

@@ -42,8 +42,20 @@ struct Position {
     bool operator==(const Position& o) const { 
         return line == o.line && character == o.character; 
     }
+    bool operator!=(const Position& o) const {
+        return line != o.line || character != o.character;
+    }
     bool operator<(const Position& o) const {
         return line < o.line || (line == o.line && character < o.character);
+    }
+    bool operator<=(const Position& o) const {
+        return line < o.line || (line == o.line && character <= o.character);
+    }
+    bool operator>(const Position& o) const {
+        return line > o.line || (line == o.line && character > o.character);
+    }
+    bool operator>=(const Position& o) const {
+        return line > o.line || (line == o.line && character >= o.character);
     }
 };
 

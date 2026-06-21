@@ -1,5 +1,5 @@
 ; =============================================================================
-; model_invoker.asm — Sovereign Model Invoker (Pure x64 MASM)
+; model_invoker.asm ? Sovereign Model Invoker (Pure x64 MASM)
 ; Replaces JSON-based model_invoker.hpp with raw tensor dispatch
 ; =============================================================================
 ; Build:   ml64 /c /nologo /Fo$(OutDir)model_invoker.obj model_invoker.asm
@@ -31,8 +31,8 @@ g_LastInvokeCycles  dq 0
 g_LastTokenCount    dq 0
 
 sz_prepare          db "[Invoker] PrepareContext: %zu tokens", 10, 0
-sz_invoke_start     db "[Invoker] Invoke start (%zu tokens)", 10, 0
-sz_invoke_done      db "[Invoker] Invoke done in %llu cycles", 10, 0
+sz_invoke_start     db "[Invoker] call start (%zu tokens)", 10, 0
+sz_invoke_done      db "[Invoker] call done in %llu cycles", 10, 0
 
 ; Simple whitespace tokenization table (ASCII delimiters)
 token_delims        db 9, 10, 13, 32, 0    ; tab, LF, CR, space
@@ -279,3 +279,4 @@ _invoke_exit:
 ModelInvoker_Invoke ENDP
 
 END
+

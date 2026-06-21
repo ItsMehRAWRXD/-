@@ -38,7 +38,7 @@ struct SoftwareRasterWorkspace
     std::size_t atlasByteSize = 0;
 };
 
-std::uint32_t packColorRef(COLORREF color);
+// packColorRef is defined inline in rawrxd_text_engine.h
 
 bool initializeSoftwareRaster(HDC referenceDc, HFONT fontHandle, SoftwareRasterWorkspace* raster,
                               SoftwareRenderSurface* surface, std::uint32_t surfaceWidth, std::uint32_t surfaceHeight);

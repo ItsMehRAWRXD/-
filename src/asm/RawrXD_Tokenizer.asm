@@ -1,15 +1,15 @@
 ;================================================================================
-; RawrXD_Tokenizer.asm — High-Speed BPE Implementation
+; RawrXD_Tokenizer.asm ? High-Speed BPE Implementation
 ; Full byte-pair encoding with rank-ordered merge table lookup.
 ;
 ; Merge table layout (pointed to by r8 / vocab_trie_ptr):
 ;   64K entries, 12 bytes each (768KB total):
-;     [0..3]  pair_hash   (DWORD) — FNV-1a of (token_a, token_b) pair
-;     [4..7]  merged_id   (DWORD) — resulting token ID after merge
-;     [8..11] rank        (DWORD) — priority (lower = merge first), 0 = empty
+;     [0..3]  pair_hash   (DWORD) ? FNV-1a of (token_a, token_b) pair
+;     [4..7]  merged_id   (DWORD) ? resulting token ID after merge
+;     [8..11] rank        (DWORD) ? priority (lower = merge first), 0 = empty
 ;
 ; Algorithm: Standard BPE
-;   1. Initialize: each input byte → its own token ID (0-255)
+;   1. Initialize: each input byte ? its own token ID (0-255)
 ;   2. Repeat: scan all adjacent pairs, find lowest-rank merge in table
 ;   3. Merge that pair in-place, shift array, decrement count
 ;   4. Stop when no more merges found
@@ -17,7 +17,7 @@
 
 OPTION CASEMAP:NONE
 
-; ─── Cross-module symbol resolution ───
+; ??? Cross-module symbol resolution ???
 INCLUDE rawrxd_master.inc
 
 
@@ -61,7 +61,7 @@ InferenceCore_Tokenize_AVX2 PROC FRAME
     mov r14, r8             ; merge_table_ptr
     mov r15, r9             ; output_tokens
 
-    ; ── Phase 1: Initialize byte-level tokens ──
+    ; ?? Phase 1: Initialize byte-level tokens ??
     xor esi, esi            ; index
     cmp r13, 0
     jle tokenize_empty
@@ -75,7 +75,7 @@ init_loop:
 
     ; rsi = token_count (starts equal to text_len)
 
-    ; ── Phase 2: Iterative BPE merge ──
+    ; ?? Phase 2: Iterative BPE merge ??
 merge_cycle:
     cmp rsi, 2
     jl tokenize_done        ; Need at least 2 tokens for a pair
@@ -133,17 +133,17 @@ scan_pairs:
     xor cl, r8b
     imul ecx, [fnv_prime]
 
-    ; Table lookup: index = hash & 0xFFFF, entry = base + index * 12
+    ; Table lookup: index = hash & 0FFFFh, entry = base + index * 12
     and ecx, 0FFFFh
     imul ecx, ecx, 12
     add rcx, r14            ; entry pointer
 
     ; Check if entry matches (pair_hash stored at entry+0)
-    ; We recompute the "canonical" hash to compare — use same hash as index
+    ; We recompute the "canonical" hash to compare ? use same hash as index
     ; Actually, check if rank != 0 (occupied) and rank < best_rank
     mov r8d, [rcx + 8]      ; rank
     test r8d, r8d
-    jz next_pair             ; rank=0 → empty slot, no merge
+    jz next_pair             ; rank=0 ? empty slot, no merge
 
     ; Verify the stored pair_hash matches our hash to handle collisions
     ; The pair_hash field stores the full 32-bit hash for collision resolution
@@ -170,9 +170,9 @@ next_pair:
 
 check_found:
     cmp dword ptr [rbp-20], 0
-    je tokenize_done         ; No merges found → done
+    je tokenize_done         ; No merges found ? done
 
-    ; ── Perform merge at best_pos ──
+    ; ?? Perform merge at best_pos ??
     mov ebx, [rbp-8]        ; position to merge
     mov eax, [rbp-16]       ; merged token ID
 
@@ -220,3 +220,4 @@ tokenize_done:
 InferenceCore_Tokenize_AVX2 ENDP
 
 END
+

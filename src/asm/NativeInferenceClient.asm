@@ -1,6 +1,6 @@
 ; =============================================================================
-; NativeInferenceClient.asm — Sovereign In-Process Inference Client
-; Pure x64 MASM (ml64) — Replaces HTTP/Socket layer with direct memory mapping
+; NativeInferenceClient.asm ? Sovereign In-Process Inference Client
+; Pure x64 MASM (ml64) ? Replaces HTTP/Socket layer with direct memory mapping
 ; =============================================================================
 ; Build:   ml64 /c /nologo /Fo$(OutDir)NativeInferenceClient.obj NativeInferenceClient.asm
 ; Link:    link ... NativeInferenceClient.obj msvcrt.lib kernel32.lib
@@ -24,7 +24,7 @@ EXTERN MapViewOfFile:PROC
 EXTERN UnmapViewOfFile:PROC
 
 ; ---------------------------------------------------------------------------
-; Bridge externs (ai_agent_masm_bridge.hpp — C linkage, packed structs)
+; Bridge externs (ai_agent_masm_bridge.hpp ? C linkage, packed structs)
 ; ---------------------------------------------------------------------------
 EXTERN masm_ai_tensor_simd_process:PROC
 
@@ -227,7 +227,7 @@ _infer_has_model:
     test al, al
     jz _infer_fail
 
-    ; Return full buffer size on success (backend wrote into outBuf)
+    ; Return full buffer m_size on success (backend wrote into outBuf)
     mov rax, rsi
     jmp _infer_done
 
@@ -283,3 +283,4 @@ _no_file:
 NativeInferenceClient_Shutdown ENDP
 
 END
+

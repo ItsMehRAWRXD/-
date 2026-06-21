@@ -4,7 +4,7 @@
 ; =============================================================================
 ;
 ; Production-grade NanoQuant implementation for the RawrXD IDE.
-; Registers GGML_TYPE_NQ_1 (type 20) as a new quantization format:
+; Registers GGML_TYPE_NQ_1 (m_type 20) as a new quantization format:
 ;   - 1.0625 bits per element (15.06x compression vs FP16, 30.12x vs FP32)
 ;   - ADMM-optimized sign-magnitude encoding
 ;   - Fused dequant + matmul kernels for zero-overhead inference
@@ -19,42 +19,42 @@
 ;   - ggml_backend.asm                         (backend opcode dispatch)
 ;   - RawrXD_NanoQuant_Streaming.asm           (GGUF I/O + QuadBuffer hooks)
 ;
-; ╔═══════════════════════════════════════════════════════════════════════╗
-; ║  NQ_1 BLOCK FORMAT (34 bytes per 256 elements)                      ║
-; ║                                                                     ║
-; ║  Offset  Size  Field        Description                             ║
-; ║  ------  ----  -----        -----------                             ║
-; ║  +0      2     d            F16 scale factor                        ║
-; ║  +2      32    signs[32]    256 sign bits, packed little-endian     ║
-; ║                              Bit=1 → +d (positive weight)           ║
-; ║                              Bit=0 → -d (negative weight)           ║
-; ║                                                                     ║
-; ║  Dequant: weight[i] = fp16→f32(d) * (2*bit(signs,i) - 1)          ║
-; ║         = +d if bit=1,  -d if bit=0                                 ║
-; ║                                                                     ║
-; ║  Effective: 34B / 256 elements = 1.0625 bpe                        ║
-; ║  Compression vs FP16: 16 / 1.0625 = 15.06x                        ║
-; ║  Compression vs FP32: 32 / 1.0625 = 30.12x                        ║
-; ╚═══════════════════════════════════════════════════════════════════════╝
+; ?????????????????????????????????????????????????????????????????????????
+; ?  NQ_1 BLOCK FORMAT (34 bytes per 256 elements)                      ?
+; ?                                                                     ?
+; ?  Offset  m_size  Field        Description                             ?
+; ?  ------  ----  -----        -----------                             ?
+; ?  +0      2     d            F16 scale factor                        ?
+; ?  +2      32    signs[32]    256 sign bits, packed little-endian     ?
+; ?                              Bit=1 ? +d (positive weight)           ?
+; ?                              Bit=0 ? -d (negative weight)           ?
+; ?                                                                     ?
+; ?  Dequant: weight[i] = fp16?f32(d) * (2*bit(signs,i) - 1)          ?
+; ?         = +d if bit=1,  -d if bit=0                                 ?
+; ?                                                                     ?
+; ?  Effective: 34B / 256 elements = 1.0625 bpe                        ?
+; ?  Compression vs FP16: 16 / 1.0625 = 15.06x                        ?
+; ?  Compression vs FP32: 32 / 1.0625 = 30.12x                        ?
+; ?????????????????????????????????????????????????????????????????????????
 ;
-; ╔═══════════════════════════════════════════════════════════════════════╗
-; ║  NQ_MATRIX FORMAT (sub-1-bit, matrix-level factorization)           ║
-; ║                                                                     ║
-; ║  Header (32 bytes):                                                 ║
-; ║    +0:  uint32 magic      'NQR4' = 3452514Eh                       ║
-; ║    +4:  uint32 rows       M                                         ║
-; ║    +8:  uint32 cols       N                                         ║
-; ║    +12: uint32 rank       r (1-8)                                   ║
-; ║    +16: float  scales[4]  rank-1..4 scales (16 bytes)               ║
-; ║                                                                     ║
-; ║  Data per rank factor k:                                            ║
-; ║    row_signs[k]: ceil(M/8) bytes  (M sign bits)                     ║
-; ║    col_signs[k]: ceil(N/8) bytes  (N sign bits)                     ║
-; ║                                                                     ║
-; ║  W[i,j] = Σ_k scales[k] * rsign[k][i] * csign[k][j]               ║
-; ║                                                                     ║
-; ║  For 4096×4096 rank-4: 4128 bytes = 0.002 bpe (8000x vs FP16)      ║
-; ╚═══════════════════════════════════════════════════════════════════════╝
+; ?????????????????????????????????????????????????????????????????????????
+; ?  NQ_MATRIX FORMAT (sub-1-bit, matrix-level factorization)           ?
+; ?                                                                     ?
+; ?  Header (32 bytes):                                                 ?
+; ?    +0:  uint32 magic      'NQR4' = 3452514Eh                       ?
+; ?    +4:  uint32 rows       M                                         ?
+; ?    +8:  uint32 cols       N                                         ?
+; ?    +12: uint32 rank       r (1-8)                                   ?
+; ?    +16: float  scales[4]  rank-1..4 scales (16 bytes)               ?
+; ?                                                                     ?
+; ?  Data per rank factor k:                                            ?
+; ?    row_signs[k]: ceil(M/8) bytes  (M sign bits)                     ?
+; ?    col_signs[k]: ceil(N/8) bytes  (N sign bits)                     ?
+; ?                                                                     ?
+; ?  W[i,j] = ?_k scales[k] * rsign[k][i] * csign[k][j]               ?
+; ?                                                                     ?
+; ?  For 4096?4096 rank-4: 4128 bytes = 0.002 bpe (8000x vs FP16)      ?
+; ?????????????????????????????????????????????????????????????????????????
 ;
 ; Build: ml64.exe /c /Zi /Zd /Fo NanoQuant.obj RawrXD_NanoQuant_Engine.asm
 ; Link:  Statically linked into RawrEngine / RawrXD-Win32IDE via CMake
@@ -86,7 +86,7 @@ NQ1_SCALE_OFFSET        EQU     0               ; F16 scale at byte 0
 NQ1_SIGNS_OFFSET        EQU     2               ; 32 bytes of packed sign bits
 QK_NQ1                  EQU     256             ; Elements per NQ_1 block
 
-; New GGML type identifiers (extends RawrXD_Common.inc)
+; New GGML m_type identifiers (extends RawrXD_Common.inc)
 GGML_TYPE_NQ_1          EQU     20              ; Block-level binary (34B/256el)
 GGML_TYPE_NQ_R4         EQU     21              ; Matrix-level rank-4 binary
 
@@ -125,12 +125,12 @@ NQ_GEMM_TILE_K          EQU     256             ; Must match QK_NQ1
 PUBLIC NanoQuant_Init
 PUBLIC NanoQuant_GetCapabilities
 
-; Quantization (F32 → NQ_1)
+; Quantization (F32 ? NQ_1)
 PUBLIC NQ1_QuantizeBlock_Fast
 PUBLIC NQ1_QuantizeBlock_ADMM
 PUBLIC NQ1_QuantizeTensor
 
-; Dequantization (NQ_1 → F32)
+; Dequantization (NQ_1 ? F32)
 PUBLIC NQ1_DequantBlock_AVX512
 PUBLIC NQ1_DequantBlock_AVX2
 PUBLIC NQ1_Dequant
@@ -201,7 +201,7 @@ inv_256_f32:
     DD      3B800000h                   ; 1.0/256.0 = 0.00390625
 
 ; Bit-select mask for AVX2 sign extraction (8 dwords, each with one bit set)
-; Element i has bit i set → vpand isolates that bit from the broadcast byte
+; Element i has bit i set ? vpand isolates that bit from the broadcast byte
 bit_select_dw:
     DD      01h, 02h, 04h, 08h, 10h, 20h, 40h, 80h
 
@@ -257,9 +257,9 @@ NanoQuant_Init PROC FRAME
     mov     eax, 1
     cpuid
 
-    ; Check OSXSAVE (ECX bit 27) — required before XGETBV
+    ; Check OSXSAVE (ECX bit 27) ? required before XGETBV
     bt      ecx, 27
-    jnc     @@init_set_dispatch         ; No OSXSAVE → skip all AVX/AVX-512
+    jnc     @@init_set_dispatch         ; No OSXSAVE ? skip all AVX/AVX-512
 
     ; Verify OS has enabled AVX state via XGETBV(XCR0)
     push    rcx                          ; Preserve CPUID ECX
@@ -269,7 +269,7 @@ NanoQuant_Init PROC FRAME
     ; Check XCR0[2:1] = SSE + AVX state must both be enabled
     and     eax, 06h
     cmp     eax, 06h
-    jne     @@init_set_dispatch         ; OS hasn't enabled AVX → skip
+    jne     @@init_set_dispatch         ; OS hasn't enabled AVX ? skip
 
     bt      ecx, 12                     ; FMA3
     jnc     @@check_f16c
@@ -305,7 +305,7 @@ NanoQuant_Init PROC FRAME
     pop     rbx
     and     eax, 0E0h                    ; Bits 7,6,5
     cmp     eax, 0E0h
-    jne     @@init_set_dispatch         ; OS hasn't enabled ZMM state → no AVX-512
+    jne     @@init_set_dispatch         ; OS hasn't enabled ZMM state ? no AVX-512
 
     or      r8d, NQ_CAP_AVX512F
     mov     g_NQ_HasAVX512F, 1
@@ -418,7 +418,7 @@ NQ1_QuantizeBlock_Fast PROC FRAME
     ; vmovmskps extracts sign bits: bit=1 if float is negative
     ; We invert: bit=1 means positive (our encoding)
 
-    vpbroadcastd ymm4, dword ptr [abs_mask_dw]  ; 0x7FFFFFFF mask
+    vpbroadcastd ymm4, dword ptr [abs_mask_dw]  ; 07FFFFFFFh mask
     vxorps  ymm5, ymm5, ymm5                     ; Magnitude accumulator
 
     lea     r12, [rdi + NQ1_SIGNS_OFFSET]         ; Signs output (32 bytes)
@@ -439,7 +439,7 @@ NQ1_QuantizeBlock_Fast PROC FRAME
     cmp     ecx, 32
     jb      @@quant_fast_loop
 
-    ; --- Phase 2: Horizontal sum of ymm5 → scalar magnitude sum ---
+    ; --- Phase 2: Horizontal sum of ymm5 ? scalar magnitude sum ---
     vextractf128 xmm1, ymm5, 1
     vaddps  xmm0, xmm5, xmm1                    ; 4 partial sums
     vhaddps xmm0, xmm0, xmm0                    ; 2 partial sums
@@ -449,7 +449,7 @@ NQ1_QuantizeBlock_Fast PROC FRAME
     vmulss  xmm0, xmm0, dword ptr [inv_256_f32] ; d = mean(|W|)
 
     ; --- Phase 4: Convert d to F16 and store ---
-    vcvtps2ph xmm1, xmm0, 0                     ; F32 → F16 (round nearest)
+    vcvtps2ph xmm1, xmm0, 0                     ; F32 ? F16 (round nearest)
     vpextrw eax, xmm1, 0                         ; Extract F16 word
     mov     word ptr [rdi + NQ1_SCALE_OFFSET], ax ; Store F16 scale
 
@@ -468,7 +468,7 @@ NQ1_QuantizeBlock_Fast ENDP
 ; =============================================================================
 ; NQ1_QuantizeBlock_ADMM
 ; ADMM-optimized quantization for improved accuracy.
-; Iteratively refines signs and scale to minimize ||W - d*(2*signs-1)||²
+; Iteratively refines signs and scale to minimize ||W - d*(2*signs-1)||?
 ;
 ; RCX = src (float* 256 elements)
 ; RDX = dst (NQ1 block, 34 bytes output)
@@ -496,7 +496,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
     .allocstack 2112
     .endprolog
 
-    mov     rsi, rcx                               ; W_original (F32 × 256)
+    mov     rsi, rcx                               ; W_original (F32 ? 256)
     mov     rdi, rdx                               ; Output NQ_1 block
     mov     r14d, r8d                              ; max_iter
     test    r14d, r14d
@@ -515,7 +515,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
     ; --- Initialize: Z[i] = 0, U[i] = 0 ---
     mov     rcx, r12
     xor     eax, eax
-    mov     edx, 512                               ; 256 dwords = 1024 bytes = 512×2 (for both)
+    mov     edx, 512                               ; 256 dwords = 1024 bytes = 512?2 (for both)
     vxorps  ymm0, ymm0, ymm0
 @@init_zero:
     vmovups ymmword ptr [rcx], ymm0
@@ -636,15 +636,15 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
     vmovups ymm1, ymmword ptr [rsi + rax]           ; W[8]
     movzx   eax, byte ptr [rbx + rcx]              ; 8 sign bits
 
-    ; Expand 8 bits to 8 × ±1.0f
+    ; Expand 8 bits to 8 ? ?1.0f
     ; Broadcast byte to all 8 dwords
     vmovd   xmm2, eax
     vpbroadcastd ymm2, xmm2
     ; AND with bit-select mask to isolate each bit
     vpand   ymm3, ymm2, ymmword ptr [bit_select_dw]
-    ; Compare: element = mask value → all 1s (-1 in int), else 0
+    ; Compare: element = mask value ? all 1s (-1 in int), else 0
     vpcmpeqd ymm4, ymm3, ymmword ptr [bit_select_dw]
-    ; ymm4 = 0xFFFFFFFF where bit=1, 0x00000000 where bit=0
+    ; ymm4 = 0FFFFFFFFh where bit=1, 000000000h where bit=0
     ; Use as blend mask: select +1.0 where bit=1, -1.0 where bit=0
     vmovaps  ymm5, ymmword ptr [neg_one_f32]
     vblendvps ymm5, ymm5, ymmword ptr [one_f32], ymm4
@@ -657,7 +657,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
     jmp     @@scale_loop
 @@scale_done:
 
-    ; Horizontal sum → xmm0[0]
+    ; Horizontal sum ? xmm0[0]
     vextractf128 xmm1, ymm0, 1
     vaddps  xmm0, xmm0, xmm1
     vhaddps xmm0, xmm0, xmm0
@@ -688,7 +688,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
     cmp     ecx, 32
     jge     @@z_step_done
 
-    ; Expand signs to ±1.0 (reuse from B-step pattern)
+    ; Expand signs to ?1.0 (reuse from B-step pattern)
     movzx   eax, byte ptr [rbx + rcx]
     vmovd   xmm2, eax
     vpbroadcastd ymm2, xmm2
@@ -729,7 +729,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
     cmp     ecx, 32
     jge     @@u_step_done
 
-    ; Expand signs to ±1.0 again
+    ; Expand signs to ?1.0 again
     movzx   eax, byte ptr [rbx + rcx]
     vmovd   xmm2, eax
     vpbroadcastd ymm2, xmm2
@@ -755,7 +755,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
 @@u_step_done:
 
     ; =================================================================
-    ; Convergence check: primal_residual = ||alpha*B - Z||²
+    ; Convergence check: primal_residual = ||alpha*B - Z||?
     ; =================================================================
     vxorps  ymm0, ymm0, ymm0                       ; Residual accumulator
     lea     rbx, [rdi + NQ1_SIGNS_OFFSET]
@@ -781,7 +781,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
 
     vmovups ymm2, ymmword ptr [r12 + rax]           ; Z
     vsubps  ymm5, ymm5, ymm2                       ; diff = alpha*B - Z
-    vfmadd231ps ymm0, ymm5, ymm5                   ; residual += diff²
+    vfmadd231ps ymm0, ymm5, ymm5                   ; residual += diff?
 
     inc     ecx
     jmp     @@residual_loop
@@ -798,7 +798,7 @@ NQ1_QuantizeBlock_ADMM PROC FRAME
 
     ; Compare normalized residual to tolerance
     vcomiss xmm0, xmm14                             ; residual/n vs tolerance
-    jb      @@admm_converged                        ; Below tolerance → done
+    jb      @@admm_converged                        ; Below tolerance ? done
 
     inc     r15d
     lock add qword ptr [g_NQ1ADMMIterTotal], 1
@@ -904,8 +904,8 @@ NQ1_QuantizeTensor ENDP
 
 ; =============================================================================
 ; NQ1_DequantBlock_AVX512
-; Dequantize one NQ_1 block (34 bytes) → 256 F32 values.
-; Uses AVX-512 opmask merge for efficient bit→float expansion.
+; Dequantize one NQ_1 block (34 bytes) ? 256 F32 values.
+; Uses AVX-512 opmask merge for efficient bit?float expansion.
 ;
 ; RCX = src (NQ1 block, 34 bytes)
 ; RDX = dst (float*, 256 elements = 1024 bytes)
@@ -916,7 +916,7 @@ NQ1_DequantBlock_AVX512 PROC FRAME
     .pushreg rbx
     .endprolog
 
-    ; Load scale d: F16 → F32 → broadcast to ZMM
+    ; Load scale d: F16 ? F32 ? broadcast to ZMM
     movzx   eax, word ptr [rcx + NQ1_SCALE_OFFSET]
     vmovd   xmm0, eax
     vcvtph2ps xmm0, xmm0                           ; F32 scale
@@ -959,7 +959,7 @@ NQ1_DequantBlock_AVX512 ENDP
 
 ; =============================================================================
 ; NQ1_DequantBlock_AVX2
-; Dequantize one NQ_1 block → 256 F32 values.
+; Dequantize one NQ_1 block ? 256 F32 values.
 ; AVX2 fallback: expands bits via vpbroadcastd + vpcmpeqd + vblendvps.
 ;
 ; RCX = src (NQ1 block)
@@ -976,7 +976,7 @@ NQ1_DequantBlock_AVX2 PROC FRAME
     mov     rsi, rcx                               ; Source block
     mov     rbx, rdx                               ; Destination F32
 
-    ; Load scale d: F16 → F32
+    ; Load scale d: F16 ? F32
     movzx   eax, word ptr [rsi + NQ1_SCALE_OFFSET]
     vmovd   xmm0, eax
     vcvtph2ps xmm0, xmm0                           ; F32 scale
@@ -994,7 +994,7 @@ NQ1_DequantBlock_AVX2 PROC FRAME
     xor     edx, edx                                ; Byte counter (0..31)
 
 @@dq_avx2_loop:
-    ; Load 1 byte of signs → 8 bits
+    ; Load 1 byte of signs ? 8 bits
     movzx   eax, byte ptr [rcx + rdx]
 
     ; Broadcast byte to all 8 dword lanes
@@ -1004,17 +1004,17 @@ NQ1_DequantBlock_AVX2 PROC FRAME
     ; Isolate each bit: AND with [1,2,4,8,16,32,64,128]
     vpand   ymm1, ymm0, ymm5
 
-    ; Compare equal to mask → 0xFFFFFFFF where bit was set, 0 otherwise
+    ; Compare equal to mask ? 0FFFFFFFFh where bit was set, 0 otherwise
     vpcmpeqd ymm2, ymm1, ymm5
 
     ; Blend: select +d where bit=1, -d where bit=0
-    ; vblendvps uses bit 31 of mask: 0xFFFFFFFF has bit 31 set
+    ; vblendvps uses bit 31 of mask: 0FFFFFFFFh has bit 31 set
     vblendvps ymm3, ymm7, ymm6, ymm2
 
     ; Store 8 dequantized F32 values
     vmovups ymmword ptr [rbx], ymm3
 
-    add     rbx, 32                                ; 8 floats × 4 bytes
+    add     rbx, 32                                ; 8 floats ? 4 bytes
     inc     edx
     cmp     edx, 32
     jb      @@dq_avx2_loop
@@ -1030,7 +1030,7 @@ NQ1_DequantBlock_AVX2 ENDP
 
 ; =============================================================================
 ; NQ1_Dequant
-; Dispatcher: dequantize n_blocks of NQ_1 → F32.
+; Dispatcher: dequantize n_blocks of NQ_1 ? F32.
 ;
 ; RCX = src (NQ1 block array)
 ; RDX = dst (float*)
@@ -1093,7 +1093,7 @@ NQ1_Dequant ENDP
 
 ; =============================================================================
 ; NQ1_VecDot_AVX512
-; Fused dot product: dot(NQ1_block, F32[256]) → float scalar.
+; Fused dot product: dot(NQ1_block, F32[256]) ? float scalar.
 ; Uses AVX-512 opmask merge + FMA for maximum throughput.
 ;
 ; RCX = src_nq1 (NQ1 block, 34 bytes)
@@ -1105,16 +1105,16 @@ NQ1_VecDot_AVX512 PROC FRAME
     .pushreg rbx
     .endprolog
 
-    ; Load scale d: F16 → F32
+    ; Load scale d: F16 ? F32
     movzx   eax, word ptr [rcx + NQ1_SCALE_OFFSET]
     vmovd   xmm7, eax
     vcvtph2ps xmm7, xmm7                           ; d scalar
 
     ; Strategy: Use masked-add accumulation
-    ;   sum_pos = Σ input[i] where sign[i]=1
-    ;   sum_all = Σ input[i] for all i
+    ;   sum_pos = ? input[i] where sign[i]=1
+    ;   sum_all = ? input[i] for all i
     ;   dot = d * (2*sum_pos - sum_all)
-    ; This avoids expanding bits to ±1.0, saving one instruction per iteration.
+    ; This avoids expanding bits to ?1.0, saving one instruction per iteration.
 
     vxorps  zmm0, zmm0, zmm0                       ; sum_pos accumulator
     vxorps  zmm1, zmm1, zmm1                       ; sum_all accumulator
@@ -1129,7 +1129,7 @@ NQ1_VecDot_AVX512 PROC FRAME
     ; Accumulate all elements
     vaddps  zmm1, zmm1, zmm2
 
-    ; Load 16 sign bits → opmask
+    ; Load 16 sign bits ? opmask
     movzx   eax, word ptr [rbx]
     kmovw   k1, eax
 
@@ -1143,7 +1143,7 @@ NQ1_VecDot_AVX512 PROC FRAME
     cmp     ecx, 16
     jb      @@vd512_loop
 
-    ; Horizontal sum of zmm0 (sum_pos) → xmm3
+    ; Horizontal sum of zmm0 (sum_pos) ? xmm3
     vextractf64x4 ymm2, zmm0, 1
     vaddps  ymm0, ymm0, ymm2
     vextractf128 xmm2, ymm0, 1
@@ -1151,7 +1151,7 @@ NQ1_VecDot_AVX512 PROC FRAME
     vhaddps xmm0, xmm0, xmm0
     vhaddps xmm0, xmm0, xmm0                       ; xmm0[0] = sum_pos
 
-    ; Horizontal sum of zmm1 (sum_all) → xmm4
+    ; Horizontal sum of zmm1 (sum_all) ? xmm4
     vextractf64x4 ymm2, zmm1, 1
     vaddps  ymm1, ymm1, ymm2
     vextractf128 xmm2, ymm1, 1
@@ -1208,17 +1208,17 @@ NQ1_VecDot_AVX2 PROC FRAME
     cmp     edx, 32
     jge     @@vd_avx2_done
 
-    ; Expand 8 sign bits to 8 × ±1.0f
+    ; Expand 8 sign bits to 8 ? ?1.0f
     movzx   eax, byte ptr [rcx + rdx]
     vmovd   xmm1, eax
     vpbroadcastd ymm1, xmm1
     vpand   ymm2, ymm1, ymm5                       ; Isolate bits
-    vpcmpeqd ymm3, ymm2, ymm5                      ; Bit=1 → 0xFFFFFFFF
-    vblendvps ymm3, ymm4, ymm6, ymm3               ; ±1.0
+    vpcmpeqd ymm3, ymm2, ymm5                      ; Bit=1 ? 0FFFFFFFFh
+    vblendvps ymm3, ymm4, ymm6, ymm3               ; ?1.0
 
     ; Load 8 F32 inputs and FMA
     vmovups ymm1, ymmword ptr [rbx]
-    vfmadd231ps ymm0, ymm1, ymm3                   ; acc += input * ±1.0
+    vfmadd231ps ymm0, ymm1, ymm3                   ; acc += input * ?1.0
 
     add     rbx, 32
     inc     edx
@@ -1311,7 +1311,7 @@ NQ1_SGEMV PROC FRAME
     jge     @@sgemv_done
 
     ; Compute dot product for this row
-    ; output[row] = Σ_block dot(W_block, input_block)
+    ; output[row] = ?_block dot(W_block, input_block)
 
     vxorps  xmm0, xmm0, xmm0                       ; Row accumulator
 
@@ -1367,14 +1367,14 @@ NQ1_SGEMV ENDP
 
 ; =============================================================================
 ; NQ1_SGEMM_Tiled
-; Tiled GEMM: C[M×N] += A[M×K] × dequant(B_NQ1[N×K])
+; Tiled GEMM: C[M?N] += A[M?K] ? dequant(B_NQ1[N?K])
 ; B is stored row-major: N rows of K elements each (NQ_1 quantized).
 ; Tiles over M to process NQ_GEMM_TILE_M rows simultaneously.
 ;
-; RCX = A (float*, M×K row-major)
-; RDX = B (NQ1 blocks, N rows × K/256 blocks each)
-; R8  = C (float*, M×N row-major, must be pre-zeroed or accumulated)
-; R9D = M (batch size / rows of A)
+; RCX = A (float*, M?K row-major)
+; RDX = B (NQ1 blocks, N rows ? K/256 blocks each)
+; R8  = C (float*, M?N row-major, must be pre-zeroed or accumulated)
+; R9D = M (batch m_size / rows of A)
 ; [RSP+40] = N (output columns / rows of B)
 ; [RSP+48] = K (inner dimension, must be multiple of 256)
 ; Returns: RAX = 0 success
@@ -1446,7 +1446,7 @@ NQ1_SGEMM_Tiled PROC FRAME
     jge     @@gemm_next_m
 
     ; Compute C[m, n] += dot(A_row_m, dequant(B_row_n))
-    ; = Σ_block NQ1_VecDot(B_block, A_block)
+    ; = ?_block NQ1_VecDot(B_block, A_block)
 
     vxorps  xmm0, xmm0, xmm0                       ; Accumulator for C[m,n]
     xor     r8d, r8d                               ; Block index
@@ -1532,10 +1532,10 @@ NQ1_SGEMM ENDP
 ; =============================================================================
 ; NQ_MatrixFactor_Rank1
 ; Low-rank rank-1 binary factorization of a full weight matrix.
-; W[M×N] ≈ s * row_signs[M] ⊗ col_signs[N]
-; where signs ∈ {±1}, s is a scalar.
+; W[M?N] ? s * row_signs[M] ? col_signs[N]
+; where signs ? {?1}, s is a scalar.
 ;
-; RCX = W (float*, M×N row-major)
+; RCX = W (float*, M?N row-major)
 ; RDX = output buffer (NQ_MATRIX header + data)
 ; R8D = M (rows)
 ; R9D = N (cols)
@@ -1572,7 +1572,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
     mov     dword ptr [rdi + NQM_RANK_OFFSET], 1
 
     ; === Phase 1: Compute row signs ===
-    ; row_sign[i] = sign(Σ_j W[i,j])
+    ; row_sign[i] = sign(?_j W[i,j])
     ; (Sign of row sum gives the dominant direction)
 
     lea     r14, [rdi + NQM_HEADER_SIZE]            ; Row signs output
@@ -1589,7 +1589,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
     cmp     ecx, r12d
     jge     @@mf1_row_flush
 
-    ; Compute row sum: Σ_j W[row, j]
+    ; Compute row sum: ?_j W[row, j]
     vxorps  ymm0, ymm0, ymm0                       ; Sum accumulator
     xor     edx, edx                               ; Col index
     mov     eax, ecx
@@ -1672,7 +1672,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
 
 @@mf1_col_signs:
     ; === Phase 2: Compute column signs ===
-    ; col_sign[j] = sign(Σ_i W[i,j] * row_sign[i])
+    ; col_sign[j] = sign(?_i W[i,j] * row_sign[i])
     ; (Given row signs, optimal col signs minimize reconstruction error)
 
     movzx   eax, r15w                               ; Row signs bytes
@@ -1689,7 +1689,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
     cmp     ecx, r13d
     jge     @@mf1_csign_flush
 
-    ; Compute weighted column sum: Σ_i W[i,j] * row_sign[i]
+    ; Compute weighted column sum: ?_i W[i,j] * row_sign[i]
     vxorps  xmm0, xmm0, xmm0
     xor     edx, edx                               ; Row index
 
@@ -1725,7 +1725,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
     jmp     @@mf1_csign_inner
 
 @@mf1_csign_process:
-    ; Sign of weighted sum → col_sign bit
+    ; Sign of weighted sum ? col_sign bit
     vxorps  xmm1, xmm1, xmm1
     vcomiss xmm0, xmm1
     setae   bl
@@ -1765,7 +1765,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
 
 @@mf1_compute_scale:
     ; === Phase 3: Compute optimal scale ===
-    ; s = Σ_{i,j} W[i,j] * row_sign[i] * col_sign[j] / (M * N)
+    ; s = ?_{i,j} W[i,j] * row_sign[i] * col_sign[j] / (M * N)
     vxorps  xmm0, xmm0, xmm0                       ; Scale accumulator
 
     xor     ecx, ecx                               ; Row
@@ -1802,7 +1802,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
     bt      ebx, eax
     setc    r9b                                     ; r9b = col_sign bit
 
-    ; Combined sign: both same → +1, different → -1
+    ; Combined sign: both same ? +1, different ? -1
     cmp     r8b, r9b
     je      @@mf1_scale_add
     vsubss  xmm0, xmm0, xmm1
@@ -1827,7 +1827,7 @@ NQ_MatrixFactor_Rank1 PROC FRAME
     ; Store scale
     vmovss  dword ptr [rdi + NQM_SCALES_OFFSET], xmm0
 
-    ; === Calculate total output size ===
+    ; === Calculate total output m_size ===
     ; header + ceil(M/8) + ceil(N/8)
     mov     eax, r12d
     add     eax, 7
@@ -1853,9 +1853,9 @@ NQ_MatrixFactor_Rank1 ENDP
 ; =============================================================================
 ; NQ_MatrixFactor_MultiRank
 ; Multi-rank binary factorization via greedy residual peeling.
-; W ≈ Σ_{k=1}^{r} s_k * row_k ⊗ col_k
+; W ? ?_{k=1}^{r} s_k * row_k ? col_k
 ;
-; RCX = W (float*, M×N — WILL BE MODIFIED as residual)
+; RCX = W (float*, M?N ? WILL BE MODIFIED as residual)
 ; RDX = output buffer (NQ_MATRIX format)
 ; R8D = M, R9D = N
 ; [RSP+40] = rank (1-8)
@@ -2014,7 +2014,7 @@ NQ_MatrixFactor_MultiRank PROC FRAME
     bt      r9d, eax
     setc    r9b
 
-    ; Product sign → ±s
+    ; Product sign ? ?s
     ; Load current residual element
     mov     eax, ecx
     imul    eax, r13d
@@ -2023,11 +2023,11 @@ NQ_MatrixFactor_MultiRank PROC FRAME
 
     cmp     r8b, r9b
     je      @@mr_sub_pos
-    ; Different signs → approximation is -s, subtract (-s) = add s
+    ; Different signs ? approximation is -s, subtract (-s) = add s
     vaddss  xmm0, xmm0, xmm7
     jmp     @@mr_sub_store
 @@mr_sub_pos:
-    ; Same signs → approximation is +s, subtract s
+    ; Same signs ? approximation is +s, subtract s
     vsubss  xmm0, xmm0, xmm7
 @@mr_sub_store:
     vmovss  dword ptr [rsi + rax*4], xmm0
@@ -2044,7 +2044,7 @@ NQ_MatrixFactor_MultiRank PROC FRAME
     jmp     @@mr_rank_loop
 
 @@mr_done:
-    ; Calculate total output size
+    ; Calculate total output m_size
     mov     eax, NQM_HEADER_SIZE
     mov     ecx, [rsp+8]                           ; bytes_per_rank
     imul    ecx, r14d                               ; * rank
@@ -2067,12 +2067,12 @@ NQ_MatrixFactor_MultiRank ENDP
 ; =============================================================================
 ; NQ_MatrixGEMM
 ; GEMM using matrix-level binary factorization.
-; C[M×N] = A[M×K] × dequant(NQ_MATRIX[K×N])
-; Exploits: C[i,j] = Σ_r s_r * col_sign[r][j] * dot(A_row_i, row_signs[r])
+; C[M?N] = A[M?K] ? dequant(NQ_MATRIX[K?N])
+; Exploits: C[i,j] = ?_r s_r * col_sign[r][j] * dot(A_row_i, row_signs[r])
 ;
-; RCX = A (float*, M×K)
+; RCX = A (float*, M?K)
 ; RDX = NQ_MATRIX data (header + signs)
-; R8  = C (float*, M×N, will be overwritten)
+; R8  = C (float*, M?N, will be overwritten)
 ; R9D = M (rows of A)
 ; Returns: RAX = 0 success
 ; =============================================================================
@@ -2205,7 +2205,7 @@ NQ_MatrixGEMM PROC FRAME
     vpbroadcastd ymm3, xmm3
     vpand   ymm4, ymm3, ymmword ptr [bit_select_dw]
     vpcmpeqd ymm4, ymm4, ymmword ptr [bit_select_dw]
-    ; ymm4 = 0xFFFFFFFF where bit=1
+    ; ymm4 = 0FFFFFFFFh where bit=1
 
     ; Masked add: sum_pos += A[i] where sign=1
     vandps  ymm5, ymm2, ymm4                       ; Zero out elements where sign=0
@@ -2328,7 +2328,7 @@ NQ_MatrixGEMM ENDP
 
 ; =============================================================================
 ; NQ1_Requantize_Q4_0
-; Requantize Q4_0 blocks → NQ_1 blocks (dequant→F32→quantize pipeline).
+; Requantize Q4_0 blocks ? NQ_1 blocks (dequant?F32?quantize pipeline).
 ;
 ; RCX = src (Q4_0 blocks, 18 bytes each)
 ; RDX = dst (NQ_1 blocks, 34 bytes each)
@@ -2366,7 +2366,7 @@ NQ1_Requantize_Q4_0 PROC FRAME
     cmp     rbx, r13
     jge     @@rq40_done
 
-    ; Dequantize 8 Q4_0 blocks (256 elements) → F32 scratch buffer
+    ; Dequantize 8 Q4_0 blocks (256 elements) ? F32 scratch buffer
     lea     r8, [rsp]                              ; F32 scratch
     xor     ecx, ecx                               ; Q4_0 sub-block index
 
@@ -2378,7 +2378,7 @@ NQ1_Requantize_Q4_0 PROC FRAME
     ; Q4_0: [F16 d (2 bytes)][qs[16] (16 bytes)] = 18 bytes
     ; Actually Q4_0 scale is F16 at offset 0, data at offset 2
 
-    ; Load scale: F16 → F32
+    ; Load scale: F16 ? F32
     movzx   eax, word ptr [rsi]
     vmovd   xmm0, eax
     vcvtph2ps xmm0, xmm0                           ; d scalar
@@ -2417,7 +2417,7 @@ NQ1_Requantize_Q4_0 PROC FRAME
     jmp     @@rq40_dq_sub
 
 @@rq40_quantize:
-    ; Quantize 256 F32 values → NQ_1 block
+    ; Quantize 256 F32 values ? NQ_1 block
     lea     rcx, [rsp]                             ; F32 scratch
     mov     rdx, rdi                               ; NQ_1 output
     call    NQ1_QuantizeBlock_Fast
@@ -2441,7 +2441,7 @@ NQ1_Requantize_Q4_0 ENDP
 
 ; =============================================================================
 ; NQ1_Requantize_Q8_0
-; Requantize Q8_0 blocks → NQ_1 blocks.
+; Requantize Q8_0 blocks ? NQ_1 blocks.
 ;
 ; RCX = src (Q8_0 blocks, 34 bytes each)
 ; RDX = dst (NQ_1 blocks, 34 bytes each)
@@ -2535,8 +2535,8 @@ NQ1_Requantize_Q8_0 ENDP
 
 ; =============================================================================
 ; NQ1_Requantize_Q4_K
-; Requantize Q4_K blocks (144 bytes / 256 elements) → NQ_1 (34 bytes / 256).
-; Direct block-to-block pipeline (same super-block size).
+; Requantize Q4_K blocks (144 bytes / 256 elements) ? NQ_1 (34 bytes / 256).
+; Direct block-to-block pipeline (same super-block m_size).
 ;
 ; RCX = src (Q4_K blocks)
 ; RDX = dst (NQ_1 blocks)
@@ -2665,7 +2665,7 @@ NQ1_Requantize_Q4_K PROC FRAME
     jmp     @@rq4k_sub
 
 @@rq4k_quantize:
-    ; Quantize 256 F32 values → NQ_1 block
+    ; Quantize 256 F32 values ? NQ_1 block
     mov     rcx, r13
     mov     rdx, rdi
     call    NQ1_QuantizeBlock_Fast
@@ -2701,14 +2701,14 @@ NQ1_GetBlockSize ENDP
 ; Calculate compression ratio vs FP16 for a given element count.
 ;
 ; RCX = n_elements
-; Returns: EAX = compression ratio × 100 (e.g., 1506 = 15.06x vs FP16)
+; Returns: EAX = compression ratio ? 100 (e.g., 1506 = 15.06x vs FP16)
 ; =============================================================================
 NQ1_GetCompressionRatio PROC
-    ; FP16 size = n_elements * 2 bytes
+    ; FP16 m_size = n_elements * 2 bytes
     mov     rax, rcx
     shl     rax, 1                                 ; * 2
 
-    ; NQ_1 size = (n_elements / 256) * 34 bytes
+    ; NQ_1 m_size = (n_elements / 256) * 34 bytes
     mov     rdx, rcx
     shr     rdx, 8                                 ; / 256
     imul    rdx, BLOCK_NQ1_SIZE                    ; * 34
@@ -2730,7 +2730,7 @@ NQ1_GetCompressionRatio ENDP
 ; NQ1_GetStats
 ; Fill caller-provided buffer with performance counter values.
 ;
-; RCX = output buffer (5 × uint64_t):
+; RCX = output buffer (5 ? uint64_t):
 ;   [0] = quant blocks
 ;   [1] = dequant blocks
 ;   [2] = vec_dot calls
@@ -2755,11 +2755,11 @@ NQ1_GetStats ENDP
 
 ; =============================================================================
 ; NQ1_Dispatch
-; Type-based dispatch for NQ_1 operations (compatible with KQuant_Dispatch).
+; m_type-based dispatch for NQ_1 operations (compatible with KQuant_Dispatch).
 ;
 ; ECX = operation:
-;   0 = Dequantize block (RDX=src, R8=dst → calls DequantBlock)
-;   1 = Vec dot (RDX=nq1, R8=f32 → result in XMM0)
+;   0 = Dequantize block (RDX=src, R8=dst ? calls DequantBlock)
+;   1 = Vec dot (RDX=nq1, R8=f32 ? result in XMM0)
 ;   2 = Quantize block fast (RDX=src_f32, R8=dst_nq1)
 ;   3 = Quantize block ADMM (RDX=src_f32, R8=dst_nq1, R9D=max_iter)
 ; Returns: depends on operation
@@ -2804,3 +2804,4 @@ NQ1_Dispatch PROC
 NQ1_Dispatch ENDP
 
 END
+

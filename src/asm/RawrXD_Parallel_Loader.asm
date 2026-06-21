@@ -92,7 +92,7 @@ RawrXD_LoadAndStreamModel proc
 
     ; 4. Pipe Chunk to Swarm Distributor
     mov rcx, r15            ; Buffer
-    mov rdx, rax            ; Actual Chunk Size
+    mov rdx, rax            ; Actual Chunk m_size
     mov r8, r13             ; Node Count
     mov r9, r14             ; Socket Array
     call RawrXD_Tensor_SliceAndDistribute
@@ -127,3 +127,4 @@ RawrXD_LoadAndStreamModel proc
 RawrXD_LoadAndStreamModel endp
 
 end
+

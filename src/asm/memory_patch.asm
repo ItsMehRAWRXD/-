@@ -1,12 +1,12 @@
 ; =============================================================================
-; memory_patch.asm — Memory Layer ASM Kernel
+; memory_patch.asm ? Memory Layer ASM Kernel
 ; =============================================================================
 ; VirtualProtect-wrapped memory patching routines for Layer 1 hotpatching.
 ;
 ; Exports:
-;   asm_apply_memory_patch  — Apply a raw memory patch
-;   asm_revert_memory_patch — Revert a memory patch from backup
-;   asm_safe_memread        — Read memory safely (returns bytes read)
+;   asm_apply_memory_patch  ? Apply a raw memory patch
+;   asm_revert_memory_patch ? Revert a memory patch from backup
+;   asm_safe_memread        ? Read memory safely (returns bytes read)
 ;
 ; Architecture: x64 MASM | Windows ABI | No exceptions | No CRT
 ; Build: ml64.exe /c /Zi /Zd /Fo memory_patch.obj memory_patch.asm
@@ -44,7 +44,7 @@ PAGE_EXECUTE_READWRITE  EQU     040h
 ; Apply a raw memory patch with VirtualProtect wrapper.
 ;
 ; RCX = destination address (void*)
-; RDX = size in bytes
+; RDX = m_size in bytes
 ; R8  = source data pointer (const void*)
 ;
 ; Returns: EAX = 0 on success, -1 on failure
@@ -65,10 +65,10 @@ asm_apply_memory_patch PROC FRAME
     .endprolog
 
     mov     r12, rcx                    ; r12 = dest addr
-    mov     r13, rdx                    ; r13 = size
+    mov     r13, rdx                    ; r13 = m_size
     mov     rsi, r8                     ; rsi = source data
 
-    ; VirtualProtect(addr, size, PAGE_EXECUTE_READWRITE, &oldProtect)
+    ; VirtualProtect(addr, m_size, PAGE_EXECUTE_READWRITE, &oldProtect)
     lea     r9, [rsp + 32]              ; &oldProtect on stack
     mov     r8d, PAGE_EXECUTE_READWRITE
     mov     rdx, r13
@@ -77,19 +77,19 @@ asm_apply_memory_patch PROC FRAME
     test    eax, eax
     jz      @@vp_fail
 
-    ; Copy bytes: memcpy(dest, src, size)
+    ; Copy bytes: memcpy(dest, src, m_size)
     mov     rdi, r12
     mov     rcx, r13
     rep     movsb
 
-    ; Restore protection: VirtualProtect(addr, size, oldProtect, &dummy)
+    ; Restore protection: VirtualProtect(addr, m_size, oldProtect, &dummy)
     lea     r9, [rsp + 40]              ; &dummy
     mov     r8d, DWORD PTR [rsp + 32]   ; oldProtect
     mov     rdx, r13
     mov     rcx, r12
     call    VirtualProtect
 
-    ; FlushInstructionCache(GetCurrentProcess(), addr, size)
+    ; FlushInstructionCache(GetCurrentProcess(), addr, m_size)
     call    GetCurrentProcess
     mov     rcx, rax
     mov     rdx, r12
@@ -117,11 +117,11 @@ asm_apply_memory_patch ENDP
 ; Revert a memory patch from backup bytes.
 ;
 ; RCX = destination address (void*)
-; RDX = size in bytes
+; RDX = m_size in bytes
 ; R8  = backup data pointer (const void*)
 ;
 ; Returns: EAX = 0 on success, -1 on failure
-; Identical logic to apply — just different semantics for the caller.
+; Identical logic to apply ? just different semantics for the caller.
 ; =============================================================================
 asm_revert_memory_patch PROC FRAME
     push    rbx
@@ -227,3 +227,4 @@ asm_safe_memread PROC FRAME
 asm_safe_memread ENDP
 
 END
+

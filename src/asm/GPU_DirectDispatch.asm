@@ -1,17 +1,17 @@
 ; ============================================================================
-; GPU_DirectDispatch.asm — GPU Direct Dispatch from MASM
+; GPU_DirectDispatch.asm ? GPU Direct Dispatch from MASM
 ; ============================================================================
 ; Directly records Vulkan compute dispatches from assembly.
 ; Bypasses C++ overhead for inference hot paths.
 ;
 ; Exports:
-;   GPUDD_Init              — Initialize GPU dispatch context
-;   GPUDD_CreateBuffer      — Create GPU buffer (RCX=size, RDX=usage)
-;   GPUDD_UploadData        — Upload data to GPU buffer
-;   GPUDD_DispatchCompute   — Dispatch compute shader (RCX=groupsX, RDX=groupsY, R8=groupsZ)
-;   GPUDD_ReadbackData      — Read GPU buffer back to CPU
-;   GPUDD_DestroyBuffer       — Destroy GPU buffer
-;   GPUDD_Shutdown          — Cleanup
+;   GPUDD_Init              ? Initialize GPU dispatch context
+;   GPUDD_CreateBuffer      ? Create GPU buffer (RCX=m_size, RDX=usage)
+;   GPUDD_UploadData        ? Upload data to GPU buffer
+;   GPUDD_DispatchCompute   ? Dispatch compute shader (RCX=groupsX, RDX=groupsY, R8=groupsZ)
+;   GPUDD_ReadbackData      ? Read GPU buffer back to CPU
+;   GPUDD_DestroyBuffer       ? Destroy GPU buffer
+;   GPUDD_Shutdown          ? Cleanup
 ;
 ; Architecture:
 ;   1. Get Vulkan device/queue from global context
@@ -134,7 +134,7 @@ VK_WHOLE_SIZE                                     EQU 0FFFFFFFFFFFFFFFFh
 .code
 
 ; ============================================================================
-; GPUDD_Init — Initialize GPU dispatch context
+; GPUDD_Init ? Initialize GPU dispatch context
 ; Returns RAX = 1 on success
 ; ============================================================================
 GPUDD_Init PROC FRAME
@@ -221,7 +221,7 @@ _gpudd_init_done:
 GPUDD_Init ENDP
 
 ; ============================================================================
-; GPUDD_CreateBuffer — RCX=size, RDX=usage flags
+; GPUDD_CreateBuffer ? RCX=m_size, RDX=usage flags
 ; Returns RAX = buffer handle, RDX = memory handle
 ; ============================================================================
 GPUDD_CreateBuffer PROC FRAME
@@ -235,7 +235,7 @@ GPUDD_CreateBuffer PROC FRAME
     .allocstack 128
     .endprolog
 
-    mov     rbx, rcx                    ; RBX = size
+    mov     rbx, rcx                    ; RBX = m_size
     mov     rsi, rdx                    ; RSI = usage
 
     ; Find free slot
@@ -255,7 +255,7 @@ _slot_found:
     lea     rcx, [rsp+32]           ; VkBufferCreateInfo
     mov     dword ptr [rcx], VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO
     mov     qword ptr [rcx+4], 0    ; pNext
-    mov     [rcx+12], rbx           ; size
+    mov     [rcx+12], rbx           ; m_size
     mov     [rcx+20], rsi           ; usage
     mov     dword ptr [rcx+28], VK_SHARING_MODE_EXCLUSIVE
     mov     dword ptr [rcx+32], 0   ; queueFamilyIndexCount
@@ -286,7 +286,7 @@ _slot_found:
     lea     rcx, [rsp+64]           ; VkMemoryAllocateInfo
     mov     dword ptr [rcx], VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO
     mov     qword ptr [rcx+4], 0    ; pNext
-    mov     rax, [rsp+32]           ; size from requirements
+    mov     rax, [rsp+32]           ; m_size from requirements
     mov     [rcx+12], rax
     mov     dword ptr [rcx+20], eax ; memoryTypeIndex
 
@@ -328,7 +328,7 @@ _create_done:
 GPUDD_CreateBuffer ENDP
 
 ; ============================================================================
-; GPUDD_UploadData — RCX=buffer handle, RDX=CPU data pointer, R8=size
+; GPUDD_UploadData ? RCX=buffer handle, RDX=CPU data pointer, R8=m_size
 ; Returns RAX = 1 on success
 ; ============================================================================
 GPUDD_UploadData PROC FRAME
@@ -344,7 +344,7 @@ GPUDD_UploadData PROC FRAME
 
     mov     rbx, rcx                    ; RBX = buffer
     mov     rsi, rdx                    ; RSI = data
-    mov     rdi, r8                     ; RDI = size
+    mov     rdi, r8                     ; RDI = m_size
 
     ; Map staging buffer
     mov     rcx, [g_vkDevice]
@@ -385,11 +385,11 @@ GPUDD_UploadData PROC FRAME
     lea     rdx, [rsp+32]
     call    qword ptr [pfn_vkBeginCommandBuffer]
 
-    ; Copy staging → device buffer
+    ; Copy staging ? device buffer
     lea     rcx, [rsp+32]           ; VkBufferCopy
     mov     qword ptr [rcx], 0      ; srcOffset
     mov     qword ptr [rcx+8], 0    ; dstOffset
-    mov     [rcx+16], rdi           ; size
+    mov     [rcx+16], rdi           ; m_size
     mov     rcx, r12
     mov     rdx, [g_stagingBuffer]
     mov     r8, rbx
@@ -409,7 +409,7 @@ GPUDD_UploadData PROC FRAME
     mov     dword ptr [rcx+24], r9d           ; dstQueueFamilyIndex
     mov     qword ptr [rcx+28], rbx           ; buffer
     mov     qword ptr [rcx+36], 0   ; offset
-    mov     qword ptr [rcx+44], VK_WHOLE_SIZE ; size
+    mov     qword ptr [rcx+44], VK_WHOLE_SIZE ; m_size
 
     mov     rcx, r12
     mov     edx, VK_PIPELINE_STAGE_TRANSFER_BIT
@@ -451,7 +451,7 @@ _upload_done:
 GPUDD_UploadData ENDP
 
 ; ============================================================================
-; GPUDD_DispatchCompute — RCX=groupsX, RDX=groupsY, R8=groupsZ
+; GPUDD_DispatchCompute ? RCX=groupsX, RDX=groupsY, R8=groupsZ
 ; Returns RAX = 1 on success
 ; ============================================================================
 GPUDD_DispatchCompute PROC FRAME
@@ -522,7 +522,7 @@ _dispatch_done:
 GPUDD_DispatchCompute ENDP
 
 ; ============================================================================
-; GPUDD_ReadbackData — RCX=buffer handle, RDX=CPU dest pointer, R8=size
+; GPUDD_ReadbackData ? RCX=buffer handle, RDX=CPU dest pointer, R8=m_size
 ; Returns RAX = 1 on success
 ; ============================================================================
 GPUDD_ReadbackData PROC FRAME
@@ -538,9 +538,9 @@ GPUDD_ReadbackData PROC FRAME
 
     mov     rbx, rcx                    ; RBX = buffer
     mov     rsi, rdx                    ; RSI = dest
-    mov     rdi, r8                     ; RDI = size
+    mov     rdi, r8                     ; RDI = m_size
 
-    ; Record copy device → staging
+    ; Record copy device ? staging
     mov     rcx, [g_vkDevice]
     mov     rdx, [g_commandPool]
     call    _allocateCommandBuffer
@@ -557,7 +557,7 @@ GPUDD_ReadbackData PROC FRAME
     lea     rdx, [rsp+32]
     call    qword ptr [pfn_vkBeginCommandBuffer]
 
-    ; Copy buffer → staging
+    ; Copy buffer ? staging
     lea     rcx, [rsp+32]
     mov     qword ptr [rcx], 0
     mov     qword ptr [rcx+8], 0
@@ -619,7 +619,7 @@ _readback_done:
 GPUDD_ReadbackData ENDP
 
 ; ============================================================================
-; GPUDD_DestroyBuffer — RCX=buffer handle
+; GPUDD_DestroyBuffer ? RCX=buffer handle
 ; ============================================================================
 GPUDD_DestroyBuffer PROC FRAME
     push    rbx
@@ -666,7 +666,7 @@ _destroy_done:
 GPUDD_DestroyBuffer ENDP
 
 ; ============================================================================
-; GPUDD_Shutdown — Cleanup all resources
+; GPUDD_Shutdown ? Cleanup all resources
 ; ============================================================================
 GPUDD_Shutdown PROC FRAME
     push    rbx
@@ -797,3 +797,4 @@ _submitAndWait PROC
 _submitAndWait ENDP
 
 END
+

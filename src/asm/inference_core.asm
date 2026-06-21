@@ -1,11 +1,11 @@
 ; =============================================================================
-; inference_core.asm — GEMM / GEMV Inference Kernels (AVX2/FMA3 + AVX-512)
+; inference_core.asm ? GEMM / GEMV Inference Kernels (AVX2/FMA3 + AVX-512)
 ; =============================================================================
 ;
 ; Production-grade matrix multiplication kernels for transformer inference.
 ; Provides:
-;   - SGEMM (fp32 × fp32 → fp32) with tiled AVX2/FMA3 micro-kernels
-;   - SGEMV (fp32 matrix × fp32 vector → fp32 vector) for decode phase
+;   - SGEMM (fp32 ? fp32 ? fp32) with tiled AVX2/FMA3 micro-kernels
+;   - SGEMV (fp32 matrix ? fp32 vector ? fp32 vector) for decode phase
 ;   - AVX-512 dispatch when hardware supports it
 ;   - CPUID-based runtime feature detection
 ;   - Non-temporal stores for large output matrices (>L2 threshold)
@@ -13,21 +13,21 @@
 ; Architecture: x64 MASM64 | Windows x64 ABI
 ; Calling Convention: Microsoft x64 (RCX, RDX, R8, R9 + stack)
 ;
-; ╔═══════════════════════════════════════════════════════════════════════╗
-; ║  WINDOWS x64 REGISTER PRESERVATION CONTRACT                        ║
-; ║                                                                     ║
-; ║  Volatile (caller-saved, free to clobber):                          ║
-; ║    RAX, RCX, RDX, R8, R9, R10, R11                                ║
-; ║    XMM0-XMM5 / YMM0-YMM5 / ZMM0-ZMM5                             ║
-; ║                                                                     ║
-; ║  Non-volatile (callee-saved, MUST preserve):                        ║
-; ║    RBX, RBP, RSI, RDI, R12, R13, R14, R15                         ║
-; ║    XMM6-XMM15 / YMM6-YMM15 / ZMM6-ZMM15                          ║
-; ║    (Also ZMM16-ZMM31 are volatile on Windows)                       ║
-; ║                                                                     ║
-; ║  Stack: RSP must be 16-byte aligned before CALL                     ║
-; ║  Shadow space: 32 bytes reserved by caller above return address     ║
-; ╚═══════════════════════════════════════════════════════════════════════╝
+; ?????????????????????????????????????????????????????????????????????????
+; ?  WINDOWS x64 REGISTER PRESERVATION CONTRACT                        ?
+; ?                                                                     ?
+; ?  Volatile (caller-saved, free to clobber):                          ?
+; ?    RAX, RCX, RDX, R8, R9, R10, R11                                ?
+; ?    XMM0-XMM5 / YMM0-YMM5 / ZMM0-ZMM5                             ?
+; ?                                                                     ?
+; ?  Non-volatile (callee-saved, MUST preserve):                        ?
+; ?    RBX, RBP, RSI, RDI, R12, R13, R14, R15                         ?
+; ?    XMM6-XMM15 / YMM6-YMM15 / ZMM6-ZMM15                          ?
+; ?    (Also ZMM16-ZMM31 are volatile on Windows)                       ?
+; ?                                                                     ?
+; ?  Stack: RSP must be 16-byte aligned before CALL                     ?
+; ?  Shadow space: 32 bytes reserved by caller above return address     ?
+; ?????????????????????????????????????????????????????????????????????????
 ;
 ; Build: ml64.exe /c /Zi /Zd inference_core.asm
 ; Link:  Statically linked into RawrEngine / RawrXD-Win32IDE via CMake ASM_MASM
@@ -41,11 +41,11 @@ INCLUDE RawrXD_Common.inc
 ;                           CONSTANTS
 ; =============================================================================
 
-; Micro-kernel tile sizes (AVX2: 8-wide FMA, 6×16 register blocking)
+; Micro-kernel tile sizes (AVX2: 8-wide FMA, 6?16 register blocking)
 GEMM_MR_AVX2            EQU 6           ; Rows of C per micro-kernel tile
-GEMM_NR_AVX2            EQU 16          ; Cols of C per micro-kernel tile (2 × YMM)
+GEMM_NR_AVX2            EQU 16          ; Cols of C per micro-kernel tile (2 ? YMM)
 GEMM_MR_AVX512          EQU 6           ; Rows of C per micro-kernel tile (AVX-512)
-GEMM_NR_AVX512          EQU 32          ; Cols of C per micro-kernel tile (2 × ZMM)
+GEMM_NR_AVX512          EQU 32          ; Cols of C per micro-kernel tile (2 ? ZMM)
 
 ; L2 cache threshold for non-temporal store decision (256 KB)
 NT_STORE_THRESHOLD      EQU 262144
@@ -59,7 +59,7 @@ PREFETCH_DIST_L2        EQU 1024        ; 16 cache lines
 ; =============================================================================
 ; g_HasAVX2, g_HasFMA3, g_HasAVX512F, g_GemmCalls, g_GemvCalls,
 ; g_GemmFlops, g_GemmDispatch, g_GemvDispatch
-; are now defined in rawr_globals.asm — accessed via EXTERNDEF (rawr_globals.inc)
+; are now defined in rawr_globals.asm ? accessed via EXTERNDEF (rawr_globals.inc)
 INCLUDE rawr_globals.inc
 
 ; =============================================================================
@@ -189,7 +189,7 @@ InferenceCore_GetCapabilities ENDP
 
 ; =============================================================================
 ; InferenceCore_GetStats
-; RCX = pointer to output buffer (3 × uint64_t):
+; RCX = pointer to output buffer (3 ? uint64_t):
 ;   [0] = total GEMM calls
 ;   [1] = total GEMV calls
 ;   [2] = total FLOPs
@@ -207,14 +207,14 @@ InferenceCore_GetStats PROC
 InferenceCore_GetStats ENDP
 
 ; =============================================================================
-; InferenceCore_SGEMM — Dispatched SGEMM (calls best available path)
+; InferenceCore_SGEMM ? Dispatched SGEMM (calls best available path)
 ;
-; C[M×N] = alpha * A[M×K] * B[K×N] + beta * C[M×N]
+; C[M?N] = alpha * A[M?K] * B[K?N] + beta * C[M?N]
 ;
 ; RCX = pointer to GemmParams struct:
-;   +0:  float* A       (row-major, M×K)
-;   +8:  float* B       (row-major, K×N)
-;   +16: float* C       (row-major, M×N)
+;   +0:  float* A       (row-major, M?K)
+;   +8:  float* B       (row-major, K?N)
+;   +16: float* C       (row-major, M?N)
 ;   +24: int32  M
 ;   +28: int32  N
 ;   +32: int32  K
@@ -250,12 +250,12 @@ InferenceCore_SGEMM PROC
 InferenceCore_SGEMM ENDP
 
 ; =============================================================================
-; InferenceCore_SGEMV — Dispatched SGEMV (calls best available path)
+; InferenceCore_SGEMV ? Dispatched SGEMV (calls best available path)
 ;
-; y[M] = alpha * A[M×N] * x[N] + beta * y[M]
+; y[M] = alpha * A[M?N] * x[N] + beta * y[M]
 ;
 ; RCX = pointer to GemvParams struct:
-;   +0:  float* A       (row-major, M×N)
+;   +0:  float* A       (row-major, M?N)
 ;   +8:  float* x       (vector, length N)
 ;   +16: float* y       (vector, length M, output)
 ;   +24: int32  M
@@ -292,7 +292,7 @@ InferenceCore_SGEMV ENDP
 ; =============================================================================
 ; =============================================================================
 ;
-; Tiled SGEMM using 6×16 register blocking (6 rows × 2 YMM cols).
+; Tiled SGEMM using 6?16 register blocking (6 rows ? 2 YMM cols).
 ; Uses 12 YMM accumulators (ymm0..ymm11), leaving ymm12-ymm15 for 
 ; temporaries. XMM6-XMM15 are saved/restored per Windows x64 ABI.
 ;
@@ -302,7 +302,7 @@ InferenceCore_SGEMV ENDP
 ;     For k = 0..K-1:
 ;       Broadcast A[i+0..5, k] into 6 registers
 ;       Load B[k, j:j+8] and B[k, j+8:j+16] into 2 YMM
-;       6× FMA into accumulators
+;       6? FMA into accumulators
 ;     Scale by alpha, add beta*C, store
 ; =============================================================================
 InferenceCore_SGEMM_AVX2 PROC FRAME
@@ -323,7 +323,7 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
     .pushreg r14
     push    r15
     .pushreg r15
-    ; Save XMM6-XMM15 per Windows x64 ABI (10 × 16 bytes = 160 bytes)
+    ; Save XMM6-XMM15 per Windows x64 ABI (10 ? 16 bytes = 160 bytes)
     sub     rsp, 176                    ; 160 + 16 alignment padding
     .allocstack 176
     vmovdqu xmmword ptr [rsp],      xmm6
@@ -441,7 +441,7 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
 
     ; Broadcast A[i+0, k] and FMA
     vbroadcastss ymm12, dword ptr [rbx]              ; WRONG: clobbers ymm12
-    ; Reload B — we need to be more careful with register allocation
+    ; Reload B ? we need to be more careful with register allocation
     ; Strategy: Load B once into ymm12/ymm13, broadcast A into a temp
     
     ; Reload B
@@ -603,7 +603,7 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
     cmp     ebx, r8d
     jge     @@avx2_j_tail_next_col
 
-    ; Dot product: A[i+row, :] · B[:, j]
+    ; Dot product: A[i+row, :] ? B[:, j]
     vxorps  xmm0, xmm0, xmm0           ; Accumulator
 
     ; A pointer: A + (i+row)*lda_bytes
@@ -621,7 +621,7 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
 @@avx2_jt_k:
     cmp     ebx, r10d
     jge     @@avx2_jt_k_done
-    ; This scalar tail is intentionally simple — runs only for edge tiles
+    ; This scalar tail is intentionally simple ? runs only for edge tiles
     ; A[i+row, k]
     movsxd  r8, ecx
     add     r8d, eax                    ; i + row
@@ -671,7 +671,7 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
     jmp     @@avx2_i_loop
 
 @@avx2_i_tail:
-    ; Handle remaining rows (i to M) — scalar per element
+    ; Handle remaining rows (i to M) ? scalar per element
     cmp     ecx, r8d
     jge     @@avx2_done
 
@@ -760,7 +760,7 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
 @@avx2_k_loop_refactored:
     pop     rdx
     pop     rcx
-    ; Fall through — recompute with a clean approach using LOCAL-style stack frame
+    ; Fall through ? recompute with a clean approach using LOCAL-style stack frame
 
     ; We need to redo the micro-kernel with proper pointer tracking.
     ; Use push/pop to maintain B cursor in a callee-saved register approach.
@@ -783,12 +783,12 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
     ; A_base = A + i * lda_bytes
     movsxd  rax, ecx
     imul    rax, r11
-    lea     rbx, [rsi + rax]            ; RBX = &A[i, 0] — A cursor (advances by 4 per k)
+    lea     rbx, [rsi + rax]            ; RBX = &A[i, 0] ? A cursor (advances by 4 per k)
 
     ; B_base = B + j * 4
     movsxd  rax, edx
     shl     rax, 2
-    lea     rax, [rdi + rax]            ; RAX = &B[0, j] — B cursor (advances by ldb_bytes per k)
+    lea     rax, [rdi + rax]            ; RAX = &B[0, j] ? B cursor (advances by ldb_bytes per k)
 
     ; K counter in a temp on stack
     push    r10                         ; Save K on stack (we'll decrement a copy)
@@ -830,7 +830,7 @@ InferenceCore_SGEMM_AVX2 PROC FRAME
     jmp     @@avx2_k_done
 
 ; =============================================================================
-; APPROACH 3: Clean 6×16 micro-kernel with explicit pointer management
+; APPROACH 3: Clean 6?16 micro-kernel with explicit pointer management
 ; RBX = A cursor,  stack[0] = B cursor,  ECX = i,  EDX = j
 ; =============================================================================
 @@avx2_k_approach3:
@@ -938,7 +938,7 @@ InferenceCore_SGEMM_AVX2 ENDP
 ; =============================================================================
 ; =============================================================================
 ;
-; y[M] = alpha * A[M×N] * x[N] + beta * y[M]
+; y[M] = alpha * A[M?N] * x[N] + beta * y[M]
 ;
 ; Processes 8 elements of the dot product per cycle (YMM width).
 ; Each row of A is dotted against x using vfmadd231ps.
@@ -1064,8 +1064,8 @@ InferenceCore_SGEMV_AVX2 PROC FRAME
     jnz     @@gemv_4row_k1
 
 @@gemv_4row_reduce:
-    ; Horizontal sum of each YMM accumulator → scalar
-    ; ymm0 → xmm0[0]
+    ; Horizontal sum of each YMM accumulator ? scalar
+    ; ymm0 ? xmm0[0]
     vextractf128 xmm4, ymm0, 1
     vaddps  xmm0, xmm0, xmm4
     vhaddps xmm0, xmm0, xmm0
@@ -1204,7 +1204,7 @@ InferenceCore_SGEMV_AVX2 ENDP
 ; =============================================================================
 ; =============================================================================
 ;
-; Tiled SGEMM using 6×32 register blocking (6 rows × 2 ZMM cols = 32 floats).
+; Tiled SGEMM using 6?32 register blocking (6 rows ? 2 ZMM cols = 32 floats).
 ; Uses ZMM0..ZMM11 as accumulators (volatile on Windows).
 ; ZMM16..ZMM31 used as temporaries (volatile on Windows for AVX-512).
 ; No need to save ZMM6-ZMM15 when using AVX-512 instructions because
@@ -1308,7 +1308,7 @@ InferenceCore_SGEMM_AVX512 PROC FRAME
     jg      @@avx512_j_tail
 
     ; =========================================================
-    ; 6×32 micro-kernel (AVX-512)
+    ; 6?32 micro-kernel (AVX-512)
     ; ZMM0/1   = C[i+0, j:j+16 / j+16:j+32]
     ; ZMM2/3   = C[i+1, ...]
     ; ZMM4/5   = C[i+2, ...]
@@ -1509,7 +1509,7 @@ InferenceCore_SGEMM_AVX512 PROC FRAME
     push    rax
     push    rdx
 
-    ; Scalar dot: A[i+row, :] · B[:, j]
+    ; Scalar dot: A[i+row, :] ? B[:, j]
     movsxd  rbx, ebx
     imul    rbx, r11
     lea     rbx, [rsi + rbx]            ; &A[i+row, 0]
@@ -1666,7 +1666,7 @@ InferenceCore_SGEMM_AVX512 ENDP
 ; =============================================================================
 ; =============================================================================
 ;
-; y[M] = alpha * A[M×N] * x[N] + beta * y[M]
+; y[M] = alpha * A[M?N] * x[N] + beta * y[M]
 ; Processes 16 floats per ZMM (vs 8 for AVX2).
 ; 4 rows at a time for instruction-level parallelism.
 ;
@@ -1789,8 +1789,8 @@ InferenceCore_SGEMV_AVX512 PROC FRAME
     vfmadd231ps zmm3 {k1}, zmm4, zmmword ptr [r10]
 
 @@avx512_gemv_4row_reduce:
-    ; Horizontal sum: ZMM → scalar
-    ; zmm0 → xmm0[0]
+    ; Horizontal sum: ZMM ? scalar
+    ; zmm0 ? xmm0[0]
     vextractf64x4 ymm16, zmm0, 1
     vaddps  ymm0, ymm0, ymm16
     vextractf128 xmm5, ymm0, 1
@@ -1960,3 +1960,4 @@ sgemv_avx512 ENDP
 
 ; =============================================================================
 END
+

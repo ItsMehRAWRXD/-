@@ -1,5 +1,5 @@
 ; ============================================================================
-; wom_commit.asm — Atomic SHA-256 Chaining (Mnemosyne)
+; wom_commit.asm ? Atomic SHA-256 Chaining (Mnemosyne)
 ; ============================================================================
 ;
 ; PURPOSE:
@@ -13,7 +13,7 @@
 
 ; WOM_CommitBlock
 ; RCX: Data Pointer
-; RDX: Size
+; RDX: m_size
 ; R8:  Output Chain Hash (32 bytes)
 PUBLIC WOM_CommitBlock
 WOM_CommitBlock PROC FRAME
@@ -48,3 +48,4 @@ WOM_CommitBlock PROC FRAME
 WOM_CommitBlock ENDP
 
 END
+
