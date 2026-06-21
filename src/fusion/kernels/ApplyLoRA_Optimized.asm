@@ -4,12 +4,12 @@
 ; Optimization targets:
 ;   - Loop unrolling (factor 8) to reduce branch overhead
 ;   - AVX-512 FMA (vfmadd231ps) for 16 floats/cycle
-;   - Memory prefetching (vprefetch0) for L1 cache
+;   - Memory prefetching (prefetcht0) for L1 cache
 ;   - Target: <42M cycles (10ms @ 4.2GHz) for 1M elements
 ;
 ; Mathematical operation: h = W0x + alpha * (B * A * x)
-
-include \masm64\include\rawrxd_win64.inc
+;
+; Build: ml64.exe /c /W3 /Zd /Zi ApplyLoRA_Optimized.asm
 
 ; External C++ symbols
 EXTERN g_loraContextBeacon:QWORD
@@ -29,9 +29,8 @@ LOCTX_MATRIX_A      EQU 16
 LOCTX_MATRIX_B      EQU 24
 LOCTX_ACTIVE        EQU 32
 
-; 64-byte aligned data segment for cache line optimization
+; Uninitialized data segment for cache line optimization
 .data?
-align 64
 lora_temp_buffer    REAL4 64 DUP(?)      ; Temporary buffer for Ax (max rank 64)
 scratch_pad         REAL4 64 DUP(?)      ; Scratch space for prefetching
 
