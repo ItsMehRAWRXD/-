@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Build artifacts
 build/
 build_fresh/
@@ -61,10 +62,32 @@ Makefile
 # Wine rawrxd-space prefix (Mac/Linux wrapper)
 .rawrxd/
 wrapper/rawrxd-space.env
+=======
+# Object files
+*.obj
+*.o
+
+# Executables
+*.exe
+*.dll
+
+# Build artifacts
+*.pdb
+*.ilk
+*.map
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.sln
+*.vcxproj*
+>>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 
 # OS
 .DS_Store
 Thumbs.db
+<<<<<<< HEAD
 *.log
 
 # Dependencies
@@ -218,3 +241,10 @@ build_prod/*.exe
 build_prod/*.pdb
 build_prod/*.dll
 .gitignore  
+=======
+
+# Temp
+*.tmp
+*.temp
+*.log
+>>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd

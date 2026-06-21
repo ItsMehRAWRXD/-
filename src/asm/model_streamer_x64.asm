@@ -1,5 +1,9 @@
 ; =============================================================================
+<<<<<<< HEAD
 ; model_streamer_x64.asm ? Zero-copy memory-mapped streamer helpers (x64 MASM)
+=======
+; model_streamer_x64.asm — Zero-copy memory-mapped streamer helpers (x64 MASM)
+>>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; =============================================================================
 ;
 ; Focus: enable SeLockMemoryPrivilege for SEC_LARGE_PAGES / MEM_LARGE_PAGES paths.
@@ -206,7 +210,11 @@ RawrXD_MapModelView2MB PROC FRAME
     ret
 
 @fallback_64k:
+<<<<<<< HEAD
     ; Align offset down to 64KB and expand map m_size by delta
+=======
+    ; Align offset down to 64KB and expand map size by delta
+>>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov     rax, r11
     and     rax, ALIGN_64K_MASK             ; alignedOffset
     mov     r13, rax
@@ -280,4 +288,7 @@ RawrXD_StreamToGPU_AVX512 ENDP
 
 END
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd

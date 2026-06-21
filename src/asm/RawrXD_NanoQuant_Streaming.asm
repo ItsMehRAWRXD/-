@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 ; =============================================================================
 ; RawrXD_NanoQuant_Streaming.asm
@@ -671,3 +672,8 @@ NQS_GetStats ENDP
 END
 
 
+=======
+
+/fix
+
+>>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
