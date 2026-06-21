@@ -150,6 +150,8 @@ if(WIN32)
 endif()
 
 # RawrXD - Zero Bloat Horizon (Phase 14.7.3+)
+# Phase 21: CMake Build System Integration - Added cmake/ to module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 project(RawrXD VERSION 14.7.3 LANGUAGES C CXX ASM_MASM)
 
 # MSVC: std::expected (<expected>) is only available at C++23 (STL4038 at C++20).
@@ -447,6 +449,11 @@ if(RAWR_HAS_MASM)
         src/asm/ums_micro_scheduler.asm
         # Previously broken MASM64 syntax now portable C++20 with extern "C" ABI compatibility.
 
+        # Phase 21: LoRA Kernel Sources (CMake Build System Integration)
+        src/lora/ApplyLoRA_Optimized.asm
+        src/lora/ApplyLoRA.asm
+        src/lora/LoRABeacon_MASM.asm
+        src/lora/LoRABeaconChain_MASM.asm
         
         # Keep C++ reverse_engineered_stubs.cpp as single source of truth for these symbols.
         # ASM unresolved stubs duplicate AllocateDMABuffer and cause LNK2005 in Win32IDE.
@@ -1724,6 +1731,12 @@ endif()
 # Link RE library into RawrEngine
 target_link_libraries(RawrEngine PRIVATE RawrXD-RE-Library)
 
+# Phase 21: Link LoRA library (C++ + ASM kernels) when enabled
+if(RAWR_HAS_LORA)
+    target_link_libraries(RawrEngine PRIVATE rawrxd_lora)
+    message(STATUS "[Phase 21] RawrEngine linked with rawrxd_lora")
+endif()
+
 target_include_directories(RawrEngine PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/win32app
@@ -1878,6 +1891,12 @@ if(WIN32)
 endif()
 
 target_link_libraries(RawrXD_Gold PRIVATE RawrXD-RE-Library)
+
+# Phase 21: Link LoRA library (C++ + ASM kernels) when enabled
+if(RAWR_HAS_LORA)
+    target_link_libraries(RawrXD_Gold PRIVATE rawrxd_lora)
+    message(STATUS "[Phase 21] RawrXD_Gold linked with rawrxd_lora")
+endif()
 
 target_include_directories(RawrXD_Gold PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
