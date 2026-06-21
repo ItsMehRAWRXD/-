@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <intrin.h>  // For _mm_sfence
 
 namespace RawrXD {
 

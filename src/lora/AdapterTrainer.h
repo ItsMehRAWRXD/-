@@ -9,6 +9,7 @@
 #include <functional>
 #include <chrono>
 #include <memory>
+#include <filesystem>
 
 // Forward declarations for LoRAContext beacon
 namespace RawrXD::MASM {
@@ -155,6 +156,9 @@ private:
     
     // Initialize A and B with random values (Xavier initialization)
     void initialize_weights();
+    
+    // Initialize momentum buffers
+    void initialize_momentum_buffers();
 
 private:
     AdapterTrainerConfig m_config;

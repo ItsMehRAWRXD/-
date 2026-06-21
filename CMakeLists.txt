@@ -5736,13 +5736,20 @@ if(WIN32)
     message(STATUS "[Phase 17C] Configuring Semantic Index module with FAISS/HNSW...")
     
     # Include the semantic_index subdirectory which has its own CMakeLists.txt
-    add_subdirectory(src/semantic_index)
+    # Guard against duplicate inclusion (already added at top-level if RAWR_ENABLE_SEMANTIC_INDEX)
+    if(NOT TARGET semantic_index)
+        add_subdirectory(src/semantic_index)
+    endif()
     
     # Include the ast_parser subdirectory for Phase 17 Workstream 2
-    add_subdirectory(src/ast_parser)
+    if(NOT TARGET ast_parser)
+        add_subdirectory(src/ast_parser)
+    endif()
     
     # Include the autocomplete_integration subdirectory for Phase 17 Integration
-    add_subdirectory(src/autocomplete_integration)
+    if(NOT TARGET autocomplete_integration)
+        add_subdirectory(src/autocomplete_integration)
+    endif()
     
     # Link Phase 17 modules to Win32IDE
     target_link_libraries(RawrXD-Win32IDE PRIVATE semantic_index ast_parser autocomplete_integration)
