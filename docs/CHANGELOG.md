@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Phase 17 — Semantic Search Integration (2026-06-21)
+
+#### Added
+- **Semantic Search Core:** FAISS IVFPQ and HNSW vector indexing backends (`src/semantic_index/`)
+  - IVFPQ configuration: nlist=100, m=8, nbits=8 for ~140MB memory footprint
+  - Automatic training trigger at 1000 vectors
+  - Graceful HNSW fallback when FAISS unavailable
+- **Embedding Pipeline:** ONNX Runtime-based code embedding engine (`CodeEmbedder`)
+  - Lazy model loading to avoid IDE startup blocking
+  - Mean pooling to 384-d vectors with L2 normalization
+  - CodeBERT/MiniLM compatible architecture
+- **Hybrid Retrieval Engine:** Unified autocomplete combining Trie + Semantic + AST
+  - Weighted fusion: `Score = 0.75*Trie + 0.25*Semantic`
+  - Parallel std::async dispatch with timeout protection
+  - Latency guard: 3.5ms P95 hard limit
+- **Production Hardening (Phase 17D):**
+  - Thread-safe shutdown with `std::atomic<bool>` flags
+  - Explicit PIMPL destructors for ordered resource cleanup
+  - Telemetry hooks for trie hits, semantic hits, timeout counts
+  - Memory usage tracking and budget enforcement
+- **Documentation:**
+  - `docs/SEMANTIC_SEARCH_ARCHITECTURE.md` — Hybrid fusion design
+  - `docs/SEMANTIC_API_REFERENCE.md` — C++ API for UI engineers
+  - `docs/BUILD_DEPENDENCIES.md` — FAISS/ONNX/OpenMP build matrix
+
+#### Technical Details
+- **Files Added:**
+  - `src/semantic_index/SemanticCodeIndex.cpp/h` — Vector index with dual backend
+  - `src/semantic_index/CodeEmbedder.cpp/h` — ONNX embedding engine
+  - `src/autocomplete_integration/UnifiedAutocompleteEngine.cpp/h` — Hybrid engine
+  - `src/semantic_index/CMakeLists.txt` — Build configuration with graceful degradation
+- **Build Flags:** `RAWR_HAS_FAISS`, `RAWR_HAS_ONNXRUNTIME`, `USE_FAISS_BACKEND`
+- **Dependencies:** FAISS (optional), ONNX Runtime, OpenMP, HNSW (fallback)
+
 ### Fixed
 - **Electron AI providers:** `localhost` → **`127.0.0.1`** in `config/providers.json`, `preferIpv4Loopback()` on every request, and **`http.Agent({ family: 4 })`** for axios so Node cannot prefer **`::1`** when Ollama is IPv4-only; `providers.json` cache cleared on load. Clearer **`ECONNREFUSED`** text (`docs/AUTONOMOUS_AGENT_ELECTRON.md`).
 - **Electron IRC bridge:** `electron/irc_protocol.js` — repaired invalid **`split(/\n')`** typo that broke module load; protocol helpers + **`irc-bridge-selfcheck.js`** validate chunking and parsers without opening sockets.
