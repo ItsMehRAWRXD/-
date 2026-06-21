@@ -1,5 +1,5 @@
 # Semantic Index Module - CMake Configuration
-# Phase 17: Advanced Intelligence - Build Infrastructure
+# Phase 17C: FAISS/HNSW Vector Search Integration
 
 cmake_minimum_required(VERSION 3.20)
 
@@ -16,18 +16,24 @@ set(SEMANTIC_INDEX_HEADERS
     SemanticCodeIndex.h
 )
 
-# Try to find FAISS first (preferred backend)
+# ---------------------------------------------------------------------------
+# Phase 17C: Vector Search Dependency Injection
+# ---------------------------------------------------------------------------
+
+# 1. Look for pre-installed FAISS (Optional - production builds)
+# FAISS requires BLAS/LAPACK which may not be available on all dev machines
 find_package(faiss CONFIG QUIET)
 
 if(faiss_FOUND)
-    message(STATUS "FAISS found - using FAISS backend for semantic search")
-    set(USE_FAISS_BACKEND TRUE)
-    set(SEMANTIC_INDEX_BACKEND_LIBS faiss)
+    message(STATUS "[Phase 17C] Found system FAISS. Enabling IVFPQ backend.")
+    set(RAWR_USE_FAISS ON)
+    set(SEMANTIC_INDEX_BACKEND_LIBS faiss::faiss)
 else()
-    message(STATUS "FAISS not found - falling back to HNSW (header-only) backend")
-    set(USE_FAISS_BACKEND FALSE)
+    # 2. HNSW fallback - header-only, no dependencies
+    message(STATUS "[Phase 17C] FAISS not found. Using HNSW (header-only) backend.")
+    set(RAWR_USE_FAISS OFF)
     
-    # HNSW is header-only, we'll include it as a submodule or fetch it
+    # Fetch HNSW header-only library
     include(FetchContent)
     FetchContent_Declare(
         hnsw
@@ -37,8 +43,17 @@ else()
     )
     FetchContent_MakeAvailable(hnsw)
     
-    # HNSW is header-only, no linking required
     set(SEMANTIC_INDEX_BACKEND_LIBS "")
+endif()
+
+# 3. OpenMP for FAISS parallelization (required for IVFPQ)
+find_package(OpenMP QUIET)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "[Phase 17C] OpenMP found - enabling parallel IVFPQ search")
+    set(RAWR_HAS_OPENMP ON)
+else()
+    message(WARNING "[Phase 17C] OpenMP not found - IVFPQ will be single-threaded")
+    set(RAWR_HAS_OPENMP OFF)
 endif()
 
 # Create the library
@@ -47,11 +62,18 @@ add_library(${SEMANTIC_INDEX_MODULE} STATIC
     ${SEMANTIC_INDEX_HEADERS}
 )
 
-# Define backend macro
-if(USE_FAISS_BACKEND)
+# Define backend macros for conditional compilation
+if(RAWR_USE_FAISS)
     target_compile_definitions(${SEMANTIC_INDEX_MODULE}
-        PRIVATE USE_FAISS_BACKEND
+        PRIVATE 
+            RAWR_HAS_FAISS=1
+            USE_FAISS_BACKEND
     )
+    if(RAWR_HAS_OPENMP)
+        target_compile_definitions(${SEMANTIC_INDEX_MODULE}
+            PRIVATE RAWR_HAS_OPENMP=1
+        )
+    endif()
 else()
     target_compile_definitions(${SEMANTIC_INDEX_MODULE}
         PRIVATE USE_HNSW_BACKEND
@@ -63,7 +85,7 @@ target_include_directories(${SEMANTIC_INDEX_MODULE}
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE
-        $<$<NOT:$<BOOL:${USE_FAISS_BACKEND}>>:${hnsw_SOURCE_DIR}>
+        $<$<NOT:$<BOOL:${RAWR_USE_FAISS}>>:${hnsw_SOURCE_DIR}>
 )
 
 # Link libraries
@@ -71,6 +93,14 @@ target_link_libraries(${SEMANTIC_INDEX_MODULE}
     PUBLIC
         ${SEMANTIC_INDEX_BACKEND_LIBS}
 )
+
+# OpenMP linkage
+if(RAWR_HAS_OPENMP AND OpenMP_CXX_FOUND)
+    target_link_libraries(${SEMANTIC_INDEX_MODULE}
+        PUBLIC
+            OpenMP::OpenMP_CXX
+    )
+endif()
 
 # Compiler options for performance
 if(MSVC)
@@ -108,3 +138,25 @@ install(TARGETS ${SEMANTIC_INDEX_MODULE}
 install(FILES ${SEMANTIC_INDEX_HEADERS}
     DESTINATION include/semantic_index
 )
+
+# ---------------------------------------------------------------------------
+# Phase 17C: Export configuration to parent scope
+# ---------------------------------------------------------------------------
+set(RAWR_SEMANTIC_INDEX_FAISS_ENABLED ${RAWR_USE_FAISS} CACHE BOOL "FAISS enabled for semantic index" FORCE)
+set(RAWR_SEMANTIC_INDEX_OPENMP_ENABLED ${RAWR_HAS_OPENMP} CACHE BOOL "OpenMP enabled for semantic index" FORCE)
+
+# Export to parent scope for main CMakeLists.txt
+set(RAWR_SEMANTIC_INDEX_FAISS_ENABLED ${RAWR_USE_FAISS} PARENT_SCOPE)
+set(RAWR_SEMANTIC_INDEX_OPENMP_ENABLED ${RAWR_HAS_OPENMP} PARENT_SCOPE)
+
+# ---------------------------------------------------------------------------
+# Phase 17C: Configuration Summary
+# ---------------------------------------------------------------------------
+message(STATUS "")
+message(STATUS "[Phase 17C] Semantic Index Configuration Summary:")
+message(STATUS "  Backend:          $<IF:${RAWR_USE_FAISS},FAISS IVFPQ,HNSW>")
+message(STATUS "  Vector Dimension: 384 (MiniLM-compatible)")
+message(STATUS "  OpenMP:           $<IF:${RAWR_HAS_OPENMP},Enabled,Disabled>")
+message(STATUS "  Memory Budget:    278MB available / ~140MB estimated")
+message(STATUS "  Target:           ${SEMANTIC_INDEX_MODULE}")
+message(STATUS "")

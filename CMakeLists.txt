@@ -5682,9 +5682,9 @@ if(WIN32)
     endif()
 
     # =========================================================================
-    # Phase 17: Semantic Index Module (Advanced Intelligence)
+    # Phase 17C: Semantic Index Module (Advanced Intelligence - FAISS Integration)
     # =========================================================================
-    message(STATUS "[Phase 17] Configuring Semantic Index module...")
+    message(STATUS "[Phase 17C] Configuring Semantic Index module with FAISS/HNSW...")
     
     # Include the semantic_index subdirectory which has its own CMakeLists.txt
     add_subdirectory(src/semantic_index)
@@ -5697,6 +5697,25 @@ if(WIN32)
     
     # Link Phase 17 modules to Win32IDE
     target_link_libraries(RawrXD-Win32IDE PRIVATE semantic_index ast_parser autocomplete_integration)
+    
+    # Phase 17C: Propagate FAISS configuration to Win32IDE
+    if(RAWR_SEMANTIC_INDEX_FAISS_ENABLED)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE 
+            RAWR_HAS_FAISS=1
+            RAWR_SEMANTIC_INDEX_FAISS_ENABLED=1
+        )
+        message(STATUS "[Phase 17C] Win32IDE linked with FAISS IVFPQ semantic index")
+    else()
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE 
+            RAWR_HAS_FAISS=0
+            RAWR_SEMANTIC_INDEX_FAISS_ENABLED=0
+        )
+        message(STATUS "[Phase 17C] Win32IDE linked with HNSW semantic index (FAISS not available)")
+    endif()
+    
+    if(RAWR_SEMANTIC_INDEX_OPENMP_ENABLED)
+        target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWR_SEMANTIC_INDEX_OPENMP_ENABLED=1)
+    endif()
     
     # =========================================================================
     # Win32IDE Link Libraries
