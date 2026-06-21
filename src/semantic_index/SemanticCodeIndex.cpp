@@ -77,7 +77,7 @@ struct TrainingBuffer {
 class SemanticCodeIndex::Impl {
 public:
     explicit Impl(const SemanticIndexConfig& cfg);
-    ~Impl() = default;
+    ~Impl();  // Phase 17D.3: Explicit destructor for native cleanup
     
     // Delete copy/move to ensure proper backend cleanup
     Impl(const Impl&) = delete;
@@ -126,6 +126,38 @@ public:
 SemanticCodeIndex::Impl::Impl(const SemanticIndexConfig& cfg) 
     : config(cfg), embedder(cfg.vector_dimension) {
     initialize_faiss();
+}
+
+// Phase 17D.3: Explicit destructor for native FAISS cleanup
+SemanticCodeIndex::Impl::~Impl() {
+#if USE_FAISS_BACKEND
+    // Explicit cleanup order: index -> quantizer
+    // This ensures FAISS internal memory is properly released
+    if (faiss_index) {
+        // Reset any internal state before destruction
+        faiss_index.reset();
+    }
+    if (quantizer) {
+        quantizer.reset();
+    }
+    // Clear training buffer
+    training_buffer.clear();
+#else
+    // HNSW cleanup
+    if (hnsw_index) {
+        hnsw_index.reset();
+    }
+    if (space) {
+        space.reset();
+    }
+#endif
+    
+    // Clear all containers to release memory
+    faiss_to_snippet_id.clear();
+    faiss_to_snippet_id.shrink_to_fit();
+    snippet_to_faiss_idx.clear();
+    snippets.clear();
+    embeddings.clear();
 }
 
 void SemanticCodeIndex::Impl::initialize_faiss() {
