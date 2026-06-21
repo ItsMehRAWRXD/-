@@ -48,6 +48,49 @@ if(TARGET test_gguf_loader)
     message(STATUS "  ✓ Registered test_gguf_loader")
 endif()
 
+# ═════════════════════════════════════════════════════════════════════════════
+# Phase 19: LoRA E2E Integration Tests
+# ═════════════════════════════════════════════════════════════════════════════
+if(TARGET rawrxd_lora)
+    # Build E2E test executable
+    add_executable(rawrxd_e2e_tests
+        ${CMAKE_SOURCE_DIR}/src/tests/E2ETestFramework.cpp
+        ${CMAKE_SOURCE_DIR}/src/tests/integration_e2e_test.cpp
+    )
+    
+    target_include_directories(rawrxd_e2e_tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/tests
+        ${CMAKE_SOURCE_DIR}/src
+    )
+    
+    target_link_libraries(rawrxd_e2e_tests PRIVATE
+        rawrxd_lora
+        jsoncpp_lib
+    )
+    
+    set_target_properties(rawrxd_e2e_tests PROPERTIES
+        FOLDER "Tests/Phase19"
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+    )
+    
+    # Register individual tests
+    add_test(NAME RawrXD_E2E_BasicTraining COMMAND rawrxd_e2e_tests basic_training_pipeline)
+    add_test(NAME RawrXD_E2E_Serialization COMMAND rawrxd_e2e_tests serialization_round_trip)
+    add_test(NAME RawrXD_E2E_Alignment COMMAND rawrxd_e2e_tests memory_alignment_verification)
+    add_test(NAME RawrXD_E2E_ChainCreation COMMAND rawrxd_e2e_tests beacon_chain_creation)
+    add_test(NAME RawrXD_E2E_FullPipeline COMMAND rawrxd_e2e_tests full_pipeline_integration)
+    add_test(NAME RawrXD_E2E_NaNProtection COMMAND rawrxd_e2e_tests nan_inf_protection)
+    add_test(NAME RawrXD_E2E_ChainTraversal COMMAND rawrxd_e2e_tests chain_traversal_verification)
+    add_test(NAME RawrXD_E2E_Performance COMMAND rawrxd_e2e_tests performance_budget)
+    
+    # Full suite
+    add_test(NAME RawrXD_E2E_All COMMAND rawrxd_e2e_tests)
+    set_tests_properties(RawrXD_E2E_All PROPERTIES TIMEOUT 120)
+    
+    message(STATUS "  ✓ Registered Phase 19 LoRA E2E tests (8 test cases)")
+endif()
+
 if(TARGET test_gguf_loader_simple)
     add_test(NAME test_gguf_loader_simple COMMAND test_gguf_loader_simple)
     message(STATUS "  ✓ Registered test_gguf_loader_simple")
