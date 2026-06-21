@@ -70,6 +70,17 @@ public:
     bool is_initialized() const;
     
     /**
+     * @brief Check if IVFPQ index is trained (FAISS only)
+     * @return true if trained and ready for search, false otherwise
+     */
+    bool is_trained() const;
+    
+    /**
+     * @brief Get number of vectors waiting for training (FAISS only)
+     */
+    size_t training_buffer_size() const;
+    
+    /**
      * @brief Add a code snippet to the index
      * @param snippet The code text
      * @param metadata File path, line number, etc.
