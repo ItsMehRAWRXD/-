@@ -103,7 +103,7 @@ void AdaptiveFusionEngine::update_from_signal(
         if (signal == RawrXD::Telemetry::InteractionSignal::TAB_ACCEPT) {
             m_persona.tab_accepts++;
         } else if (signal == RawrXD::Telemetry::InteractionSignal::DISMISS ||
-                   signal == RawrXD::Telemetry::InteractionSignal::IGNORE) {
+                   signal == RawrXD::Telemetry::InteractionSignal::IGNORE_5S) {
             m_persona.dismissals++;
         }
         
@@ -134,7 +134,7 @@ double AdaptiveFusionEngine::signal_to_reward(RawrXD::Telemetry::InteractionSign
             return REWARD_ACCEPT;
         case RawrXD::Telemetry::InteractionSignal::DISMISS:
             return REWARD_DISMISS;
-        case RawrXD::Telemetry::InteractionSignal::IGNORE:
+        case RawrXD::Telemetry::InteractionSignal::IGNORE_5S:
             return REWARD_IGNORE;
         case RawrXD::Telemetry::InteractionSignal::EDIT_AFTER_ACCEPT:
             return REWARD_EDIT_AFTER;

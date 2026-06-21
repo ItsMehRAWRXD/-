@@ -21,7 +21,7 @@ namespace RawrXD::Telemetry {
  */
 enum class InteractionSignal {
     TAB_ACCEPT,           // User pressed Tab to accept suggestion
-    IGNORE,               // User continued typing without accepting
+    IGNORE_5S,            // User continued typing without accepting (5s timeout)
     DISMISS,              // User explicitly dismissed (Esc)
     EDIT_AFTER_ACCEPT     // User accepted then modified the result
 };
