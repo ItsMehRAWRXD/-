@@ -783,9 +783,9 @@ void MatrixMultiply_AVX512(const float* A, const float* B, float* C, uint64_t M,
 void MatrixMultiply_AVX512(const float* A, const float* B, float* C, uint64_t M, uint64_t K, uint64_t N)
 {
 #pragma omp parallel for collapse(2)
-    for (uint64_t i = 0; i < M; i++)
+    for (int64_t i = 0; i < static_cast<int64_t>(M); i++)
     {
-        for (uint64_t j = 0; j < N; j++)
+        for (int64_t j = 0; j < static_cast<int64_t>(N); j++)
         {
             float sum = 0.0f;
             for (uint64_t k = 0; k < K; k++)
