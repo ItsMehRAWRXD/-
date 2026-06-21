@@ -1659,6 +1659,30 @@ if(WIN32)
 endif()
 
 # =============================================================================
+# Phase 17C: Semantic Index Integration
+# =============================================================================
+option(RAWR_ENABLE_SEMANTIC_INDEX "Enable FAISS/HNSW semantic code indexing" ON)
+
+if(RAWR_ENABLE_SEMANTIC_INDEX)
+    message(STATUS "[Phase 17C] Semantic Index integration enabled")
+    add_subdirectory(src/semantic_index)
+    set(RAWR_HAS_SEMANTIC_INDEX ON)
+else()
+    message(STATUS "[Phase 17C] Semantic Index integration disabled")
+    set(RAWR_HAS_SEMANTIC_INDEX OFF)
+endif()
+
+# Phase 18A: Feedback Collection Infrastructure
+if(RAWR_ENABLE_TELEMETRY)
+    message(STATUS "[Phase 18A] Feedback Collection (Personalized Intent Tuning) enabled")
+    add_subdirectory(src/telemetry)
+    set(RAWR_HAS_TELEMETRY ON)
+else()
+    message(STATUS "[Phase 18A] Feedback Collection disabled")
+    set(RAWR_HAS_TELEMETRY OFF)
+endif()
+
+# =============================================================================
 # Reverse Engineering Suite (sub-module)
 # =============================================================================
 add_subdirectory(src)
