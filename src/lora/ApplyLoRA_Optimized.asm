@@ -246,6 +246,9 @@ skip_prefetch:
     ; Process this tile - INLINED from COMPUTE_LORA_TILE macro
     ; R12D = tile rows, R13D = rank, R14D = rank (preserved)
     
+    ; Set row counter for this tile
+    mov     r12d, TILE_SIZE_B     ; R12D = rows to process in this tile
+    
 tile_row_loop:
     cmp     r12d, 0
     jle     tile_complete

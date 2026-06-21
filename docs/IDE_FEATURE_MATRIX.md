@@ -1,7 +1,9 @@
 # RawrXD IDE - Comprehensive Feature Matrix
-**Version:** 1.0-PHASE23  
+**Version:** 1.0-PHASE25  
 **Last Updated:** 2026-06-21  
-**Total Source Files:** 5,189 (2,794 .cpp, 1,823 .h/.hpp, 572 .asm)
+**Total Source Files:** 5,200 (2,805 .cpp, 1,833 .h/.hpp, 572 .asm)  
+**Phase 24 Achievement:** The Cockpit - Full UI integration for debugging and diagnostics  
+**Phase 25 Achievement:** The Performance HUD - Real-time metrics visualization
 
 ---
 
@@ -247,7 +249,19 @@
 
 ---
 
-## 5. DEBUGGING (Phase 23 Complete)
+## 5. DEBUGGING (Phase 23-24 Complete)
+
+### 5.0 Debug UI (Phase 24 Complete)
+| Feature | Status | Implementation | Notes |
+|---------|--------|----------------|-------|
+| **Breakpoint Gutter** | ✅ Complete | ui/BreakpointsGutter.cpp | Click to toggle, visual indicators |
+| **Call Stack Panel** | ✅ Complete | ui/CallStackPanel.cpp | Frame navigation, symbols |
+| **Problems Panel** | ✅ Complete | ui/ProblemsPanel.cpp | LSP diagnostics display |
+| **Current Line Highlight** | ✅ Complete | ui/BreakpointsGutter.cpp | IP indicator (yellow arrow) |
+| **Diagnostic Squiggles** | ✅ Complete | ui/Win32IDE_UI_EventBridge.cpp | Underline errors/warnings |
+| **UI Event Bridge** | ✅ Complete | ui/Win32IDE_UI_EventBridge.cpp | Thread-safe backend→UI |
+| **Debug Toolbar** | ✅ Complete | RawrXD_IDE_Win32.cpp | Start/Stop/Step buttons |
+| **Debug Status Bar** | ✅ Complete | RawrXD_IDE_Win32.cpp | Debug state indicator |
 
 ### 5.1 Debugger Core
 | Feature | Status | Implementation | Notes |
@@ -430,7 +444,23 @@
 | **Quantization** | ✅ Complete | quantization/ | Q4, Q8, Q16 support |
 | **Flash Attention** | ✅ Complete | cs_rope_fused.hlsl | Fused attention |
 
-### 7.3 Monitoring
+### 7.3 Performance HUD (Phase 25 Complete)
+| Feature | Status | Implementation | Notes |
+|---------|--------|----------------|-------|
+| **Real-time Metrics** | ✅ Complete | ui/PerformanceHUD.cpp | Live telemetry display |
+| **Kernel Latency Display** | ✅ Complete | ui/PerformanceHUD.cpp | 23.80 µs visualization |
+| **Memory Bandwidth Graph** | ✅ Complete | ui/PerformanceHUD.cpp | GB/s time-series |
+| **TPS Counter** | ✅ Complete | ui/PerformanceHUD.cpp | Token throughput |
+| **GPU Utilization Gauge** | ✅ Complete | ui/PerformanceHUD.cpp | Circular percentage |
+| **CPU Utilization Gauge** | ✅ Complete | ui/PerformanceHUD.cpp | System CPU % |
+| **Historical Data** | ✅ Complete | ui/PerformanceHUD.cpp | 5-second rolling window |
+| **Severity Alerts** | ✅ Complete | ui/PerformanceHUD.cpp | Color-coded thresholds |
+| **Kernel Integration** | ✅ Complete | PerformanceHUD_KernelIntegration.h | Zero-overhead macros |
+| **Line Graph Widget** | ✅ Complete | ui/PerformanceHUD.cpp | Multi-metric charts |
+| **Digital Display Widget** | ✅ Complete | ui/PerformanceHUD.cpp | Large numeric readout |
+| **Gauge Widget** | ✅ Complete | ui/PerformanceHUD.cpp | Circular gauges |
+
+### 7.4 Monitoring
 | Feature | Status | Implementation | Notes |
 |---------|--------|----------------|-------|
 | **TSCMonitor** | ✅ Complete | TSCMonitor.cpp | RDTSC timing |

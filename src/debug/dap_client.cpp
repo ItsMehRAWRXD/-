@@ -878,11 +878,10 @@ DAPResult DAPClient::getVariables(uint32_t variablesReference, std::vector<DAPVa
 
 DAPResult DAPClient::setVariable(uint32_t variablesReference, const std::string& name,
                                   const std::string& value) {
-    json args = {
-        {"variablesReference", variablesReference},
-        {"name", name},
-        {"value", value}
-    };
+    json args = json::object();
+    args["variablesReference"] = variablesReference;
+    args["name"] = name;
+    args["value"] = value;
     
     uint32_t requestId;
     sendRequest("setVariable", args, requestId);
@@ -897,11 +896,10 @@ DAPResult DAPClient::setVariable(uint32_t variablesReference, const std::string&
 
 DAPResult DAPClient::evaluate(const std::string& expression, uint32_t frameId,
                                DAPVariable& outResult) {
-    json args = {
-        {"expression", expression},
-        {"frameId", frameId},
-        {"context", "watch"}
-    };
+    json args = json::object();
+    args["expression"] = expression;
+    args["frameId"] = frameId;
+    args["context"] = "watch";
     
     uint32_t requestId;
     sendRequest("evaluate", args, requestId);
@@ -951,7 +949,9 @@ DAPResult DAPClient::getThreads(std::vector<DAPThread>& outThreads) {
 // Modules
 // ============================================================================
 DAPResult DAPClient::getModules(std::vector<DAPModule>& outModules) {
-    json args = {{"startModule", 0}, {"moduleCount", 0}};  // 0 = all
+    json args = json::object();
+    args["startModule"] = 0;
+    args["moduleCount"] = 0;  // 0 = all
     
     uint32_t requestId;
     sendRequest("modules", args, requestId);
@@ -1005,11 +1005,10 @@ DAPResult DAPClient::getSource(uint32_t sourceReference, std::string& outContent
 // ============================================================================
 DAPResult DAPClient::disassemble(uint64_t address, uint32_t instructionCount,
                                   std::vector<std::string>& outInstructions) {
-    json args = {
-        {"memoryReference", std::to_string(address)},
-        {"instructionCount", instructionCount},
-        {"resolveSymbols", true}
-    };
+    json args = json::object();
+    args["memoryReference"] = std::to_string(address);
+    args["instructionCount"] = instructionCount;
+    args["resolveSymbols"] = true;
     
     uint32_t requestId;
     sendRequest("disassemble", args, requestId);
@@ -1035,11 +1034,10 @@ DAPResult DAPClient::disassemble(uint64_t address, uint32_t instructionCount,
 // Memory
 // ============================================================================
 DAPResult DAPClient::readMemory(uint64_t address, uint32_t count, std::vector<uint8_t>& outData) {
-    json args = {
-        {"memoryReference", std::to_string(address)},
-        {"offset", 0},
-        {"count", count}
-    };
+    json args = json::object();
+    args["memoryReference"] = std::to_string(address);
+    args["offset"] = 0;
+    args["count"] = count;
     
     uint32_t requestId;
     sendRequest("readMemory", args, requestId);
@@ -1065,11 +1063,10 @@ DAPResult DAPClient::writeMemory(uint64_t address, const std::vector<uint8_t>& d
     // Encode data as base64 (simplified)
     std::string base64Data;  // Would need proper base64 encoder
     
-    json args = {
-        {"memoryReference", std::to_string(address)},
-        {"offset", 0},
-        {"data", base64Data}
-    };
+    json args = json::object();
+    args["memoryReference"] = std::to_string(address);
+    args["offset"] = 0;
+    args["data"] = base64Data;
     
     uint32_t requestId;
     sendRequest("writeMemory", args, requestId);

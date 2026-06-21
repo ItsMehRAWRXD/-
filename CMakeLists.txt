@@ -451,7 +451,7 @@ if(RAWR_HAS_MASM)
 
         # Phase 21: LoRA Kernel Sources (CMake Build System Integration)
         src/lora/ApplyLoRA_Optimized.asm
-        src/lora/ApplyLoRA.asm
+        src/lora/ApplyLoRA_Clean.asm
         src/lora/LoRABeacon_MASM.asm
         src/lora/LoRABeaconChain_MASM.asm
         
@@ -4425,6 +4425,7 @@ if(WIN32)
         src/win32app/Win32IDE_ExpressionEvaluator.cpp
         src/win32app/Win32IDE_FuzzySearch.cpp
         src/win32app/Win32IDE_DAPServer.cpp
+        src/debug/dap_client.cpp
         src/win32app/Win32IDE_MissingActions.cpp
         src/agentic/StreamingResultChannel.cpp
 
