@@ -1,4 +1,5 @@
 #include "SemanticCodeIndex.h"
+#include "CodeEmbedder.h"
 
 #include <chrono>
 #include <algorithm>
@@ -20,7 +21,8 @@
 
 namespace rawrxd {
 
-// Simple embedding generator (stub - replace with ONNX Runtime in production)
+// Legacy SimpleEmbedder - kept for backward compatibility
+// New code should use CodeEmbedder for ONNX Runtime support
 class SimpleEmbedder {
 public:
     explicit SimpleEmbedder(int dim) : dimension(dim), rng(42) {}
