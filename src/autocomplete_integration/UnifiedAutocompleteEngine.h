@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <variant>
+#include <functional>  // Phase 17D.2: For telemetry callback
 
 // Forward declarations
 namespace rawrxd {
@@ -136,9 +137,22 @@ public:
         uint64_t trie_hits = 0;
         uint64_t semantic_hits = 0;
         uint64_t ast_hits = 0;
+        uint64_t hybrid_fusion_count = 0;  // Phase 17D.2: Both paths triggered
+        uint64_t timeout_count = 0;         // Phase 17D.2: Semantic search timeouts
         float avg_latency_ms = 0.0f;
+        float avg_trie_latency_ms = 0.0f;   // Phase 17D.2: Trie-only latency
+        float avg_semantic_latency_ms = 0.0f; // Phase 17D.2: Semantic-only latency
+        float cache_hit_rate = 0.0f;        // Phase 17D.2: Embedding cache efficiency
     };
     Stats get_stats() const;
+    
+    /**
+     * @brief Phase 17D.2: Export telemetry to external system
+     * @param callback Function to receive telemetry data
+     */
+    using TelemetryCallback = std::function<void(const Stats&)>;
+    void set_telemetry_callback(TelemetryCallback callback);
+    void flush_telemetry();
 
 private:
     struct Impl;

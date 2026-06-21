@@ -33,6 +33,11 @@ struct UnifiedAutocompleteEngine::Impl {
     float last_trie_latency_ms = 0.0f;
     float last_semantic_latency_ms = 0.0f;
     
+    // Phase 17D.2: Telemetry
+    TelemetryCallback telemetry_callback;
+    uint64_t cache_hits = 0;
+    uint64_t cache_misses = 0;
+    
     // Trie index (simplified - would connect to existing SymbolIndex)
     std::unordered_map<std::string, std::vector<std::string>> trie_index;
     
@@ -86,8 +91,11 @@ struct UnifiedAutocompleteEngine::Impl {
     std::vector<float> get_embedding(const std::string& context) {
         auto it = embedding_cache.find(context);
         if (it != embedding_cache.end()) {
+            cache_hits++;
             return it->second.embedding;
         }
+        
+        cache_misses++;
         
         // Compute new embedding
         std::vector<float> embedding;
@@ -262,13 +270,47 @@ std::vector<UnifiedCompletion> UnifiedAutocompleteEngine::get_completions(const 
     m_impl->stats.avg_latency_ms = (m_impl->stats.avg_latency_ms * (m_impl->stats.total_queries - 1) + 
                                        m_impl->last_latency_ms) / m_impl->stats.total_queries;
     
-    // Update hit counters
+    // Phase 17D.2: Update cache hit rate
+    uint64_t total_cache_ops = m_impl->cache_hits + m_impl->cache_misses;
+    if (total_cache_ops > 0) {
+        m_impl->stats.cache_hit_rate = static_cast<float>(m_impl->cache_hits) / total_cache_ops;
+    }
+    
+    // Update hit counters and track hybrid fusion
+    bool had_trie = false, had_semantic = false;
     for (const auto& r : results) {
         switch (r.source) {
-            case QueryType::FAST_PREFIX: m_impl->stats.trie_hits++; break;
-            case QueryType::SEMANTIC: m_impl->stats.semantic_hits++; break;
-            case QueryType::CONTEXT_AWARE: m_impl->stats.ast_hits++; break;
+            case QueryType::FAST_PREFIX: 
+                m_impl->stats.trie_hits++; 
+                had_trie = true;
+                break;
+            case QueryType::SEMANTIC: 
+                m_impl->stats.semantic_hits++; 
+                had_semantic = true;
+                break;
+            case QueryType::CONTEXT_AWARE: 
+                m_impl->stats.ast_hits++; 
+                break;
         }
+    }
+    
+    // Phase 17D.2: Track hybrid fusion (both trie and semantic contributed)
+    if (had_trie && had_semantic) {
+        m_impl->stats.hybrid_fusion_count++;
+    }
+    
+    // Phase 17D.2: Track timeouts
+    if (high_confidence_trie < MAX_TRIE_RESULTS) {
+        auto semantic_elapsed = std::chrono::steady_clock::now() - start;
+        auto semantic_ms = std::chrono::duration_cast<std::chrono::microseconds>(semantic_elapsed).count() / 1000.0f;
+        if (semantic_ms > LATENCY_BUDGET_MS) {
+            m_impl->stats.timeout_count++;
+        }
+    }
+    
+    // Phase 17D.2: Flush telemetry if callback registered
+    if (m_impl->telemetry_callback) {
+        m_impl->telemetry_callback(m_impl->stats);
     }
     
     return results;
@@ -494,6 +536,19 @@ float UnifiedAutocompleteEngine::get_last_latency_ms() const {
 
 UnifiedAutocompleteEngine::Stats UnifiedAutocompleteEngine::get_stats() const {
     return m_impl ? m_impl->stats : Stats{};
+}
+
+// Phase 17D.2: Telemetry callback implementation
+void UnifiedAutocompleteEngine::set_telemetry_callback(TelemetryCallback callback) {
+    if (m_impl) {
+        m_impl->telemetry_callback = callback;
+    }
+}
+
+void UnifiedAutocompleteEngine::flush_telemetry() {
+    if (m_impl && m_impl->telemetry_callback) {
+        m_impl->telemetry_callback(m_impl->stats);
+    }
 }
 
 } // namespace rawrxd
