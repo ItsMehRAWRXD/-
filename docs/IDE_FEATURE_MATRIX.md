@@ -1,5 +1,5 @@
 # RawrXD IDE - Comprehensive Feature Matrix
-**Version:** 1.0-PHASE20  
+**Version:** 1.0-PHASE21  
 **Last Updated:** 2026-06-21  
 **Total Source Files:** 5,189 (2,794 .cpp, 1,823 .h/.hpp, 572 .asm)
 
@@ -210,7 +210,7 @@
 | **Build Profiles** | ✅ Complete | CMakePresets.json | Debug, Release, RelWithDebInfo |
 | **Cross-Compilation** | 🟡 Partial | CMakeLists.txt | Basic support |
 
-### 4.2 MASM Integration
+### 4.2 MASM Integration (Phase 21 Complete)
 | Feature | Status | Implementation | Notes |
 |---------|--------|----------------|-------|
 | **ml64.exe Detection** | ✅ Complete | CMakeLists.txt | Auto-detects from VS environment |
@@ -218,7 +218,9 @@
 | **ASM Linking** | ✅ Complete | cmake/Phase21_HardenedMASM.cmake | Automatic linking to main target |
 | **CMake ASM Support** | ✅ Complete | cmake/Phase21_HardenedMASM.cmake | enable_language(ASM_MASM) hardened |
 | **IntelliSense for ASM** | 🟡 Partial | RawrXD_Lexer_MASM.cpp | Basic instruction list |
-| **ASM Error Parsing** | 🟡 Partial | CMake integration | Captured in build output |
+| **ASM Error Parsing** | ✅ Complete | build/ASM_Error_Parser.cpp | Full parser with explanations |
+| **LoRA Library Linkage** | ✅ Complete | CMakeLists.txt | rawrxd_lora linked to RawrEngine/Gold |
+| **Build Reproducibility** | ✅ Complete | CMakeLists.txt | Clone → cmake → working IDE |
 
 ### 4.3 Build Execution
 | Feature | Status | Implementation | Notes |
@@ -535,16 +537,15 @@
 ## 🎯 PRIORITY RECOMMENDATIONS
 
 ### P0 (Critical - Blocks Release)
-1. CMake MASM Integration - Fix build system debt
-2. LoRAContext Offset Verification - Ensure C++/ASM alignment
+1. ✅ ~~CMake MASM Integration~~ - **COMPLETE** (Phase 21)
+2. ✅ ~~LoRAContext Offset Verification~~ - **COMPLETE** (Phase 21)  
+3. ✅ ~~ASM Error Parsing~~ - **COMPLETE** (Phase 22)
+4. Debugger Backend Wiring - Complete CDB integration
 
 ### P1 (High - Major Impact)
-3. Debugger Backend Wiring - Complete CDB integration
-4. LSP Diagnostics Display - Hook to UI
-5. MASM IntelliSense - Basic completion
-
-### P2 (Medium - Nice to Have)
-6. Refactoring Tools - Complete rename/extract
+5. LSP Diagnostics Display - Hook to UI
+6. MASM IntelliSense - Basic completion
+7. Refactoring Tools - Complete rename/extract
 7. Advanced Editor - Multi-cursor, column select
 8. Live Share - Real-time collaboration
 
