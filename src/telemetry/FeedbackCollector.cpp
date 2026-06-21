@@ -70,6 +70,11 @@ FeedbackCollector::~FeedbackCollector() {
     shutdown();
 }
 
+void FeedbackCollector::SetHandler(FeedbackHandler handler) {
+    std::lock_guard<std::mutex> lock(m_handler_mutex);
+    m_handler = std::move(handler);
+}
+
 void FeedbackCollector::record(
     InteractionSignal signal,
     const std::string& context_hash,
@@ -114,6 +119,16 @@ size_t FeedbackCollector::flush_to_wal() {
         while (!m_queue.empty()) {
             batch.push_back(std::move(m_queue.front()));
             m_queue.pop();
+        }
+    }
+    
+    // Phase 18B: Invoke real-time handler before WAL flush
+    {
+        std::lock_guard<std::mutex> lock(m_handler_mutex);
+        if (m_handler) {
+            for (const auto& entry : batch) {
+                m_handler(entry);
+            }
         }
     }
     

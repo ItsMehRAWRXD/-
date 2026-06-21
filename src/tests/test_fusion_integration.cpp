@@ -47,7 +47,15 @@ void RunFusionIntegrationTest() {
             std::chrono::system_clock::now().time_since_epoch()).count();
         entry.edit_distance = 0;
         
-        collector.Record(entry);
+        collector.record(
+            entry.signal,
+            entry.context_hash,
+            "test_suggestion",
+            entry.trie_score,
+            entry.semantic_score,
+            entry.final_score,
+            entry.edit_distance
+        );
     }
 
     // 4. Wait for background worker to drain
