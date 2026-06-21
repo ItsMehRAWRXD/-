@@ -1,5 +1,6 @@
 # Completion Module - CMake Configuration
 # Phase 17C: CompletionRouter for hybrid Trie + Semantic search
+# Phase 18B: AdaptiveFusionEngine for self-tuning weights
 
 cmake_minimum_required(VERSION 3.20)
 
@@ -8,10 +9,14 @@ set(COMPLETION_MODULE completion)
 # Source files
 set(COMPLETION_SOURCES
     completion_router.cpp
+    AdaptiveFusionEngine.cpp
+    FeedbackListener.cpp
 )
 
 set(COMPLETION_HEADERS
     completion_router.h
+    AdaptiveFusionEngine.h
+    FeedbackListener.h
 )
 
 # Create the library

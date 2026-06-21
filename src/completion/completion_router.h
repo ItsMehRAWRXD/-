@@ -14,8 +14,9 @@ namespace rawrxd {
 
 namespace RawrXD {
 
-// Forward declaration for legacy Trie integration
+// Forward declarations
 class KeywordHashTable;
+class AdaptiveFusionEngine;  // Phase 18B: Self-tuning weights
 
 /**
  * @brief Editor context for completion requests
@@ -65,9 +66,11 @@ struct CompletionSuggestion {
  * - SemanticCodeIndex vector search (intent-aware)
  * - LSP symbol providers (language-aware)
  * 
+ * Phase 18B: Now uses AdaptiveFusionEngine for self-tuning weights
+ * 
  * Design goals:
  * - Thin mediator (minimal latency overhead)
- * - Configurable fusion weights
+ * - Configurable fusion weights (now adaptive)
  * - Graceful degradation (fallback chains)
  * - Thread-safe for IDE event loop
  */
@@ -76,8 +79,8 @@ public:
     /**
      * @brief Fusion weights for hybrid ranking
      * 
-     * Weights should sum to 1.0 for normalized scoring.
-     * Default: 60% semantic, 40% trie (semantic-first strategy)
+     * DEPRECATED: Use AdaptiveFusionEngine for dynamic weights
+     * These are used as initial values only.
      */
     struct FusionWeights {
         float trie_weight = 0.4f;
@@ -91,7 +94,7 @@ public:
     enum class Mode {
         TRIE_ONLY,           // Legacy behavior (baseline)
         SEMANTIC_ONLY,       // Pure vector search
-        HYBRID_FUSION,       // Weighted combination (default)
+        HYBRID_FUSION,       // Weighted combination (default, now adaptive)
         SMART_FALLBACK       // Auto-select based on query type
     };
 
@@ -127,7 +130,10 @@ public:
     bool has_semantic_index() const { return m_semantic_index != nullptr; }
 
     /**
-     * @brief Configure fusion weights
+     * @brief Configure fusion weights (initial values only)
+     * 
+     * Phase 18B: These are now initial values. Actual weights
+     * come from AdaptiveFusionEngine.
      */
     void set_weights(const FusionWeights& weights);
     FusionWeights get_weights() const { return m_weights; }
@@ -173,6 +179,16 @@ public:
     );
 
     /**
+     * @brief Report feedback for a suggestion
+     * 
+     * Phase 18B: Triggers AdaptiveFusionEngine learning
+     * 
+     * @param suggestion The accepted/rejected suggestion
+     * @param accepted true if user accepted, false if dismissed
+     */
+    void report_feedback(const CompletionSuggestion& suggestion, bool accepted);
+
+    /**
      * @brief Get performance statistics
      */
     struct Stats {
@@ -183,8 +199,12 @@ public:
         double avg_latency_ms = 0.0;
         double p95_latency_ms = 0.0;
         uint64_t budget_exceeded_count = 0;
+        
+        // Phase 18B: Adaptive learning stats
+        float current_alpha = 0.75f;
+        bool is_converged = false;
     };
-    Stats get_stats() const { return m_stats; }
+    Stats get_stats() const;
     void reset_stats() { m_stats = Stats{}; }
 
 private:
@@ -209,12 +229,8 @@ private:
     // Determine if query is suitable for semantic search
     bool should_use_semantic(std::string_view query) const;
     
-    // Normalize and combine scores
-    float calculate_fusion_score(
-        float trie_score,
-        float semantic_score,
-        Source source
-    ) const;
+    // Get current alpha from AdaptiveFusionEngine
+    float get_current_alpha() const;
 
 private:
     // Dependencies

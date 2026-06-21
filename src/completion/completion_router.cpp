@@ -1,4 +1,5 @@
 #include "completion_router.h"
+#include "AdaptiveFusionEngine.h"
 
 #include "../semantic_index/SemanticCodeIndex.h"
 #include "../KeywordHashTable.h"
@@ -76,16 +77,18 @@ bool CompletionRouter::initialize(
 }
 
 void CompletionRouter::set_weights(const FusionWeights& weights) {
-    // Validate weights sum to approximately 1.0
-    float total = weights.trie_weight + weights.semantic_weight + weights.lsp_weight;
-    if (std::abs(total - 1.0f) > 0.01f) {
-        // Normalize to sum to 1.0
-        m_weights.trie_weight = weights.trie_weight / total;
-        m_weights.semantic_weight = weights.semantic_weight / total;
-        m_weights.lsp_weight = weights.lsp_weight / total;
-    } else {
-        m_weights = weights;
-    }
+    // Phase 18B: These are now initial values only
+    // Actual weights come from AdaptiveFusionEngine
+    m_weights = weights;
+    
+    // Update AdaptiveFusionEngine initial alpha
+    AdaptiveFusionEngine::instance().reset();
+}
+
+float CompletionRouter::get_current_alpha() const {
+    // Phase 18B: Get dynamic alpha from AdaptiveFusionEngine
+    // Alpha = 0.0 means Pure Semantic, 1.0 means Pure Trie
+    return AdaptiveFusionEngine::instance().get_alpha();
 }
 
 std::vector<CompletionSuggestion> CompletionRouter::get_suggestions(
@@ -166,6 +169,11 @@ std::vector<CompletionSuggestion> CompletionRouter::get_suggestions(
         m_stats.p95_latency_ms = sorted[p95_idx];
     }
     
+    // Phase 18B: Update stats with current alpha
+    m_stats.current_alpha = get_current_alpha();
+    auto af_stats = AdaptiveFusionEngine::instance().get_stats();
+    m_stats.is_converged = af_stats.is_converged;
+    
     return results;
 }
 
@@ -205,6 +213,53 @@ std::vector<CompletionSuggestion> CompletionRouter::get_suggestions_with_budget(
     }
     
     return results;
+}
+
+void CompletionRouter::report_feedback(const CompletionSuggestion& suggestion, bool accepted) {
+    // Phase 18B: Map suggestion to feedback event and update AdaptiveFusionEngine
+    FeedbackEventType event_type = accepted ? FeedbackEventType::TAB_ACCEPT : FeedbackEventType::DISMISS;
+    
+    // Convert source to string
+    std::string source_str = "unknown";
+    switch (suggestion.source) {
+        case CompletionSuggestion::Source::TRIE_PREFIX:
+            source_str = "trie";
+            break;
+        case CompletionSuggestion::Source::SEMANTIC_INTENT:
+            source_str = "semantic";
+            break;
+        case CompletionSuggestion::Source::HYBRID_FUSION:
+            source_str = "hybrid";
+            break;
+        default:
+            break;
+    }
+    
+    // Create feedback event
+    FeedbackEvent event;
+    event.type = event_type;
+    event.suggestion_text = suggestion.text;
+    event.source = source_str;
+    event.suggestion_score = suggestion.relevance_score;
+    event.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    
+    // Send to FeedbackListener (which will update AdaptiveFusionEngine)
+    // Note: In real implementation, this would go through FeedbackCollector
+    // For now, we directly update the engine
+    float reward = accepted ? 1.0f : 0.0f;
+    
+    // Adjust reward based on source
+    float adjusted_reward = reward;
+    if (source_str == "semantic") {
+        adjusted_reward = 1.0f - reward;  // Invert: accept semantic = 0.0 alpha
+    } else if (source_str == "trie") {
+        adjusted_reward = reward;  // Keep as-is
+    } else {
+        adjusted_reward = 0.5f;  // Neutral for hybrid/unknown
+    }
+    
+    AdaptiveFusionEngine::instance().update_weights(adjusted_reward);
 }
 
 std::vector<CompletionSuggestion> CompletionRouter::query_trie(
@@ -288,6 +343,11 @@ std::vector<CompletionSuggestion> CompletionRouter::fuse_results(
     std::vector<CompletionSuggestion> fused;
     fused.reserve(trie_results.size() + semantic_results.size());
     
+    // Phase 18B: Get dynamic alpha from AdaptiveFusionEngine
+    float alpha = get_current_alpha();  // 0.0 = Pure Semantic, 1.0 = Pure Trie
+    float trie_weight = alpha;
+    float semantic_weight = 1.0f - alpha;
+    
     // Normalize scores within each result set
     auto trie_normalized = trie_results;
     auto semantic_normalized = semantic_results;
@@ -295,15 +355,15 @@ std::vector<CompletionSuggestion> CompletionRouter::fuse_results(
     normalize_scores(trie_normalized);
     normalize_scores(semantic_normalized);
     
-    // Apply fusion weights and combine
+    // Apply dynamic weights and combine
     for (auto& s : trie_normalized) {
-        s.relevance_score *= m_weights.trie_weight;
+        s.relevance_score *= trie_weight;
         s.source = CompletionSuggestion::Source::HYBRID_FUSION;
         fused.push_back(s);
     }
     
     for (auto& s : semantic_normalized) {
-        s.relevance_score *= m_weights.semantic_weight;
+        s.relevance_score *= semantic_weight;
         s.source = CompletionSuggestion::Source::HYBRID_FUSION;
         fused.push_back(s);
     }
@@ -347,22 +407,13 @@ bool CompletionRouter::should_use_semantic(std::string_view query) const {
     return has_natural_language || (query.length() >= 5 && !looks_like_symbol);
 }
 
-float CompletionRouter::calculate_fusion_score(
-    float trie_score,
-    float semantic_score,
-    Source source) const {
-    
-    switch (source) {
-        case Source::TRIE_PREFIX:
-            return trie_score * m_weights.trie_weight;
-        case Source::SEMANTIC_INTENT:
-            return semantic_score * m_weights.semantic_weight;
-        case Source::HYBRID_FUSION:
-            // Already fused - return as-is
-            return (trie_score + semantic_score) / 2.0f;
-        default:
-            return trie_score;
-    }
+CompletionRouter::Stats CompletionRouter::get_stats() const {
+    // Phase 18B: Include adaptive learning stats
+    Stats stats = m_stats;
+    auto af_stats = AdaptiveFusionEngine::instance().get_stats();
+    stats.current_alpha = af_stats.current_alpha;
+    stats.is_converged = af_stats.is_converged;
+    return stats;
 }
 
 } // namespace RawrXD
