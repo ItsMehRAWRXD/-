@@ -8,12 +8,19 @@
 #include <condition_variable>
 #include <functional>
 #include <chrono>
+#include <memory>
+
+// Forward declarations for LoRAContext beacon
+namespace RawrXD::MASM {
+    struct LoRAContext;
+}
 
 namespace RawrXD {
 
 // Forward declarations
 struct AdapterWeights;
 class AdapterRegistry;
+struct AdapterState;
 
 // Training sample from WAL (Write-Ahead Log) of user interactions
 struct TrainingSample {
@@ -39,6 +46,10 @@ struct AdapterTrainerConfig {
     bool use_lr_decay = true;
     float lr_decay_rate = 0.95f;
     uint32_t lr_decay_steps = 10;
+    
+    // Phase 18C.3: Shadow buffer config
+    uint32_t beacon_swap_interval = 50;   // Steps between beacon swaps
+    bool use_shadow_buffer = true;          // Enable atomic swap pattern
 };
 
 // Training progress callback
@@ -49,8 +60,21 @@ using TrainingCallback = std::function<void(
     bool is_complete
 )>;
 
+// Phase 18C.3: Shadow buffer for thread-safe updates
+struct ShadowBuffer {
+    std::vector<float> matrix_A;           // Shadow A matrix
+    std::vector<float> matrix_B;           // Shadow B matrix
+    std::atomic<bool> ready{false};        // Ready for beacon swap
+    uint32_t version = 0;                   // Version counter
+    
+    void allocate(uint32_t rank, uint32_t hidden_dim);
+    void copy_from(const std::vector<float>& A, const std::vector<float>& B);
+    void swap_to_loRAContext(MASM::LoRAContext* context, float alpha);
+};
+
 // Background trainer for LoRA adapters
 // Implements SGD with momentum for updating A and B matrices
+// Phase 18C.3: Shadow-buffer pattern for MASM beacon integration
 class AdapterTrainer {
 public:
     AdapterTrainer();
@@ -80,6 +104,7 @@ public:
         uint64_t samples_processed = 0;
         uint64_t samples_queued = 0;
         bool is_converged = false;
+        uint32_t beacon_swaps = 0;        // Phase 18C.3: Swap counter
     };
     Metrics get_metrics() const;
     
@@ -91,12 +116,24 @@ public:
     
     // Load checkpoint for continued training
     bool load_checkpoint(const std::string& name);
+    
+    // Phase 18C.3: Force immediate beacon swap
+    bool force_beacon_swap();
+    
+    // Phase 18C.3: Get shadow buffer pointer (for debugging)
+    const ShadowBuffer* get_shadow_buffer() const { return m_shadow_buffer.get(); }
 
 private:
     void training_loop(const std::string& target_name);
     
     // SGD update step
     void update_weights(const std::vector<TrainingSample>& batch);
+    
+    // Phase 18C.3: Shadow buffer operations
+    void initialize_shadow_buffer();
+    void sync_to_shadow();
+    void perform_beacon_swap();
+    bool is_shadow_ready() const;
     
     // Compute loss for a batch
     float compute_loss(const std::vector<TrainingSample>& batch);
@@ -150,6 +187,12 @@ private:
     
     // Checkpoint directory
     std::filesystem::path m_checkpoint_dir;
+    
+    // Phase 18C.3: Shadow buffer for atomic beacon swaps
+    std::unique_ptr<ShadowBuffer> m_shadow_buffer;
+    mutable std::mutex m_shadow_mutex;
+    MASM::LoRAContext* m_lora_context = nullptr;  // Beacon pointer
+    uint32_t m_steps_since_swap = 0;
 };
 
 // Factory for creating pre-configured trainers

@@ -1,5 +1,7 @@
 #include "AdapterTrainer.h"
 #include "AdapterRegistry.h"
+#include "LoRAAdapterManager.h"
+#include "../fusion/kernels/LoRAContext.h"
 #include <random>
 #include <cmath>
 #include <fstream>
@@ -7,6 +9,37 @@
 #include <algorithm>
 
 namespace RawrXD {
+
+// ============================================================================
+// ShadowBuffer Implementation (Phase 18C.3)
+// ============================================================================
+
+void ShadowBuffer::allocate(uint32_t rank, uint32_t hidden_dim) {
+    matrix_A.resize(rank * hidden_dim);
+    matrix_B.resize(hidden_dim * rank);
+    ready.store(false);
+}
+
+void ShadowBuffer::copy_from(const std::vector<float>& A, const std::vector<float>& B) {
+    matrix_A = A;
+    matrix_B = B;
+    version++;
+}
+
+void ShadowBuffer::swap_to_loRAContext(MASM::LoRAContext* context, float alpha) {
+    if (!context || matrix_A.empty() || matrix_B.empty()) return;
+    
+    // Update context pointers atomically
+    context->alpha = alpha;
+    context->matrix_A = matrix_A.data();
+    context->matrix_B = matrix_B.data();
+    
+    // Memory fence to ensure ordering
+    _mm_sfence();
+    
+    // Mark as active
+    context->active = 1;
+}
 
 // ============================================================================
 // AdapterTrainer Implementation
@@ -30,6 +63,11 @@ AdapterTrainer::~AdapterTrainer() {
 void AdapterTrainer::initialize(const AdapterTrainerConfig& config) {
     m_config = config;
     initialize_weights();
+    
+    // Phase 18C.3: Initialize shadow buffer if enabled
+    if (m_config.use_shadow_buffer) {
+        initialize_shadow_buffer();
+    }
 }
 
 void AdapterTrainer::initialize_weights() {
@@ -49,6 +87,75 @@ void AdapterTrainer::initialize_weights() {
     // Initialize B: hidden_dim x rank (start with zeros for stability)
     m_B.resize(m_config.hidden_dim * m_config.rank, 0.0f);
     
+    // Phase 18C.3: Initialize shadow buffer
+    if (m_shadow_buffer) {
+        m_shadow_buffer->allocate(m_config.rank, m_config.hidden_dim);
+        m_shadow_buffer->copy_from(m_A, m_B);
+    }
+}
+
+// Phase 18C.3: Shadow buffer initialization
+void AdapterTrainer::initialize_shadow_buffer() {
+    m_shadow_buffer = std::make_unique<ShadowBuffer>();
+    m_shadow_buffer->allocate(m_config.rank, m_config.hidden_dim);
+    
+    // Get or create LoRAContext beacon
+    auto& beacon_mgr = MASM::LoRABeaconManager::instance();
+    if (!beacon_mgr.isActive()) {
+        // Create a new context for this trainer
+        static MASM::LoRAContext context{};
+        context.alpha = m_config.learning_rate * 100; // Scaling factor
+        context.rank = m_config.rank;
+        context.input_dim = m_config.hidden_dim;
+        context.flags = MASM::LoRAContext::FLAG_VALID | 
+                       MASM::LoRAContext::FLAG_READY |
+                       MASM::LoRAContext::FLAG_FMA3;
+        beacon_mgr.updateBeacon(&context);
+        m_lora_context = &context;
+    } else {
+        m_lora_context = const_cast<MASM::LoRAContext*>(beacon_mgr.getContext());
+    }
+}
+
+// Phase 18C.3: Sync training weights to shadow buffer
+void AdapterTrainer::sync_to_shadow() {
+    if (!m_shadow_buffer || !m_config.use_shadow_buffer) return;
+    
+    std::lock_guard<std::mutex> lock(m_shadow_mutex);
+    m_shadow_buffer->copy_from(m_A, m_B);
+    m_shadow_buffer->ready.store(true);
+}
+
+// Phase 18C.3: Perform atomic beacon swap
+void AdapterTrainer::perform_beacon_swap() {
+    if (!m_shadow_buffer || !m_lora_context) return;
+    
+    std::lock_guard<std::mutex> lock(m_shadow_mutex);
+    if (m_shadow_buffer->ready.load()) {
+        m_shadow_buffer->swap_to_loRAContext(m_lora_context, 16.0f); // alpha=16.0
+        m_shadow_buffer->ready.store(false);
+        
+        // Update metrics
+        std::lock_guard<std::mutex> metrics_lock(m_metrics_mutex);
+        m_metrics.beacon_swaps++;
+    }
+}
+
+// Phase 18C.3: Check if shadow is ready
+bool AdapterTrainer::is_shadow_ready() const {
+    return m_shadow_buffer && m_shadow_buffer->ready.load();
+}
+
+// Phase 18C.3: Force immediate beacon swap
+bool AdapterTrainer::force_beacon_swap() {
+    if (!m_config.use_shadow_buffer) return false;
+    
+    sync_to_shadow();
+    perform_beacon_swap();
+    return true;
+}
+
+void AdapterTrainer::initialize_momentum_buffers() {
     // Initialize momentum buffers
     m_velocity_A.resize(m_A.size(), 0.0f);
     m_velocity_B.resize(m_B.size(), 0.0f);
@@ -139,6 +246,20 @@ void AdapterTrainer::training_loop(const std::string& target_name) {
         
         // SGD update
         update_weights(batch);
+        
+        // Phase 18C.3: Shadow buffer sync and beacon swap
+        if (m_config.use_shadow_buffer) {
+            m_steps_since_swap++;
+            
+            // Sync to shadow buffer
+            sync_to_shadow();
+            
+            // Perform beacon swap at interval
+            if (m_steps_since_swap >= m_config.beacon_swap_interval) {
+                perform_beacon_swap();
+                m_steps_since_swap = 0;
+            }
+        }
         
         // Update learning rate with decay
         if (m_config.use_lr_decay && epoch > 0 && epoch % m_config.lr_decay_steps == 0) {
