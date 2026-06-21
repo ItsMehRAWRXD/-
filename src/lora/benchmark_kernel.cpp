@@ -13,10 +13,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include <math>
+#include <cmath>
 #include <intrin.h>
 #include <vector>
 #include <chrono>
+#include <algorithm>
+#include <numeric>
 
 // Align to 64 bytes for AVX-512 compatibility
 #define ALIGN64 __declspec(align(64))
@@ -130,7 +132,7 @@ void reference_lora_compute(
     float scale
 ) {
     // Copy base output
-    std::memcpy(result, base_output, hidden_dim * sizeof(float));
+    memcpy(result, base_output, hidden_dim * sizeof(float));
     
     // Compute temp = A * input (rank x 1)
     std::vector<float> temp(rank, 0.0f);
