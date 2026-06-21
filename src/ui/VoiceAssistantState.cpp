@@ -2,9 +2,10 @@
 // Sprint 02: UI/UX Enhancement
 // ============================================================================
 
-#include "VoiceAssistantState.hpp"
 #include <Windows.h>
+#include <objidl.h>
 #include <gdiplus.h>
+#include "ui/VoiceAssistantState.hpp"
 
 #pragma comment(lib, "gdiplus.lib")
 
@@ -185,8 +186,10 @@ bool VoiceAssistantRenderer::initialize(HWND hwnd) {
     // Initialize GDI+
     GdiplusStartupInput input;
     GdiplusStartupOutput output;
-    GdiplusStartupInput(&input);
     input.GdiplusVersion = 1;
+    input.DebugEventCallback = nullptr;
+    input.SuppressBackgroundThread = FALSE;
+    input.SuppressExternalCodecs = FALSE;
     
     GdiplusStartup(&m_gdiplusToken, &input, &output);
     
@@ -351,7 +354,7 @@ void VoiceAssistantRenderer::drawStatusText(HDC hdc, const RECT& rect, const std
     SetTextColor(hdc, color);
     SetBkMode(hdc, TRANSPARENT);
     
-    HFONT font = CreateFont(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    HFONT font = CreateFontW(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
     
@@ -361,7 +364,7 @@ void VoiceAssistantRenderer::drawStatusText(HDC hdc, const RECT& rect, const std
     textRect.top = rect.bottom - 80;
     textRect.bottom = rect.bottom - 50;
     
-    DrawText(hdc, text.c_str(), -1, &textRect, 
+    DrawTextW(hdc, text.c_str(), -1, &textRect, 
         DT_CENTER | DT_VCENTER | DT_SINGLELINE);
     
     SelectObject(hdc, oldFont);

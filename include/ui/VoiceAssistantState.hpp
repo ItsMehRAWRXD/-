@@ -8,6 +8,11 @@
 #include <functional>
 #include <string>
 
+// Undefine Windows ERROR macro to avoid conflict with enum class
+#ifdef ERROR
+#undef ERROR
+#endif
+
 namespace RawrXD {
 namespace UI {
 
@@ -135,6 +140,7 @@ private:
     void* m_graphics; // Gdiplus::Graphics*
     void* m_font;     // Gdiplus::Font*
     void* m_brush;    // Gdiplus::SolidBrush*
+    ULONG_PTR m_gdiplusToken; // GDI+ initialization token
     
     // Animation resources
     COLORREF m_idleColor;

@@ -3614,6 +3614,7 @@ if(WIN32)
         src/win32app/Win32IDE_ComposerPanel.cpp
         src/win32app/Win32IDE_TabManager.cpp
         src/ui/advanced_docking_system.cpp
+        src/ui/VoiceAssistantState.cpp
         src/kv_cache/kv_cache_fp8_quantizer.cpp
         src/inference/token_pipeline_double_buffer.cpp
         src/speculative/speculative_fused_verify.cpp
