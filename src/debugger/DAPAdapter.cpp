@@ -346,11 +346,163 @@ void DAPAdapter::Impl::HandleDisconnect(int seq) {
     shutdown_ = true;
 }
 
+// Simple line-to-address mapping for Victim.exe
+// In production, this would use PDB/DWARF symbol information
+struct LineMapping {
+    std::wstring fileName;
+    uint32_t line;
+    uint64_t address;
+    const char* symbolName;
+};
+
+// Known breakpoint locations in Victim.exe
+// These would normally come from symbol parsing
+static const LineMapping g_lineMappings[] = {
+    {L"Victim.asm", 25, 0x140001000, "__bp_entry_point"},
+    {L"Victim.asm", 35, 0x140001020, "__bp_loop_start"},
+    {L"Victim.asm", 45, 0x140001040, "__bp_loop_body"},
+    {L"Victim.asm", 55, 0x140001060, "__bp_exit_point"},
+};
+
+// Extract source path from setBreakpoints request
+std::wstring ExtractSourcePath(const std::string& json) {
+    auto pos = json.find("\"source\":");
+    if (pos == std::string::npos) return L"";
+    
+    auto pathPos = json.find("\"path\":");
+    if (pathPos == std::string::npos) return L"";
+    
+    pathPos = json.find("\"", pathPos + 7);
+    if (pathPos == std::string::npos) return L"";
+    
+    auto endPos = json.find("\"", pathPos + 1);
+    if (endPos == std::string::npos) return L"";
+    
+    std::string path = json.substr(pathPos + 1, endPos - pathPos - 1);
+    
+    // Convert to wide string
+    int len = MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, nullptr, 0);
+    std::wstring wpath(len, 0);
+    MultiByteToWideChar(CP_UTF8, 0, path.c_str(), -1, &wpath[0], len);
+    return wpath;
+}
+
+// Extract breakpoints array from request
+std::vector<std::pair<uint32_t, std::string>> ExtractBreakpoints(const std::string& json) {
+    std::vector<std::pair<uint32_t, std::string>> result;
+    
+    auto pos = json.find("\"breakpoints\":");
+    if (pos == std::string::npos) return result;
+    
+    // Simple parsing - look for line numbers in the array
+    pos = json.find("[", pos);
+    if (pos == std::string::npos) return result;
+    
+    auto endPos = json.find("]", pos);
+    if (endPos == std::string::npos) return result;
+    
+    std::string arrayContent = json.substr(pos + 1, endPos - pos - 1);
+    
+    // Find all "line":N entries
+    size_t linePos = 0;
+    while ((linePos = arrayContent.find("\"line\":", linePos)) != std::string::npos) {
+        linePos += 7;
+        
+        // Skip whitespace
+        while (linePos < arrayContent.size() && isspace(arrayContent[linePos])) linePos++;
+        
+        // Parse number
+        uint32_t lineNum = 0;
+        while (linePos < arrayContent.size() && isdigit(arrayContent[linePos])) {
+            lineNum = lineNum * 10 + (arrayContent[linePos] - '0');
+            linePos++;
+        }
+        
+        // Look for condition
+        std::string condition;
+        auto condPos = arrayContent.find("\"condition\":", linePos);
+        if (condPos != std::string::npos && condPos < arrayContent.find("}", linePos)) {
+            condPos = arrayContent.find("\"", condPos + 12);
+            if (condPos != std::string::npos) {
+                auto condEnd = arrayContent.find("\"", condPos + 1);
+                if (condEnd != std::string::npos) {
+                    condition = arrayContent.substr(condPos + 1, condEnd - condPos - 1);
+                }
+            }
+        }
+        
+        result.push_back({lineNum, condition});
+    }
+    
+    return result;
+}
+
+// Map line number to address
+uint64_t MapLineToAddress(const std::wstring& filePath, uint32_t line) {
+    // Extract filename from path
+    size_t lastSlash = filePath.find_last_of(L"\\/");
+    std::wstring fileName = (lastSlash != std::wstring::npos) 
+        ? filePath.substr(lastSlash + 1) 
+        : filePath;
+    
+    for (const auto& mapping : g_lineMappings) {
+        if (mapping.fileName == fileName && mapping.line == line) {
+            return mapping.address;
+        }
+    }
+    
+    return 0; // Not found
+}
+
 void DAPAdapter::Impl::HandleSetBreakpoints(int seq, const std::string& json) {
-    // Minimal implementation - just acknowledge
+    std::wstring sourcePath = ExtractSourcePath(json);
+    auto breakpoints = ExtractBreakpoints(json);
+    
+    std::vector<std::string> breakpointResponses;
+    uint64_t bpId = 1;
+    
+    for (const auto& bp : breakpoints) {
+        uint32_t line = bp.first;
+        const std::string& condition = bp.second;
+        
+        // Map line to address
+        uint64_t address = MapLineToAddress(sourcePath, line);
+        bool verified = false;
+        std::string message;
+        
+        if (address != 0 && debugSession_) {
+            // Set the breakpoint in the debug session
+            if (debugSession_->SetBreakpoint(address, condition)) {
+                verified = true;
+            } else {
+                message = "Failed to set breakpoint at this location";
+            }
+        } else if (address == 0) {
+            message = "Line number not found in symbol table";
+        }
+        
+        // Build breakpoint response
+        std::vector<std::pair<std::string, std::string>> fields;
+        fields.push_back({"id", JSON::Number(bpId++)});
+        fields.push_back({"verified", JSON::Bool(verified)});
+        fields.push_back({"line", JSON::Number(line)});
+        
+        if (!message.empty()) {
+            fields.push_back({"message", JSON::String(message)});
+        }
+        
+        if (verified) {
+            fields.push_back({"instructionReference", JSON::String(
+                "0x" + std::to_string(address))});
+        }
+        
+        breakpointResponses.push_back(JSON::MakeObject(fields));
+    }
+    
     std::string body = JSON::MakeObject({
-        {"breakpoints", "[]"}
+        {"breakpoints", JSON::MakeArray(breakpointResponses)}
     });
+    
     SendResponse(seq, "setBreakpoints", body);
 }
 
