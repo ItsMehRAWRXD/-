@@ -239,25 +239,45 @@ struct PendingInferenceRequest
     std::function<void(const std::string&, bool)> callback;
 };
 
-std::mutex g_pendingInferenceMutex;
+std::mutex* g_pendingInferenceMutex = nullptr;
 std::unordered_map<Win32IDE*, std::deque<PendingInferenceRequest>> g_pendingInferenceByIde;
 constexpr size_t kMaxPendingInferenceRequestsPerIde = 16;
 
-std::mutex g_chatUtf8CarryMutex;
+std::mutex* g_chatUtf8CarryMutex = nullptr;
 std::unordered_map<Win32IDE*, std::string> g_chatUtf8CarryByIde;
-std::mutex g_chatInputBufferMutex;
+std::mutex* g_chatInputBufferMutex = nullptr;
 
 /// Embedded in editor /fix chat prompt and matched in `HandleCopilotSend` to arm JSON diff consumption.
 constexpr const char kStructuredSlashFixPromptMarker[] = "Respond with ONLY a JSON object";
 
-std::mutex g_terminalCallbackLivenessMutex;
+std::mutex* g_terminalCallbackLivenessMutex = nullptr;
 std::unordered_map<Win32IDE*, std::weak_ptr<std::atomic<bool>>> g_terminalCallbackLivenessByIde;
+
+// Helper functions to safely get mutexes
+std::mutex* GetPendingInferenceMutex() {
+    if (!g_pendingInferenceMutex) g_pendingInferenceMutex = new (std::nothrow) std::mutex();
+    return g_pendingInferenceMutex;
+}
+std::mutex* GetChatUtf8CarryMutex() {
+    if (!g_chatUtf8CarryMutex) g_chatUtf8CarryMutex = new (std::nothrow) std::mutex();
+    return g_chatUtf8CarryMutex;
+}
+std::mutex* GetChatInputBufferMutex() {
+    if (!g_chatInputBufferMutex) g_chatInputBufferMutex = new (std::nothrow) std::mutex();
+    return g_chatInputBufferMutex;
+}
+std::mutex* GetTerminalCallbackLivenessMutex() {
+    if (!g_terminalCallbackLivenessMutex) g_terminalCallbackLivenessMutex = new (std::nothrow) std::mutex();
+    return g_terminalCallbackLivenessMutex;
+}
 
 std::shared_ptr<std::atomic<bool>> AcquireTerminalCallbackLiveness(Win32IDE* ide)
 {
     if (!ide)
         return nullptr;
-    std::lock_guard<std::mutex> lock(g_terminalCallbackLivenessMutex);
+    std::mutex* mtx = GetTerminalCallbackLivenessMutex();
+    if (!mtx) return nullptr;
+    std::lock_guard<std::mutex> lock(*mtx);
     auto it = g_terminalCallbackLivenessByIde.find(ide);
     if (it != g_terminalCallbackLivenessByIde.end())
     {
@@ -276,7 +296,9 @@ inline bool IsTerminalCallbackOwnerAlive(const std::shared_ptr<std::atomic<bool>
 
 void ClearTerminalCallbackLiveness(Win32IDE* ide)
 {
-    std::lock_guard<std::mutex> lock(g_terminalCallbackLivenessMutex);
+    std::mutex* mtx = GetTerminalCallbackLivenessMutex();
+    if (!mtx) return;
+    std::lock_guard<std::mutex> lock(*mtx);
     auto it = g_terminalCallbackLivenessByIde.find(ide);
     if (it != g_terminalCallbackLivenessByIde.end())
     {
@@ -338,13 +360,17 @@ size_t FindUtf8PendingStart(const std::string& text)
 
 void ClearChatUtf8Carry(Win32IDE* ide)
 {
-    std::lock_guard<std::mutex> lock(g_chatUtf8CarryMutex);
+    std::mutex* mtx = GetChatUtf8CarryMutex();
+    if (!mtx) return;
+    std::lock_guard<std::mutex> lock(*mtx);
     g_chatUtf8CarryByIde.erase(ide);
 }
 
 size_t EnqueuePendingInference(Win32IDE* ide, PendingInferenceRequest&& req)
 {
-    std::lock_guard<std::mutex> lock(g_pendingInferenceMutex);
+    std::mutex* mtx = GetPendingInferenceMutex();
+    if (!mtx) return 0;
+    std::lock_guard<std::mutex> lock(*mtx);
     auto& q = g_pendingInferenceByIde[ide];
     if (q.size() >= kMaxPendingInferenceRequestsPerIde)
     {
@@ -356,7 +382,9 @@ size_t EnqueuePendingInference(Win32IDE* ide, PendingInferenceRequest&& req)
 
 bool DequeuePendingInference(Win32IDE* ide, PendingInferenceRequest& out)
 {
-    std::lock_guard<std::mutex> lock(g_pendingInferenceMutex);
+    std::mutex* mtx = GetPendingInferenceMutex();
+    if (!mtx) return false;
+    std::lock_guard<std::mutex> lock(*mtx);
     auto it = g_pendingInferenceByIde.find(ide);
     if (it == g_pendingInferenceByIde.end() || it->second.empty())
     {
@@ -373,7 +401,9 @@ bool DequeuePendingInference(Win32IDE* ide, PendingInferenceRequest& out)
 
 void ClearPendingInference(Win32IDE* ide)
 {
-    std::lock_guard<std::mutex> lock(g_pendingInferenceMutex);
+    std::mutex* mtx = GetPendingInferenceMutex();
+    if (!mtx) return;
+    std::lock_guard<std::mutex> lock(*mtx);
     g_pendingInferenceByIde.erase(ide);
 }
 
@@ -1316,7 +1346,9 @@ static std::string normalizeChatUtf8Chunk(Win32IDE* ide, const std::string& chun
 
     std::string combined;
     {
-        std::lock_guard<std::mutex> lock(g_chatUtf8CarryMutex);
+        std::mutex* mtx = GetChatUtf8CarryMutex();
+        if (!mtx) return sanitizeForChatUi(chunk);
+        std::lock_guard<std::mutex> lock(*mtx);
         auto& carry = g_chatUtf8CarryByIde[ide];
         combined.reserve(carry.size() + chunk.size());
         combined.append(carry);
@@ -2651,16 +2683,23 @@ void Win32IDE::recreateFonts()
 
 void Win32IDE::createEditor(HWND hwnd)
 {
+    // Get parent size for initial editor dimensions
+    RECT rcParent;
+    GetClientRect(hwnd, &rcParent);
+    int initialWidth = (rcParent.right - rcParent.left) > 0 ? (rcParent.right - rcParent.left) : 800;
+    int initialHeight = (rcParent.bottom - rcParent.top) > 0 ? (rcParent.bottom - rcParent.top) : 600;
 
     m_hwndEditor = CreateWindowExW(WS_EX_CLIENTEDGE, RICHEDIT_CLASSW, L"",
                                    WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL |
                                        ES_AUTOHSCROLL | ES_WANTRETURN,
-                                   0, 0, 0, 0, hwnd, (HMENU)IDC_EDITOR, m_hInstance, nullptr);
+                                   0, 0, initialWidth, initialHeight, hwnd, (HMENU)IDC_EDITOR, m_hInstance, nullptr);
     if (!m_hwndEditor)
     {
-
+        LOG_ERROR("Failed to create editor control");
         return;
     }
+
+    LOG_INFO("Editor created: " + std::to_string(initialWidth) + "x" + std::to_string(initialHeight));
 
     m_currentDpi = getDpi();
     recreateFonts();
@@ -5661,6 +5700,10 @@ LRESULT CALLBACK Win32IDE::FloatingPanelProc(HWND hwnd, UINT uMsg, WPARAM wParam
 
     switch (uMsg)
     {
+        case WM_ERASEBKGND:
+            // Prevent flicker - we handle all painting in WM_PAINT
+            return 1;
+
         case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -7026,18 +7069,39 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
             const std::wstring driveRoot(p);
             const std::string drivePath = wideToUtf8(driveRoot);
 
-            tvis.item.pszText = const_cast<wchar_t*>(driveRoot.c_str());
-            tvis.item.lParam = (LPARAM) new std::string(drivePath);
+            // Store display name persistently to avoid dangling pointer
+            TVINSERTSTRUCTW tvisLocal = {};
+            tvisLocal.hParent = TVI_ROOT;
+            tvisLocal.hInsertAfter = TVI_LAST;
+            tvisLocal.item.mask = TVIF_TEXT | TVIF_PARAM;
+            
+            // Insert first to get the handle, then store the display name
+            tvisLocal.item.pszText = const_cast<wchar_t*>(driveRoot.c_str());  // Temporarily use local string
+            tvisLocal.item.lParam = (LPARAM) new std::string(drivePath);
 
-            HTREEITEM driveItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
-            m_treeItemPaths[driveItem] = drivePath;
+            HTREEITEM driveItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvisLocal);
+            
+            if (driveItem)
+            {
+                // Now store the display name persistently with the correct key
+                m_treeItemDisplayNames[driveItem] = driveRoot;
+                
+                // Update the tree item to point to the persistent string
+                TVITEMW updateItem = {};
+                updateItem.mask = TVIF_TEXT;
+                updateItem.hItem = driveItem;
+                updateItem.pszText = const_cast<wchar_t*>(m_treeItemDisplayNames[driveItem].c_str());
+                TreeView_SetItem(m_hwndFileTree, &updateItem);
+                
+                m_treeItemPaths[driveItem] = drivePath;
 
-            TVINSERTSTRUCTW dummyVis = {};
-            dummyVis.hParent = driveItem;
-            dummyVis.item.mask = TVIF_TEXT;
-            static wchar_t s_ellipsis[] = L"...";
-            dummyVis.item.pszText = s_ellipsis;
-            SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+                TVINSERTSTRUCTW dummyVis = {};
+                dummyVis.hParent = driveItem;
+                dummyVis.item.mask = TVIF_TEXT;
+                static wchar_t s_ellipsis[] = L"...";
+                dummyVis.item.pszText = s_ellipsis;
+                SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+            }
         }
         return;
     }
@@ -7078,30 +7142,64 @@ void Win32IDE::populateFileTree(HTREEITEM parentItem, const std::string& path)
             }
 
             std::string fullPath = path + "\\" + findData.cFileName;
+            wchar_t wbuf[MAX_PATH];
             MultiByteToWideChar(CP_ACP, 0, findData.cFileName, -1, wbuf, MAX_PATH);
+            std::wstring displayName(wbuf);  // Make a persistent copy
 
             if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             {
-                tvis.item.pszText = wbuf;
-                tvis.item.lParam = (LPARAM) new std::string(fullPath);
+                // Store display name persistently
+                TVINSERTSTRUCTW tvisLocal = {};
+                tvisLocal.hParent = parentItem;
+                tvisLocal.hInsertAfter = TVI_LAST;
+                tvisLocal.item.mask = TVIF_TEXT | TVIF_PARAM;
+                
+                // Insert first to get the handle
+                tvisLocal.item.pszText = const_cast<wchar_t*>(displayName.c_str());
+                tvisLocal.item.lParam = (LPARAM) new std::string(fullPath);
 
-                HTREEITEM folderItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
-                m_treeItemPaths[folderItem] = fullPath;
+                HTREEITEM folderItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvisLocal);
+                
+                if (folderItem)
+                {
+                    // Store display name persistently with correct key
+                    m_treeItemDisplayNames[folderItem] = displayName;
+                    
+                    // Update tree item to point to persistent string
+                    TVITEMW updateItem = {};
+                    updateItem.mask = TVIF_TEXT;
+                    updateItem.hItem = folderItem;
+                    updateItem.pszText = const_cast<wchar_t*>(m_treeItemDisplayNames[folderItem].c_str());
+                    TreeView_SetItem(m_hwndFileTree, &updateItem);
+                    
+                    m_treeItemPaths[folderItem] = fullPath;
 
-                TVINSERTSTRUCTW dummyVis = {};
-                dummyVis.hParent = folderItem;
-                dummyVis.item.mask = TVIF_TEXT;
-                static wchar_t s_ellipsis2[] = L"...";
-                dummyVis.item.pszText = s_ellipsis2;
-                SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+                    TVINSERTSTRUCTW dummyVis = {};
+                    dummyVis.hParent = folderItem;
+                    dummyVis.item.mask = TVIF_TEXT;
+                    static wchar_t s_ellipsis2[] = L"...";
+                    dummyVis.item.pszText = s_ellipsis2;
+                    SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&dummyVis);
+                }
             }
             else
             {
-                tvis.item.pszText = wbuf;
-                tvis.item.lParam = (LPARAM) new std::string(fullPath);
+                // Store display name persistently
+                TVINSERTSTRUCTW tvisLocal = {};
+                tvisLocal.hParent = parentItem;
+                tvisLocal.hInsertAfter = TVI_LAST;
+                tvisLocal.item.mask = TVIF_TEXT | TVIF_PARAM;
+                
+                // Insert first to get the handle
+                tvisLocal.item.pszText = const_cast<wchar_t*>(displayName.c_str());
+                tvisLocal.item.lParam = (LPARAM) new std::string(fullPath);
 
-                HTREEITEM fileItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvis);
-                m_treeItemPaths[fileItem] = fullPath;
+                HTREEITEM fileItem = (HTREEITEM)SendMessageW(m_hwndFileTree, TVM_INSERTITEM, 0, (LPARAM)&tvisLocal);
+                
+                if (fileItem)
+                {
+                    m_treeItemPaths[fileItem] = fullPath;
+                }
             }
         } while (FindNextFileA(findHandle, &findData));
 
@@ -11482,8 +11580,11 @@ void Win32IDE::HandleCopilotSend()
 
     std::vector<wchar_t> inputBuffer(static_cast<size_t>(inputLen) + 1, L'\0');
     {
-        std::lock_guard<std::mutex> inputLock(g_chatInputBufferMutex);
-        GetWindowTextW(m_hwndCopilotChatInput, inputBuffer.data(), inputLen + 1);
+        std::mutex* mtx = GetChatInputBufferMutex();
+        if (mtx) {
+            std::lock_guard<std::mutex> inputLock(*mtx);
+            GetWindowTextW(m_hwndCopilotChatInput, inputBuffer.data(), inputLen + 1);
+        }
     }
     std::wstring effectiveInput(inputBuffer.data());
     if (!effectiveInput.empty() && effectiveInput.front() != L'/')
@@ -13040,9 +13141,12 @@ void Win32IDE::postPromptToCopilotChat(const std::string& promptUtf8)
     ensureCopilotChatPanelVisible();
     const std::wstring w = utf8ToWide(promptUtf8);
     {
-        std::lock_guard<std::mutex> inputLock(g_chatInputBufferMutex);
-        SetWindowTextW(m_hwndCopilotChatInput, w.c_str());
-        SendMessageW(m_hwndCopilotChatInput, EM_SETSEL, static_cast<WPARAM>(w.size()), static_cast<LPARAM>(w.size()));
+        std::mutex* mtx = GetChatInputBufferMutex();
+        if (mtx) {
+            std::lock_guard<std::mutex> inputLock(*mtx);
+            SetWindowTextW(m_hwndCopilotChatInput, w.c_str());
+            SendMessageW(m_hwndCopilotChatInput, EM_SETSEL, static_cast<WPARAM>(w.size()), static_cast<LPARAM>(w.size()));
+        }
     }
     if (m_hwndCopilotChatInput && IsWindow(m_hwndCopilotChatInput))
         SetFocus(m_hwndCopilotChatInput);
@@ -14164,8 +14268,11 @@ void Win32IDE::clearCopilotInputOnUiThread()
         return;
     }
 
-    std::lock_guard<std::mutex> inputLock(g_chatInputBufferMutex);
-    SetWindowTextW(m_hwndCopilotChatInput, L"");
+    std::mutex* mtx = GetChatInputBufferMutex();
+    if (mtx) {
+        std::lock_guard<std::mutex> inputLock(*mtx);
+        SetWindowTextW(m_hwndCopilotChatInput, L"");
+    }
 }
 
 void Win32IDE::postCopilotBackendReadySafe(bool ready)
@@ -18713,6 +18820,12 @@ Win32IDE::~Win32IDE()
 {
     AgentBridge_SetShuttingDown(true);
     PromptWarm_SetAcceptRequests(false);
+    
+    // Clean up AgentBridge thread (crucial for stability)
+    if (m_agentBridgeThread && m_agentBridgeThread->joinable()) {
+        m_agentBridgeThread->join();
+    }
+    
     try
     {
         RawrXD::SkillSystem::ShutdownSkillSystem();

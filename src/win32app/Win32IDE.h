@@ -198,7 +198,6 @@ struct PeekOverlayWindowDeleter
 // Forward declarations for plugin managers defined in component translation units
 class EnterpriseStressTester;
 class SQLite3DatabaseManager;
-class TelemetryExportManager;
 class RefactoringPluginManager;
 class LanguagePluginManager;
 class ResourceGeneratorManager;
@@ -212,13 +211,6 @@ class NativeStreamProvider;
 }  // namespace RawrXD
 // Deleter defined in OllamaProvider.h - forward declaration only here
 struct NativeStreamProviderDeleter;
-
-// Forward declarations for Omega Orchestrator
-namespace rawrxd
-{
-class OmegaOrchestrator;
-enum class QualityMode : int;
-}  // namespace rawrxd
 
 namespace RawrXD
 {
@@ -489,17 +481,17 @@ class Win32IDE
     // Agentic Framework — Full Agentic IDE owns the bridge (single entry point: src/full_agentic_ide/)
     std::unique_ptr<full_agentic_ide::FullAgenticIDE> m_fullAgenticIDE;
     AgenticBridge* m_agenticBridge = nullptr;  // Non-owning; set from m_fullAgenticIDE->getBridge()
-    std::unique_ptr<Win32IDE_AgenticIntegration> m_agenticIntegration;  // Execution safety + patch + verification layer
+    
+    // AgentBridge Async Members (Background Thread Initialization)
+    std::unique_ptr<std::thread> m_agentBridgeThread;
+    std::atomic<bool> m_agentBridgeReady{false};
+    std::atomic<bool> m_agentBridgeInitStarted{false};
+    
     std::unique_ptr<RawrXD::PlanOrchestrator> m_planOrchestrator;       // Autonomous task planning and execution
-    std::unique_ptr<AutonomousFeatureEngine> m_autonomousFeatureEngine;
-    std::unique_ptr<RawrXD::AutonomousIntelligenceOrchestrator> m_autonomousOrchestrator;
-    std::unique_ptr<RawrXD::AutonomousModelManager> m_autonomousModelManager;
     std::unique_ptr<rawrxd::session::SessionController> m_sessionController;
     bool m_multiAgentEnabled = false;  // Multi-agent orchestration toggle
     // (Removed: std::unique_ptr<SlashRouter> m_slashRouter — replaced by free
     //  RawrXD::SlashRouter namespace in Win32IDE_Commands.cpp.)
-    void initializeAutonomousSystems();
-    void UpdateAutonomyStatus();
 
     // Unified Command Router Methods
     // Nested LSP completion item used by the Win32IDE pipeline (do not confuse
@@ -564,33 +556,6 @@ class Win32IDE
     void onAutonomySetGoal();
     void onAutonomyViewStatus();
     void onAutonomyViewMemory();
-
-    // Autonomous Agentic Pipeline (Task 1) + external AgentCoordinator (Task 2)
-    std::unique_ptr<RawrXD::AutonomousAgenticPipelineCoordinator> m_autonomousPipeline;
-    void* m_agentCoordinatorForPipeline = nullptr;  // AgentCoordinatorHandle when linked
-    void ensureAutonomousPipelineInitialized();
-    void onPipelineRun();
-    void onPipelineAutonomyStart();
-    void onPipelineAutonomyStop();
-
-    // ── Omega Orchestrator — Phase Ω: The Last Tool ──────────────────────
-    // Full autonomous software development pipeline with PERCEIVE→PLAN→ARCHITECT→
-    // IMPLEMENT→VERIFY→DEPLOY→OBSERVE→EVOLVE capability
-    rawrxd::OmegaOrchestrator* m_omegaOrchestrator = nullptr;
-    bool m_omegaActive = false;
-    void initializeOmegaOrchestrator();
-    void onOmegaStart();
-    void onOmegaStop();
-    void onOmegaSubmitTask();
-    void onOmegaRunCycle();
-    void onOmegaShowStatus();
-    void onOmegaViewPipeline();
-    void onOmegaSpawnAgent();
-    void onOmegaSetQualityMode(rawrxd::QualityMode mode);
-    void onOmegaCancelTask();
-    void onOmegaWorldModel();
-    void onOmegaExportStats();
-    void onOmegaDiagnostics();
 
     // ── Agentic Planning Orchestrator — Full Approval Gates ──────────────
     void onPlanningStart();
@@ -2267,6 +2232,7 @@ class Win32IDE
     // File Explorer Sidebar - tree view items
     HWND m_hwndFileTree;
     std::map<HTREEITEM, std::string> m_treeItemPaths;
+    std::map<HTREEITEM, std::wstring> m_treeItemDisplayNames;  // Persistent storage for TVITEM text
 
     HINSTANCE m_hInstance;
     HACCEL m_hAccel = nullptr;
@@ -7614,9 +7580,6 @@ class Win32IDE
     //   3. Airgapped Enterprise Env   — offline licensing + compliance + DLP
     // ════════════════════════════════════════════════════════════════════════
 
-    // ── Phase Ω: OmegaOrchestrator — Autonomous SDLC (12400–12450) ──
-    bool handleOmegaOrchestratorCommand(int commandId);
-
     // ── Agentic Planning Orchestrator — Multi-step planning with approval gates (4261–4270) ──
     bool handleAgenticPlanningCommand(int commandId);
 
@@ -8086,8 +8049,6 @@ class Win32IDE
     // Resource Generator
     std::unique_ptr<ResourceGeneratorManager> m_resourceManager;
 
-    // Telemetry Export
-    std::unique_ptr<TelemetryExportManager> m_telemetryExporter;
     bool m_coreRuntimeSpineInitialized = false;
 
     // Feature Registry / License Creator
