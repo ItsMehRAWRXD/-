@@ -77,11 +77,7 @@ TRACE_CONTEXT               EQU 96         ; Context ID (DW)
 TRACE_RESERVED              EQU 100        ; Reserved (DW)
 TRACE_MEMORY_ADDR           EQU 104        ; Memory access addr (QW)
 TRACE_MEMORY_VALUE          EQU 112        ; Memory access value (QW)
-<<<<<<< HEAD
 TRACE_MEMORY_SIZE           EQU 120        ; Memory access m_size (DW)
-=======
-TRACE_MEMORY_SIZE           EQU 120        ; Memory access size (DW)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 TRACE_MEMORY_RW             EQU 124        ; R=0, W=1 (DW)
 
 ; Trace Flags
@@ -307,11 +303,7 @@ Titan_CreateFile PROC
 Titan_CreateFile ENDP
 
 Titan_WriteFile PROC
-<<<<<<< HEAD
     ; rcx = handle, rdx = buffer, r8 = m_size
-=======
-    ; rcx = handle, rdx = buffer, r8 = size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; Returns: rax = bytes written
     push rbx
     sub rsp, 40h
@@ -334,11 +326,7 @@ twf_done:
 Titan_WriteFile ENDP
 
 Titan_ReadFile PROC
-<<<<<<< HEAD
     ; rcx = handle, rdx = buffer, r8 = m_size
-=======
-    ; rcx = handle, rdx = buffer, r8 = size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; Returns: rax = bytes read
     push rbx
     sub rsp, 40h
@@ -369,22 +357,14 @@ Titan_CloseFile ENDP
 
 ;--- KERNEL PERSISTENCE (SAVE/LOAD) ---
 Titan_SaveKernel PROC
-<<<<<<< HEAD
     ; rcx = kernel_buffer, rdx = m_size, r8 = filename
-=======
-    ; rcx = kernel_buffer, rdx = size, r8 = filename
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     push rbx
     push rsi
     push rdi
     sub rsp, 40
     
     mov rsi, rcx        ; kernel buffer
-<<<<<<< HEAD
     mov rbx, rdx        ; m_size
-=======
-    mov rbx, rdx        ; size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov rdi, r8         ; filename
     
     ; Create file for writing
@@ -394,11 +374,7 @@ Titan_SaveKernel PROC
     call Titan_CreateFile
     mov rdi, rax        ; save file handle
     
-<<<<<<< HEAD
     ; Write header: magic (4) + version (4) + m_size (4) = 12 bytes
-=======
-    ; Write header: magic (4) + version (4) + size (4) = 12 bytes
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov dword ptr [rsp], KERNEL_MAGIC
     mov dword ptr [rsp+4], KERNEL_VERSION
     mov dword ptr [rsp+8], ebx
@@ -411,11 +387,7 @@ Titan_SaveKernel PROC
     ; Write kernel data
     mov rcx, rdi        ; handle
     mov rdx, rsi        ; kernel buffer
-<<<<<<< HEAD
     mov r8, rbx         ; m_size
-=======
-    mov r8, rbx         ; size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     call Titan_WriteFile
     
     ; Close file
@@ -459,21 +431,13 @@ Titan_LoadKernel PROC
     cmp eax, KERNEL_MAGIC
     jne load_fail
     
-<<<<<<< HEAD
     ; Extract kernel m_size from header
-=======
-    ; Extract kernel size from header
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov r8d, dword ptr [rsp+8]
     
     ; Read kernel data into output buffer
     mov rcx, rbx        ; handle
     mov rdx, rdi        ; output buffer
-<<<<<<< HEAD
     call Titan_ReadFile ; r8 already contains m_size
-=======
-    call Titan_ReadFile ; r8 already contains size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov r10, rax        ; save bytes read
     
     ; Close file
@@ -548,11 +512,7 @@ Titan_GeneratePE PROC
     mov byte ptr [rdi+3], 0FFh  ; CALL
     mov byte ptr [rdi+4], 15h   ; [RIP+disp32]
     ; disp32 to IAT ExitProcess thunk (relative from rdi+9)
-<<<<<<< HEAD
     mov dword ptr [rdi+5], 0    ; Placeholder ? caller patches
-=======
-    mov dword ptr [rdi+5], 0    ; Placeholder — caller patches
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov byte ptr [rdi+9], 0CCh  ; INT3 sentinel
     
     ; --- 6. Copy .idata section (import table) ---
@@ -561,11 +521,7 @@ Titan_GeneratePE PROC
     mov ecx, SIZEOF_IDATA_RAW
     rep movsb
     
-<<<<<<< HEAD
     ; Return total image m_size
-=======
-    ; Return total image size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov eax, SIZEOF_IMAGE
     
     add rsp, 20h
@@ -583,11 +539,7 @@ Titan_NF4_Kernel PROC
     sub  rsp, 32
 
     ; BATCH 5: Phase 13 Cold-Storage Decryption
-<<<<<<< HEAD
     ; This kernel is stored XOR-encrypted with the SovereignKey (053524Eh)
-=======
-    ; This kernel is stored XOR-encrypted with the SovereignKey (0x53524E)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; In production RSA-4096, this decodes the entire .text segment start.
     
     mov  rax, 053524E47h        ; SovereignKey "SRNG"
@@ -595,15 +547,9 @@ Titan_NF4_Kernel PROC
     jne  @@lockdown
     
     ; rcx = src, rdx = dst, r8 = count (byte pairs)
-<<<<<<< HEAD
     mov rdi, rdx            ; Win64 ABI: rdx = dst ? rdi for indexing
     mov rsi, rcx            ; src ? rsi
     mov rcx, r8             ; count ? rcx
-=======
-    mov rdi, rdx            ; Win64 ABI: rdx = dst → rdi for indexing
-    mov rsi, rcx            ; src → rsi
-    mov rcx, r8             ; count → rcx
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     test rcx, rcx
     jz nf4_exit
     
@@ -702,11 +648,7 @@ Titan_CaptureRegisterState PROC
     mov [rsi + TRACE_RAX], rax
     mov [rsi + TRACE_RBX], rbx
     ; rcx is now the trace record ptr, save original rcx from caller's perspective
-<<<<<<< HEAD
     ; (original rcx was clobbered by our argument ? store rsi which held it)
-=======
-    ; (original rcx was clobbered by our argument — store rsi which held it)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov [rsi + TRACE_RCX], rsi   ; approximate: rcx = trace ptr at entry
     mov [rsi + TRACE_RDX], rdx
     mov [rsi + TRACE_R8], r8
@@ -780,11 +722,7 @@ Titan_RecordTraceEvent ENDP
 
 Titan_SetBreakpoint PROC
     ; rcx = breakpoint address
-<<<<<<< HEAD
     ; rdx = breakpoint m_type (BP_TYPE_*)
-=======
-    ; rdx = breakpoint type (BP_TYPE_*)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; Returns: rax = breakpoint ID
     
     ; Get current breakpoint count
@@ -871,21 +809,13 @@ Titan_InitCore PROC
     ; 1. Initialize Tracing & Audit Rings
     call Titan_InitTracing
     
-<<<<<<< HEAD
     ; 2. Initialize Internal State with SovereignKey (053524E47h)
-=======
-    ; 2. Initialize Internal State with SovereignKey (0x53524E47)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; In a real deployment, this would be derived from a hardware-backed enclave
     mov  rax, 053524E47h        ; SovereignKey "SRNG"
     mov  [rbx], rax
     
     ; 3. Initial Baseline Manifest Verification
-<<<<<<< HEAD
     ; If this fails, g_JIT_Entry becomes 0DEADh and Titan_MainExecution will fail
-=======
-    ; If this fails, g_JIT_Entry becomes 0xDEAD and Titan_MainExecution will fail
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; For smoke testing, we assume a valid manifest is present or mocked
     ; call TITAN_VerifyManifestIntegrity
     
@@ -903,11 +833,7 @@ Titan_MainExecution PROC
     jne @@lockdown
     
     ; Initial Smoke Check: Trace execution flow for first autonomous goal
-<<<<<<< HEAD
     ; In a production IDE, this loops until shutdown or emergency 0DEADh
-=======
-    ; In a production IDE, this loops until shutdown or emergency 0xDEAD
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     
     ; STEP 1: Generate Kernel via JIT
     lea rcx, g_JIT_Buffer
@@ -1104,11 +1030,7 @@ PROC_NAMES:
 ; 9. Verification phase ensuring opcode validity
 ; 
 ; TIER 4: PROJECT PERSISTENCE
-<<<<<<< HEAD
 ; 10. Titan_SaveKernel: Serializes JIT output with 12-byte header (magic+version+m_size)
-=======
-; 10. Titan_SaveKernel: Serializes JIT output with 12-byte header (magic+version+size)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; 11. Titan_LoadKernel: Deserializes kernel from disk with validation
 ; 12. File I/O subsystem (CreateFile, WriteFile, ReadFile, CloseHandle wraps)
 ; 
@@ -1127,11 +1049,7 @@ PROC_NAMES:
 ; +92  [DW] Flags (BP, MEM_R, MEM_W)     Execution event markers
 ; +104 [QW] Memory address                Read/write target address
 ; +112 [QW] Memory value                  Data value accessed
-<<<<<<< HEAD
 ; +120 [DW/DW] m_size, Direction           R=0/W=1 memory operation m_type
-=======
-; +120 [DW/DW] Size, Direction           R=0/W=1 memory operation type
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ;
 ; EXECUTION FLOW:
 ; 1. Initialize tracing state (trace buffer, breakpoints, execution context)
@@ -3761,11 +3679,7 @@ AI_Detokenize PROC PUBLIC
     mov rbp, rsp
     sub rsp, 30h            ; Shadow space + alignment
     
-<<<<<<< HEAD
     ; Logic: Input is RCX(ids), RDX(count), R8(output), R9(m_size)
-=======
-    ; Logic: Input is RCX(ids), RDX(count), R8(output), R9(size)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; SimpleDetokenize signature matched
     call SimpleDetokenize
     
@@ -3795,15 +3709,9 @@ AI_AC_SizeOk:
     add rsp, 28h
     test rax, rax
     jz  AI_AC_Done
-<<<<<<< HEAD
     lea r10, [g_AIState]                  ; use r10 for state ptr so rbx (m_size) is preserved
     mov qword ptr [r10+AI_CTX_BUF], rax
     mov qword ptr [r10+AI_CTX_SZFL], rbx  ; store original m_size, not pointer
-=======
-    lea r10, [g_AIState]                  ; use r10 for state ptr so rbx (size) is preserved
-    mov qword ptr [r10+AI_CTX_BUF], rax
-    mov qword ptr [r10+AI_CTX_SZFL], rbx  ; store original size, not pointer
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 AI_AC_Done:
     add rsp, 28h
     pop rbx
@@ -3953,11 +3861,7 @@ AI_LM_PatCp:
     inc eax
     jmp AI_LM_PatCp
 AI_LM_Search:
-<<<<<<< HEAD
     ; WIN32_FIND_DATAA lives at [rsp+20h] (320 bytes = 0140h)
-=======
-    ; WIN32_FIND_DATAA lives at [rsp+20h] (320 bytes = 0x140)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lea rbx, [rsp+20h]
     ; zero the struct
     xor ecx, ecx
@@ -3975,11 +3879,7 @@ AI_LM_FindFirst:
     je  AI_LM_Done
     mov rsi, rax                ; hFind
 AI_LM_EnumLoop:
-<<<<<<< HEAD
     ; cFileName at WIN32_FIND_DATAA offset 02Ch (44 bytes: attrib+3 FILETIME+2 DWORDs)
-=======
-    ; cFileName at WIN32_FIND_DATAA offset 0x2C (44 bytes: attrib+3 FILETIME+2 DWORDs)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lea rcx, [rbx+02Ch]
     xor eax, eax
 AI_LM_CopyName:
@@ -4587,11 +4487,7 @@ AI_RunBatch ENDP
 AI_GetMemUsage PROC
     sub rsp, 28h
     mov rax, gs:[60h]           ; PEB
-<<<<<<< HEAD
     ; PEB+018h = Ldr, not mem. Use g_AIState model m_size as proxy
-=======
-    ; PEB+0x18 = Ldr, not mem. Use g_AIState model size as proxy
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lea rax, [g_AIState]
     mov rax, qword ptr [rax+AI_MODEL_SZFL]
     add rsp, 28h
@@ -4611,11 +4507,7 @@ AI_OptimizeDevice PROC
     jz  AI_OD_Auto
     mov rbx, rcx                         ; save mask
     mov qword ptr [g_AIState+AI_AFFINITY_MASK], rcx
-<<<<<<< HEAD
     ; get kernel32 base (PEB walk ? always available)
-=======
-    ; get kernel32 base (PEB walk — always available)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lea rcx, [g_wKernel32]
     call Titan_GetModuleBase
     test rax, rax
@@ -5016,11 +4908,7 @@ Voice_LoadModel PROC
     xor rdx, rdx
     xor r8d, r8d
     mov rax, qword ptr [rax]
-<<<<<<< HEAD
     call qword ptr [rax+68h]    ; vtable[13]*8 = 104 = 068h
-=======
-    call qword ptr [rax+68h]    ; vtable[13]*8 = 104 = 0x68
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 Voice_LM_Done:
     mov eax, TITAN_SUCCESS
     add rsp, 28h
@@ -5065,17 +4953,10 @@ Voice_GT_Ret:
 Voice_GetText ENDP
 
 ; ============================================================
-<<<<<<< HEAD
 ; Voice_SetLang  RCX=lang_id (e.g. 00409h=en-US)
 ; ============================================================
 Voice_SetLang PROC
     ; Store lang_id in dedicated VOICE_LANG_ID field (offset 034h in VoiceState)
-=======
-; Voice_SetLang  RCX=lang_id (e.g. 0x0409=en-US)
-; ============================================================
-Voice_SetLang PROC
-    ; Store lang_id in dedicated VOICE_LANG_ID field (offset 0x34 in VoiceState)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lea rax, [g_VoiceState]
     mov dword ptr [rax+VOICE_LANG_ID], ecx
     mov eax, TITAN_SUCCESS
@@ -5266,11 +5147,7 @@ RE_Disassemble PROC
     mov rsi, rcx                ; instruction pointer
     xor edi, edi                ; offset counter
     xor ebx, ebx                ; flags: bit0=REX.W, bit1=has_rep, bit2=66prefix
-<<<<<<< HEAD
     xor r8d, r8d                ; operand m_size override
-=======
-    xor r8d, r8d                ; operand size override
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; consume legacy prefixes
 RE_DIS_Prefixes:
     movzx eax, byte ptr [rsi+rdi]
@@ -5280,20 +5157,12 @@ RE_DIS_Prefixes:
     je  RE_DIS_Skip1
     cmp al, 0F3h                ; REP/REPE
     je  RE_DIS_Skip1
-<<<<<<< HEAD
     cmp al, 66h                 ; operand m_size
-=======
-    cmp al, 66h                 ; operand size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     jne RE_DIS_NotOSize
     or  ebx, 4
     jmp RE_DIS_Skip1
 RE_DIS_NotOSize:
-<<<<<<< HEAD
     cmp al, 67h                 ; address m_size
-=======
-    cmp al, 67h                 ; address size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     je  RE_DIS_Skip1
     cmp al, 64h                 ; FS
     je  RE_DIS_Skip1
@@ -5724,11 +5593,7 @@ RE_UnhookFunc PROC
 RE_UnhookFunc ENDP
 
 ; ============================================================
-<<<<<<< HEAD
 ; RE_DumpMemory  RCX=addr  RDX=m_size  R8=out_path
-=======
-; RE_DumpMemory  RCX=addr  RDX=size  R8=out_path
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; ============================================================
 RE_DumpMemory PROC
     push rbx
@@ -5770,11 +5635,7 @@ RE_DM_Done:
 RE_DumpMemory ENDP
 
 ; ============================================================
-<<<<<<< HEAD
 ; RE_ScanStrings  RCX=base  RDX=m_size  R8=out_buf  R9=buf_size
-=======
-; RE_ScanStrings  RCX=base  RDX=size  R8=out_buf  R9=buf_size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; Finds printable ASCII runs >= 4 chars, writes to out_buf
 ; Returns RAX=strings_found
 ; ============================================================
@@ -5787,11 +5648,7 @@ RE_ScanStrings PROC
     push r14
     sub rsp, 28h
     mov r12, rcx                ; base
-<<<<<<< HEAD
     mov r13d, edx               ; m_size
-=======
-    mov r13d, edx               ; size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov r14, r8                 ; out
     xor edi, edi                ; out offset
     xor ebx, ebx                ; strings found
@@ -5800,11 +5657,7 @@ RE_SS_Outer:
     cmp esi, r13d
     jge RE_SS_Done
     movzx eax, byte ptr [r12+rsi]
-<<<<<<< HEAD
     ; printable? 020h-07Eh
-=======
-    ; printable? 0x20-0x7E
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     cmp al, 20h
     jb  RE_SS_Skip
     cmp al, 7Eh
@@ -5888,11 +5741,7 @@ RE_GetEntryPoint PROC
     cmp dword ptr [rdx], 4550h   ; "PE\0\0"
     jne RE_GEP_Fail
     ; OptionalHeader starts at +18h (after 4 sig + 20 FileHeader)
-<<<<<<< HEAD
     ; AddressOfEntryPoint at OptionalHdr+16 = NT+018h+010h = NT+028h
-=======
-    ; AddressOfEntryPoint at OptionalHdr+16 = NT+0x18+0x10 = NT+0x28
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov eax, dword ptr [rdx+28h]
     add rax, rcx                 ; VA = base + RVA
     jmp RE_GEP_Done
@@ -5927,11 +5776,7 @@ RE_GetExports PROC
     lea rbx, [r12+rax]          ; NT
     cmp dword ptr [rbx], 4550h
     jne RE_GX_Fail
-<<<<<<< HEAD
     ; Export dir RVA = OptHdr+DataDir[0].VirtualAddress = NT+088h
-=======
-    ; Export dir RVA = OptHdr+DataDir[0].VirtualAddress = NT+0x88
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov eax, dword ptr [rbx+88h]
     test eax, eax
     jz  RE_GX_Fail
@@ -6027,11 +5872,7 @@ RE_GetImports PROC
     lea rbx, [r12+rax]
     cmp dword ptr [rbx], 4550h
     jne RE_GI_Fail
-<<<<<<< HEAD
     ; Import dir at NT+090h (DataDir[1].VirtualAddress)
-=======
-    ; Import dir at NT+0x90 (DataDir[1].VirtualAddress)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov eax, dword ptr [rbx+90h]
     test eax, eax
     jz  RE_GI_Fail
@@ -6413,11 +6254,7 @@ RE_AC_Done:
 RE_AnnotateCode ENDP
 
 ; ============================================================
-<<<<<<< HEAD
 ; RE_CrossRefs  RCX=target_addr  RDX=base  R8=m_size
-=======
-; RE_CrossRefs  RCX=target_addr  RDX=base  R8=size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; Scan for any E8/E9/EB that resolves to target
 ; Returns RAX=ref_count, writes to g_REState.RE_RESULTS_BUF
 ; ============================================================
@@ -6473,11 +6310,7 @@ RE_XR_Done:
 RE_CrossRefs ENDP
 
 ; ============================================================
-<<<<<<< HEAD
 ; RE_GetCallers  RCX=func_addr  RDX=base  R8=m_size
-=======
-; RE_GetCallers  RCX=func_addr  RDX=base  R8=size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; -> RAX=count (results in RE_RESULTS_BUF)
 ; ============================================================
 RE_GetCallers PROC
@@ -6539,11 +6372,7 @@ RE_GetCallees ENDP
 
 ; ============================================================
 ; RE_PatchNOP  RCX=addr  RDX=count
-<<<<<<< HEAD
 ; Fills count bytes with 090h
-=======
-; Fills count bytes with 0x90
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; ============================================================
 RE_PatchNOP PROC
     push rbx
@@ -6595,11 +6424,7 @@ RE_PatchNOP ENDP
 
 ; ============================================================
 ; RE_PatchRet  RCX=addr
-<<<<<<< HEAD
 ; Writes 0C3h at address
-=======
-; Writes 0xC3 at address
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; ============================================================
 RE_PatchRet PROC
     sub rsp, 28h
@@ -6691,11 +6516,7 @@ RE_EB_Done:
 RE_ExtractBytes ENDP
 
 ; ============================================================
-<<<<<<< HEAD
 ; RE_ComputeHash  RCX=data  RDX=m_size  R8=out_32bytes
-=======
-; RE_ComputeHash  RCX=data  RDX=size  R8=out_32bytes
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; SHA-256 via CryptAPI
 ; ============================================================
 RE_ComputeHash PROC
@@ -6730,11 +6551,7 @@ RE_ComputeHash PROC
     add rsp, 30h
     test eax, eax
     jz  RE_CH_RelProv
-<<<<<<< HEAD
     ; CryptHashData(hHash, data, m_size, 0)
-=======
-    ; CryptHashData(hHash, data, size, 0)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov rcx, qword ptr [rbx]
     mov rdx, r12
     mov r8d, r13d
@@ -6742,11 +6559,7 @@ RE_ComputeHash PROC
     call qword ptr [g_XAPI+XAPI_CryptHashDataX]
     test eax, eax
     jz  RE_CH_RelHash
-<<<<<<< HEAD
     ; CryptGetHashParam(hHash, HP_HASHVALX, out, &m_size=32, 0)
-=======
-    ; CryptGetHashParam(hHash, HP_HASHVALX, out, &size=32, 0)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     mov rcx, qword ptr [rbx]
     mov edx, HP_HASHVALX
     mov r8, r14
@@ -6780,15 +6593,9 @@ RE_ComputeHash ENDP
 ; ============================================================
 ; TITAN_VerifyManifestIntegrity
 ; RCX = Pointer to Resource Manifest (JSON string)
-<<<<<<< HEAD
 ; RDX = m_size of Manifest
 ; R8  = Pointer to expected SHA-256 signature (32 bytes)
 ; Returns: EAX = TITAN_SUCCESS or 0DEADh (Lockdown)
-=======
-; RDX = Size of Manifest
-; R8  = Pointer to expected SHA-256 signature (32 bytes)
-; Returns: EAX = TITAN_SUCCESS or 0xDEAD (Lockdown)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; ============================================================
 TITAN_VerifyManifestIntegrity PROC
     push    rbx
@@ -6817,11 +6624,7 @@ TITAN_VerifyManifestIntegrity PROC
     jmp     @@done
 
 @@lockdown:
-<<<<<<< HEAD
     ; SECURITY VIOLATION: Trigger 0DEADh lockdown
-=======
-    ; SECURITY VIOLATION: Trigger 0xDEAD lockdown
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     ; Clear JIT kernel cache (simulated via zeroing a primary pointer)
     mov     rax, 0DEADBEEFh
     mov     [g_JIT_Entry], rax
@@ -6840,11 +6643,7 @@ TITAN_VerifyManifestIntegrity ENDP
 ; TITAN_SecureTelemetry_AES_GCM
 ; Outbound telemetry frame signing & sequence numbering
 ; RCX = Pointer to plaintext buffer
-<<<<<<< HEAD
 ; RDX = m_size of plaintext
-=======
-; RDX = Size of plaintext
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; R8  = Target frame buffer
 ; ============================================================
 TITAN_SecureTelemetry_AES_GCM PROC
@@ -6855,11 +6654,7 @@ TITAN_SecureTelemetry_AES_GCM PROC
     push rsi
     push rdi
     
-<<<<<<< HEAD
     ; Logic: [Seq (8b)] [m_size (4b)] [AES-GCM-Tag (16b)] [Enc-Payload]
-=======
-    ; Logic: [Seq (8b)] [Size (4b)] [AES-GCM-Tag (16b)] [Enc-Payload]
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lock inc qword ptr [g_Telemetry_Seq]
     mov rax, [g_Telemetry_Seq]
     mov [r8], rax ; Header: Sequence
@@ -6881,11 +6676,7 @@ TITAN_SecureTelemetry_AES_GCM PROC
 TITAN_SecureTelemetry_AES_GCM ENDP
 
 ; ============================================================
-<<<<<<< HEAD
 ; RE_FindFunc  RCX=base  RDX=m_size  R8=index (nth match)
-=======
-; RE_FindFunc  RCX=base  RDX=size  R8=index (nth match)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
 ; Heuristic: find "push rbp" (55) or sub rsp prologue
 ; Returns RAX=offset or -1
 ; ============================================================
@@ -6961,19 +6752,11 @@ RE_RebasePE PROC
     lea rsi, [r12+rax]          ; NT
     cmp dword ptr [rsi], 4550h
     jne RE_RB_Done
-<<<<<<< HEAD
     ; Reloc dir at NT+0B0h (DataDir[5])
     mov eax, dword ptr [rsi+0B0h]
     test eax, eax
     jz  RE_RB_Done
     mov ecx, dword ptr [rsi+0B4h]   ; reloc dir m_size
-=======
-    ; Reloc dir at NT+0xB0 (DataDir[5])
-    mov eax, dword ptr [rsi+0B0h]
-    test eax, eax
-    jz  RE_RB_Done
-    mov ecx, dword ptr [rsi+0B4h]   ; reloc dir size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lea rdi, [r12+rax]          ; first BASE_RELOCATION
     xor r8d, r8d                ; bytes processed
 RE_RB_BlockLoop:
@@ -6983,11 +6766,7 @@ RE_RB_BlockLoop:
     test eax, eax
     jz  RE_RB_Done
     mov edx, dword ptr [rdi+4]  ; SizeOfBlock
-<<<<<<< HEAD
     ; entries start at rdi+8, each a WORD (m_type=top 4 bits, offset=bottom 12)
-=======
-    ; entries start at rdi+8, each a WORD (type=top 4 bits, offset=bottom 12)
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     lea r9, [rdi+8]
     mov r10d, edx
     sub r10d, 8
@@ -6998,11 +6777,7 @@ RE_RB_EntryLoop:
     jge RE_RB_NextBlock
     movzx r15d, word ptr [r9+r11*2]
     mov r14d, r15d
-<<<<<<< HEAD
     shr r14d, 12                ; m_type
-=======
-    shr r14d, 12                ; type
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     cmp r14d, 0Ah               ; IMAGE_REL_BASED_DIR64=10
     jne RE_RB_EntSkip
     and r15d, 0FFFh             ; offset
@@ -7042,11 +6817,7 @@ RE_ValidatePE PROC
     lea rdx, [rcx+rax]
     cmp dword ptr [rdx], 4550h  ; PE\0\0
     jne RE_VP_Fail
-<<<<<<< HEAD
     movzx eax, word ptr [rdx+18h]  ; PE magic: 010Bh=PE32, 020Bh=PE32+
-=======
-    movzx eax, word ptr [rdx+18h]  ; PE magic: 0x10B=PE32, 0x20B=PE32+
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     cmp ax, 020Bh
     je  RE_VP_Ok
     cmp ax, 010Bh
@@ -7136,11 +6907,7 @@ RE_AnalyzeCFG PROC
     sub rsp, 20h
     mov r12, rcx                ; func start
     mov r13, rdx                ; out buf
-<<<<<<< HEAD
     mov r14d, r8d               ; buf m_size
-=======
-    mov r14d, r8d               ; buf size
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
     xor edi, edi                ; out offset
     xor esi, esi                ; instr offset
     xor ebx, ebx                ; bb count
@@ -7231,7 +6998,5 @@ RE_CFG_NoNull:
 RE_AnalyzeCFG ENDP
 
 END
-<<<<<<< HEAD
 
-=======
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
+

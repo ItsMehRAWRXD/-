@@ -755,12 +755,12 @@ bool RawrXDTransformer::tryPickMoERouterExperts(const std::uint32_t layer, const
 
 // C++ Implementations of Kernels (Ensuring Real Logic Execution)
 #ifdef __AVX512F__
-void MatrixMultiply_AVX512(const float* A, const float* B, float* C, uint64_t M, uint64_t K, uint64_t N)
+void MatrixMultiply_AVX512(const float* A, const float* B, float* C, int64_t M, int64_t K, int64_t N)
 {
 #pragma omp parallel for collapse(2)
-    for (uint64_t i = 0; i < M; i++)
+    for (int64_t i = 0; i < M; i++)
     {
-        for (uint64_t j = 0; j < N; j++)
+        for (int64_t j = 0; j < N; j++)
         {
             __m512 sum_vec = _mm512_setzero_ps();
             uint64_t k = 0;
@@ -780,12 +780,12 @@ void MatrixMultiply_AVX512(const float* A, const float* B, float* C, uint64_t M,
     }
 }
 #else
-void MatrixMultiply_AVX512(const float* A, const float* B, float* C, uint64_t M, uint64_t K, uint64_t N)
+void MatrixMultiply_AVX512(const float* A, const float* B, float* C, int64_t M, int64_t K, int64_t N)
 {
 #pragma omp parallel for collapse(2)
-    for (int64_t i = 0; i < static_cast<int64_t>(M); i++)
+    for (int64_t i = 0; i < M; i++)
     {
-        for (int64_t j = 0; j < static_cast<int64_t>(N); j++)
+        for (int64_t j = 0; j < N; j++)
         {
             float sum = 0.0f;
             for (uint64_t k = 0; k < K; k++)

@@ -1,4 +1,4 @@
-; RawrXD_LinkStubs.asm — Consolidated linker stubs for unresolved externals
+; RawrXD_LinkStubs.asm ? Consolidated linker stubs for unresolved externals
 ; Auto-generated to close the link of RawrXD_x64_IDE.exe
 ; All functions return 0 / success. All data is QWORD 0.
 
@@ -455,4 +455,5 @@ EXTERN AdjustTokenPrivileges : PROC
 EXTERN CloseHandle : PROC
 
 END
+
 

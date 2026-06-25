@@ -9,8 +9,10 @@
 
 #include "lsp/treesitter_parser.h"
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <functional>
 #include <regex>
 #include <sstream>
 
@@ -23,80 +25,83 @@ namespace RawrXD::LSP {
 TreeSitterParser::TokenStream::TokenStream(const std::string& content)
     : m_content(content) {}
 
-TreeSitterParser::Token TreeSitterParser::TokenStream::readToken() {
-    if (m_pos >= m_content.size()) return {Token::End, "", m_line, m_col};
+TreeSitterParser::Token TreeSitterParser::TokenStream::readToken() const {
+    // Cast away const to modify mutable state
+    TokenStream* self = const_cast<TokenStream*>(this);
+    
+    if (self->m_pos >= self->m_content.size()) return {Token::End, "", self->m_line, self->m_col};
 
-    char c = m_content[m_pos];
-    uint32_t line = m_line, col = m_col;
+    char c = self->m_content[self->m_pos];
+    uint32_t line = self->m_line, col = self->m_col;
 
     // Whitespace
     if (std::isspace(static_cast<unsigned char>(c))) {
         std::string ws;
-        while (m_pos < m_content.size() &&
-               std::isspace(static_cast<unsigned char>(m_content[m_pos]))) {
-            if (m_content[m_pos] == '\n') { m_line++; m_col = 0; }
-            else { m_col++; }
-            ws += m_content[m_pos++];
+        while (self->m_pos < self->m_content.size() &&
+               std::isspace(static_cast<unsigned char>(self->m_content[self->m_pos]))) {
+            if (self->m_content[self->m_pos] == '\n') { self->m_line++; self->m_col = 0; }
+            else { self->m_col++; }
+            ws += self->m_content[self->m_pos++];
         }
         return {Token::Whitespace, ws, line, col};
     }
 
     // Line comment (//)
-    if (c == '/' && m_pos + 1 < m_content.size() && m_content[m_pos + 1] == '/') {
+    if (c == '/' && self->m_pos + 1 < self->m_content.size() && self->m_content[self->m_pos + 1] == '/') {
         std::string comment = "//";
-        m_pos += 2; m_col += 2;
-        while (m_pos < m_content.size() && m_content[m_pos] != '\n') {
-            comment += m_content[m_pos++];
-            m_col++;
+        self->m_pos += 2; self->m_col += 2;
+        while (self->m_pos < self->m_content.size() && self->m_content[self->m_pos] != '\n') {
+            comment += self->m_content[self->m_pos++];
+            self->m_col++;
         }
         return {Token::Comment, comment, line, col};
     }
 
     // Block comment (/* */)
-    if (c == '/' && m_pos + 1 < m_content.size() && m_content[m_pos + 1] == '*') {
+    if (c == '/' && self->m_pos + 1 < self->m_content.size() && self->m_content[self->m_pos + 1] == '*') {
         std::string comment = "/*";
-        m_pos += 2; m_col += 2;
-        while (m_pos + 1 < m_content.size() &&
-               !(m_content[m_pos] == '*' && m_content[m_pos + 1] == '/')) {
-            if (m_content[m_pos] == '\n') { m_line++; m_col = 0; }
-            else { m_col++; }
-            comment += m_content[m_pos++];
+        self->m_pos += 2; self->m_col += 2;
+        while (self->m_pos + 1 < self->m_content.size() &&
+               !(self->m_content[self->m_pos] == '*' && self->m_content[self->m_pos + 1] == '/')) {
+            if (self->m_content[self->m_pos] == '\n') { self->m_line++; self->m_col = 0; }
+            else { self->m_col++; }
+            comment += self->m_content[self->m_pos++];
         }
-        if (m_pos + 1 < m_content.size()) {
+        if (self->m_pos + 1 < self->m_content.size()) {
             comment += "*/";
-            m_pos += 2; m_col += 2;
+            self->m_pos += 2; self->m_col += 2;
         }
         return {Token::Comment, comment, line, col};
     }
 
     // String literal
-    if (c == '"' || c == '\'') {
+    if (c == '\"' || c == '\'') {
         char quote = c;
         std::string str(1, quote);
-        m_pos++; m_col++;
-        while (m_pos < m_content.size() && m_content[m_pos] != quote) {
-            if (m_content[m_pos] == '\\' && m_pos + 1 < m_content.size()) {
-                str += m_content[m_pos++];
-                m_col++;
+        self->m_pos++; self->m_col++;
+        while (self->m_pos < self->m_content.size() && self->m_content[self->m_pos] != quote) {
+            if (self->m_content[self->m_pos] == '\\' && self->m_pos + 1 < self->m_content.size()) {
+                str += self->m_content[self->m_pos++];
+                self->m_col++;
             }
-            if (m_content[m_pos] == '\n') { m_line++; m_col = 0; }
-            else { m_col++; }
-            str += m_content[m_pos++];
+            if (self->m_content[self->m_pos] == '\n') { self->m_line++; self->m_col = 0; }
+            else { self->m_col++; }
+            str += self->m_content[self->m_pos++];
         }
-        if (m_pos < m_content.size()) { str += quote; m_pos++; m_col++; }
+        if (self->m_pos < self->m_content.size()) { str += quote; self->m_pos++; self->m_col++; }
         return {Token::String, str, line, col};
     }
 
     // Number
     if (std::isdigit(static_cast<unsigned char>(c)) ||
-        (c == '.' && m_pos + 1 < m_content.size() &&
-         std::isdigit(static_cast<unsigned char>(m_content[m_pos + 1])))) {
+        (c == '.' && self->m_pos + 1 < self->m_content.size() &&
+         std::isdigit(static_cast<unsigned char>(self->m_content[self->m_pos + 1])))) {
         std::string num;
-        while (m_pos < m_content.size() &&
-               (std::isalnum(static_cast<unsigned char>(m_content[m_pos])) ||
-                m_content[m_pos] == '.' || m_content[m_pos] == '_')) {
-            num += m_content[m_pos++];
-            m_col++;
+        while (self->m_pos < self->m_content.size() &&
+               (std::isalnum(static_cast<unsigned char>(self->m_content[self->m_pos])) ||
+                self->m_content[self->m_pos] == '.' || self->m_content[self->m_pos] == '_')) {
+            num += self->m_content[self->m_pos++];
+            self->m_col++;
         }
         return {Token::Number, num, line, col};
     }
@@ -104,11 +109,11 @@ TreeSitterParser::Token TreeSitterParser::TokenStream::readToken() {
     // Identifier / Keyword
     if (std::isalpha(static_cast<unsigned char>(c)) || c == '_') {
         std::string id;
-        while (m_pos < m_content.size() &&
-               (std::isalnum(static_cast<unsigned char>(m_content[m_pos])) ||
-                m_content[m_pos] == '_')) {
-            id += m_content[m_pos++];
-            m_col++;
+        while (self->m_pos < self->m_content.size() &&
+               (std::isalnum(static_cast<unsigned char>(self->m_content[self->m_pos])) ||
+                self->m_content[self->m_pos] == '_')) {
+            id += self->m_content[self->m_pos++];
+            self->m_col++;
         }
         static const std::unordered_set<std::string> cppKeywords = {
             "alignas","alignof","and","and_eq","asm","auto","bitand","bitor",
@@ -142,21 +147,22 @@ TreeSitterParser::Token TreeSitterParser::TokenStream::readToken() {
         "+=","-=","*=","/=","%=","&=","|=","^=","<<=",">>=","..."
     };
     for (const auto& op : multiOps) {
-        if (m_pos + op.size() <= m_content.size() &&
-            m_content.compare(m_pos, op.size(), op) == 0) {
-            m_pos += op.size();
-            m_col += static_cast<uint32_t>(op.size());
+        if (self->m_pos + op.size() <= self->m_content.size() &&
+            self->m_content.compare(self->m_pos, op.size(), op) == 0) {
+            self->m_pos += op.size();
+            self->m_col += static_cast<uint32_t>(op.size());
             return {Token::Operator, op, line, col};
         }
     }
 
     // Single-char operator/punctuation
     std::string s(1, c);
-    m_pos++; m_col++;
+    self->m_pos++; self->m_col++;
     if (std::string("+-*/%=!&|^~<>").find(c) != std::string::npos)
         return {Token::Operator, s, line, col};
     return {Token::Punctuation, s, line, col};
 }
+
 
 TreeSitterParser::Token TreeSitterParser::TokenStream::next() {
     if (m_hasPeek) { m_hasPeek = false; return m_peek; }
@@ -845,3 +851,5 @@ std::shared_ptr<ASTNode> TreeSitterParser::parseCSharp(const std::string& conten
 }
 
 } // namespace RawrXD::LSP
+
+

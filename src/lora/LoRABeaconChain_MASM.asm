@@ -34,20 +34,23 @@ CHAIN_FLAG_BLEND    EQU 1      ; Weighted blend mode
 CHAIN_FLAG_PARALLEL EQU 2      ; Parallel execution (not implemented)
 
 ; ============================================================================
-; External Symbols
+; External Symbols (defined in C++ LoRABeaconInterface.cpp)
 ; ============================================================================
-EXTERNDEF g_beacon_chain:QWORD      ; Pointer to LoRABeaconChain
+EXTERNDEF g_beacon_chain:QWORD
+EXTERNDEF g_beacon_state:QWORD
+
+.code
 
 ; ============================================================================
 ; Macro: CHECK_CHAIN
 ; Purpose: Check if a beacon chain is active
-; Output: RAX = chain pointer or NULL
+; Output: RAX = address of chain struct
 ; Clobbers: RAX
 ; ============================================================================
 CHECK_CHAIN MACRO
-    mov     rax, OFFSET g_beacon_chain
-    mov     rax, QWORD PTR [rax]        ; Dereference to get chain pointer
-    test    rax, rax
+    mov     rax, OFFSET g_beacon_chain  ; Get address of chain struct
+    mov     ecx, DWORD PTR [rax + CHAIN_ACTIVE]
+    test    ecx, ecx
     jz      no_chain_active
 ENDM
 
@@ -64,6 +67,7 @@ ENDM
 LORA_APPLY_SINGLE_ADDITIVE MACRO
     LOCAL compute_loop, row_loop, col_loop, rows_done, cols_done
     LOCAL output_loop, inner_loop, inner_done, done_compute
+    LOCAL token_loop, token_done, tokens_done
     
     ; Save registers
     push    r12
@@ -207,6 +211,7 @@ ENDM
 ;         R9  = token_count
 ; Output: Result written to R8
 ; ============================================================================
+.code
 LoRA_Apply_Chain PROC FRAME
     push    rbp
     .pushreg rbp

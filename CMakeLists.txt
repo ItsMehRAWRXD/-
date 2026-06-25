@@ -775,6 +775,7 @@ set(SOURCES
 
     src/marketplace/extension_marketplace.cpp
     src/auth/rbac_engine.cpp
+    src/auth/jwt_validator.cpp
 
     # P0 Gaps: Vector Indexing & Multi-file editing
     src/CodebaseVectorIndex.cpp
@@ -965,10 +966,18 @@ set(SOURCES
     src/core/feature_registry.cpp
     # Menu auditor (RawrXD::Audit::verifyCommandInMenu) — required by feature_registry
     src/core/menu_auditor.cpp
+    # Feature reconciliation layer — bridges FMF with Feature Registry
+    src/core/feature_reconciliation.cpp
+    # Failure Mode Firewall — runtime telemetry for stub detection
+    src/core/FailureModeFirewall.cpp
 
     # GGUF diagnostic provider + LSP server — required by lsp_hotpatch_bridge
     src/lsp/gguf_diagnostic_provider.cpp
     src/lsp/RawrXD_LSPServer.cpp
+    src/lsp/LspClient.cpp
+    
+    # LSP Provenance Router — request/response lineage tracking with FMF integration
+    src/lsp/lsp_provenance_router.cpp
 
     # Extension polyfill engine + VSCode API — required by js_extension_host
     src/core/extension_polyfill_engine.cpp
@@ -1321,6 +1330,14 @@ set(SOURCES
 
     # P5: Repo-Wide Refactor Engine (rename, extract, move, change-sig)
     src/ai/repo_refactor_engine.cpp
+
+    # P6: AI IDE Features (inline edit, smart completion, debugger, code review)
+    src/ai/ai_unified_engine.cpp
+    src/ai/ai_inline_editor.cpp
+    src/ai/ai_smart_completion.cpp
+    src/ai/ai_debugger.cpp
+    src/ai/ai_code_review.cpp
+    src/ai/ai_ui_integration.cpp
 
     # ── Transcendence Architecture (Phases E → Ω) ─────────────────────
     src/core/self_host_engine.cpp
@@ -3649,10 +3666,16 @@ if(WIN32)
         src/win32app/Win32IDE_Core.cpp
         src/win32app/Win32IDE_Accelerators.cpp
         src/win32app/Win32IDE_CoreRuntimeSpine.cpp
+        src/win32app/ASM_Bridge_Implementation.cpp
         src/win32app/Win32IDE_Commands.cpp
         src/win32app/Win32IDE_ModelLab.cpp
         src/win32app/Win32IDE_VSCodeUI.cpp
         src/win32app/Win32IDE_CopilotNativeGlue.cpp
+        src/win32app/Win32IDE_AgentBridge.cpp
+        src/win32app/FeatureRegistry.cpp
+        src/core/RawrXD_FeatureRegistry.cpp
+        src/win32app/Win32IDE_AgentBridge_Init.cpp
+        src/win32app/AnnotationOverlay.cpp
             src/win32app/WindowManager.cpp
             src/win32app/EditorOperations.cpp
             src/win32app/RouterOperations.cpp
@@ -3745,6 +3768,7 @@ if(WIN32)
         # Unified local-inference pipeline (CLI ground-truth path shared with Win32IDE)
         src/core/rawr_inference_pipeline.cpp
         src/serve/rawrxd_serve_inference_plugin.cpp
+        src/lora/LoRABeaconInterface.cpp
         src/autonomous_model_manager.cpp
         # ExtensionHost minimal link stub for Win32IDE_Commands.cpp callsites
         src/win32app/ExtensionHost_stub.cpp
@@ -3790,6 +3814,12 @@ if(WIN32)
         src/win32app/Win32IDE_SettingsEvents.cpp
         src/win32app/Win32TerminalManager.cpp
         src/win32app/TransparentRenderer.cpp
+
+        # AI Features — Top 50 IDE Parity (Phase 50) - Real implementations
+        src/win32app/Win32IDE_AIFeatures.cpp
+        src/win32app/Win32IDE_CodeActions.cpp
+        src/win32app/Win32IDE_SemanticTokens.cpp
+        src/win32app/Win32IDE_Hierarchy.cpp
 
         # Context Fusion Layer — Phase 45: Unified semantic state machine
         src/core/ContextFusionEngine.cpp
@@ -3892,6 +3922,14 @@ if(WIN32)
         src/ai/multi_file_reasoning.cpp
         src/ai/workspace_embeddings.cpp
         src/ai/repo_refactor_engine.cpp
+
+        # P6: AI IDE Features (inline edit, smart completion, debugger, code review)
+        src/ai/ai_unified_engine.cpp
+        src/ai/ai_inline_editor.cpp
+        src/ai/ai_smart_completion.cpp
+        src/ai/ai_debugger.cpp
+        src/ai/ai_code_review.cpp
+        src/ai/ai_ui_integration.cpp
 
         # AgenticObservability + SubsystemRegistry (required by AgentOrchestrator, ToolRegistry, feature_handlers)
         # already added above in this block; keep single provider per file
@@ -4299,8 +4337,6 @@ if(WIN32)
         src/security/secrets_scanner.cpp
         src/security/sast_rule_engine.cpp
         src/security/dependency_audit.cpp
-        src/win32app/Win32IDE_AgentStreamingBridge.cpp
-
         # Phase 16: Semantic Code Intelligence
         src/core/semantic_code_intelligence.cpp
         src/win32app/Win32IDE_SemanticPanel.cpp
@@ -5425,6 +5461,16 @@ if(WIN32)
     else()
         target_compile_definitions(RawrXD-Win32IDE PRIVATE RAWRXD_HAS_SOVEREIGN_GPU_ASM=0)
     endif()
+    
+    # Failure Mode Firewall — runtime telemetry for stub detection
+    target_sources(RawrXD-Win32IDE PRIVATE
+        src/core/FailureModeFirewall.cpp
+        src/core/feature_registry.cpp
+        src/core/menu_auditor.cpp
+        src/core/feature_reconciliation.cpp
+        src/lsp/lsp_provenance_router.cpp
+        src/auth/jwt_validator.cpp
+    )
 
     # Ensure link output dir exists; clear prior exe/pdb before link (mitigates MSVC LNK1104 when
     # a stale handle, indexer, or crashed link left the binary busy — harmless if files are absent).
@@ -7361,6 +7407,112 @@ set_target_properties(test_hotpatch_tools_smoke PROPERTIES
 )
 
 message(STATUS "[Smoke] Hotpatch tool smoke test: test_hotpatch_tools_smoke")
+
+# ============================================================================
+# FMF Smoke Test - Failure Mode Firewall Validation
+# ============================================================================
+add_executable(fmf_smoke_test EXCLUDE_FROM_ALL
+    src/test/fmf_smoke_test.cpp
+    src/core/FailureModeFirewall.cpp
+    src/core/feature_registry.cpp
+    src/core/menu_auditor.cpp
+    src/core/feature_reconciliation.cpp
+)
+
+target_compile_definitions(fmf_smoke_test PRIVATE
+    FMF_STANDALONE_BUILD
+)
+
+target_include_directories(fmf_smoke_test PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/win32app
+)
+
+target_compile_features(fmf_smoke_test PRIVATE cxx_std_17)
+
+if(MSVC)
+    target_compile_options(fmf_smoke_test PRIVATE /EHsc /W2 /arch:AVX2)
+endif()
+
+target_link_libraries(fmf_smoke_test PRIVATE
+    Threads::Threads
+)
+
+set_target_properties(fmf_smoke_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
+)
+
+message(STATUS "[FMF] Failure Mode Firewall smoke test: fmf_smoke_test")
+
+# ============================================================================
+# FMF Validation Matrix - Phase 0 Runtime Proof
+# ============================================================================
+add_executable(fmf_validation_matrix EXCLUDE_FROM_ALL
+    src/test/fmf_validation_matrix.cpp
+    src/core/FailureModeFirewall.cpp
+    src/core/feature_registry.cpp
+    src/core/feature_reconciliation.cpp
+    src/core/menu_auditor.cpp
+)
+
+target_compile_definitions(fmf_validation_matrix PRIVATE
+    FMF_STANDALONE_BUILD
+)
+
+target_include_directories(fmf_validation_matrix PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/win32app
+)
+
+target_compile_features(fmf_validation_matrix PRIVATE cxx_std_17)
+
+if(MSVC)
+    target_compile_options(fmf_validation_matrix PRIVATE /EHsc /W2 /arch:AVX2)
+endif()
+
+target_link_libraries(fmf_validation_matrix PRIVATE
+    Threads::Threads
+)
+
+set_target_properties(fmf_validation_matrix PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
+)
+
+message(STATUS "[FMF] Failure Mode Firewall validation matrix: fmf_validation_matrix")
+
+# ============================================================================
+# AgentPanel Crash Test Harness
+# ============================================================================
+add_executable(agentpanel_crash_test EXCLUDE_FROM_ALL
+    src/test/agentpanel_crash_test.cpp
+)
+
+target_include_directories(agentpanel_crash_test PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/win32app
+)
+
+target_compile_features(agentpanel_crash_test PRIVATE cxx_std_17)
+
+if(MSVC)
+    target_compile_options(agentpanel_crash_test PRIVATE /EHsc /W2 /arch:AVX2)
+endif()
+
+target_link_libraries(agentpanel_crash_test PRIVATE
+    Threads::Threads
+)
+
+set_target_properties(agentpanel_crash_test PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
+)
+
+message(STATUS "[TEST] AgentPanel crash test harness: agentpanel_crash_test")
 
 # ============================================================================
 # Fused FP8 Quantization Kernel

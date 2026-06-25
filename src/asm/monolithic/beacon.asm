@@ -1,5 +1,5 @@
-; RawrXD Beaconism — Intra-process message routing
-; No IPC, no sockets — direct memory queues between agents
+; RawrXD Beaconism ? Intra-process message routing
+; No IPC, no sockets ? direct memory queues between agents
 ; X+4: Hotswap message types + non-blocking recv for UI
 
 EXTERN g_hHeap:QWORD
@@ -170,7 +170,7 @@ BeaconRecv PROC FRAME
     lea     r12, g_beacons
     mov     r12, [r12 + rbx*8]
     test    r12, r12
-    jz      @recv_corrupt         ; NULL ring → corruption
+    jz      @recv_corrupt         ; NULL ring ? corruption
 
     ; ---- snapshot QPC start for timeout ----
     lea     rcx, [rsp+30h]
@@ -215,7 +215,7 @@ BeaconRecv PROC FRAME
     jmp     @recv_exit
 
     ; ================================================================
-    ;  Message available — validate, deliver, update stats
+    ;  Message available ? validate, deliver, update stats
     ; ================================================================
 @recv_gotmsg:
     add     r11d, 16
@@ -234,7 +234,7 @@ BeaconRecv PROC FRAME
     ; ---- overflow / wrap corruption: detect read crossing write ----
     mov     ecx, dword ptr [r12]        ; re-read writePos
     cmp     r11d, ecx
-    ja      @recv_corrupt               ; readPos beyond writePos → wrap err
+    ja      @recv_corrupt               ; readPos beyond writePos ? wrap err
 
     ; ---- deliver message to caller ----
     mov     [rdi], rax                  ; *ppData = pData
@@ -283,7 +283,7 @@ BeaconRecv PROC FRAME
     ret
 BeaconRecv ENDP
 
-; TryBeaconRecv(ECX=beaconID, RDX=ppData, R8=pLen) — non-blocking
+; TryBeaconRecv(ECX=beaconID, RDX=ppData, R8=pLen) ? non-blocking
 ; Returns: 1=message received, 0=ring empty, -1=corruption detected
 TryBeaconRecv PROC FRAME
     ; Non-blocking recv with integrity validation, sequence tracking,
@@ -402,7 +402,7 @@ RegisterAgent PROC FRAME
     ; ---- compute per-agent data pointer ----
     imul    eax, ebx, AGENT_STRUCT_SIZE
     lea     r12, g_agentData
-    add     r12, rax              ; r12 → agent record
+    add     r12, rax              ; r12 ? agent record
 
     ; ---- duplicate check ----
     cmp     qword ptr [r12], 1
@@ -471,7 +471,7 @@ RegisterAgent PROC FRAME
 RegisterAgent ENDP
 
 ; ================================================================
-;  BeaconTraceLog — internal diagnostic trace-ring writer
+;  BeaconTraceLog ? internal diagnostic trace-ring writer
 ;  ECX = slot, EDX = event code, R8 = data payload
 ;  Writes one 32-byte entry into the 16-slot g_traceRing.
 ;  Uses RDTSC for a cheap timestamp (no API call).
@@ -512,3 +512,4 @@ BeaconTraceLog PROC FRAME
 BeaconTraceLog ENDP
 
 END
+

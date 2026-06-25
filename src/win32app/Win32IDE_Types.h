@@ -43,6 +43,11 @@ struct AIEditTransaction {
     std::string description;
     std::vector<AIFileRollbackRecord> records;
     bool committed = false;
+    bool rolledBack = false;
+    std::string filePath;
+    std::string originalContent;
+    std::string proposedContent;
+    uint64_t timestamp = 0;
 };
 
 // =============================================================================

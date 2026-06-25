@@ -58,11 +58,11 @@ public:
     const BreakpointGutterConfig& GetConfig() const;
 
     // Breakpoint state management
-    void SetBreakpointState(uint32_t lineNumber, BreakpointVisualState state);
-    void ClearBreakpointState(uint32_t lineNumber);
-    void ClearAllBreakpoints();
-    void SetCurrentLine(uint32_t lineNumber);  // IP indicator
-    void ClearCurrentLine();
+    virtual void SetBreakpointState(uint32_t lineNumber, BreakpointVisualState state);
+    virtual void ClearBreakpointState(uint32_t lineNumber);
+    virtual void ClearAllBreakpoints();
+    virtual void SetCurrentLine(uint32_t lineNumber);  // IP indicator
+    virtual void ClearCurrentLine();
 
     // Rendering
     void Render(HDC hdc, const RECT& gutterRect, int firstVisibleLine, int linesVisible, int lineHeight);

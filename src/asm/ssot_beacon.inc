@@ -10,3 +10,4 @@ RAWR_SSOT_OWNER_FEATURES  EQU 5
 
 EXTERN rawr_ssot_owner_for_hash : PROC
 EXTERN rawr_ssot_active_owner : PROC
+

@@ -1,5 +1,5 @@
 ; =============================================================================
-; rtp_result_encoder.asm — x64 MASM — RTP tool-result frame encoder (Batch 2)
+; rtp_result_encoder.asm ? x64 MASM ? RTP tool-result frame encoder (Batch 2)
 ; Encodes binary result frames for model/tool feedback path.
 ; =============================================================================
 OPTION CASEMAP:NONE
@@ -98,3 +98,4 @@ RTP_EncodeToolResultFrame PROC FRAME
 RTP_EncodeToolResultFrame ENDP
 
 END
+

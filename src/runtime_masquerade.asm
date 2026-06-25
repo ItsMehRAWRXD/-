@@ -408,12 +408,8 @@ sym_executeSwarm             BYTE "SubAgentManager_executeSwarm", 0
 PUBLIC ?getGitChangedFiles@Win32IDE@@AEBA?AV?$vector@UGitFile@@V?$allocator@UGitFile@@@std@@@std@@XZ
 ?getGitChangedFiles@Win32IDE@@AEBA?AV?$vector@UGitFile@@V?$allocator@UGitFile@@@std@@@std@@XZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_getGitChangedFiles]
-    test rax, rax
-    jnz @fwd_getGit
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_vector
-@fwd_getGit:
-    jmp rax
 ?getGitChangedFiles@Win32IDE@@AEBA?AV?$vector@UGitFile@@V?$allocator@UGitFile@@@std@@@std@@XZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -422,13 +418,9 @@ PUBLIC ?getGitChangedFiles@Win32IDE@@AEBA?AV?$vector@UGitFile@@V?$allocator@UGit
 PUBLIC ?isGitRepository@Win32IDE@@AEBA_NXZ
 ?isGitRepository@Win32IDE@@AEBA_NXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_isGitRepository]
-    test rax, rax
-    jnz @fwd_isGit
+    ; DISABLED: IAT forwarding removed to prevent recursion
     xor eax, eax
     ret
-@fwd_isGit:
-    jmp rax
 ?isGitRepository@Win32IDE@@AEBA_NXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -437,12 +429,8 @@ PUBLIC ?isGitRepository@Win32IDE@@AEBA_NXZ
 PUBLIC ?gitStageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z
 ?gitStageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_gitStageFile]
-    test rax, rax
-    jnz @fwd_stage
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_stage:
-    jmp rax
 ?gitStageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -451,12 +439,8 @@ PUBLIC ?gitStageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?
 PUBLIC ?gitUnstageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z
 ?gitUnstageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_gitUnstageFile]
-    test rax, rax
-    jnz @fwd_unstage
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_unstage:
-    jmp rax
 ?gitUnstageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -465,12 +449,8 @@ PUBLIC ?gitUnstageFile@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@
 PUBLIC ?gitPull@Win32IDE@@AEAAXXZ
 ?gitPull@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_gitPull]
-    test rax, rax
-    jnz @fwd_pull
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_pull:
-    jmp rax
 ?gitPull@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -479,12 +459,8 @@ PUBLIC ?gitPull@Win32IDE@@AEAAXXZ
 PUBLIC ?gitPush@Win32IDE@@AEAAXXZ
 ?gitPush@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_gitPush]
-    test rax, rax
-    jnz @fwd_push
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_push:
-    jmp rax
 ?gitPush@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -493,12 +469,8 @@ PUBLIC ?gitPush@Win32IDE@@AEAAXXZ
 PUBLIC ?gitCommit@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z
 ?gitCommit@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_gitCommit]
-    test rax, rax
-    jnz @fwd_commit
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_commit:
-    jmp rax
 ?gitCommit@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -507,12 +479,8 @@ PUBLIC ?gitCommit@Win32IDE@@AEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$al
 PUBLIC ?newFile@Win32IDE@@AEAAXXZ
 ?newFile@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_newFile]
-    test rax, rax
-    jnz @fwd_newfile
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_newfile:
-    jmp rax
 ?newFile@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -521,12 +489,8 @@ PUBLIC ?newFile@Win32IDE@@AEAAXXZ
 PUBLIC ?generateResponse@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z
 ?generateResponse@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_generateResponse]
-    test rax, rax
-    jnz @fwd_genresp
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_string
-@fwd_genresp:
-    jmp rax
 ?generateResponse@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -535,13 +499,9 @@ PUBLIC ?generateResponse@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@
 PUBLIC ?isModelLoaded@Win32IDE@@AEBA_NXZ
 ?isModelLoaded@Win32IDE@@AEBA_NXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_isModelLoaded]
-    test rax, rax
-    jnz @fwd_modelload
+    ; DISABLED: IAT forwarding removed to prevent recursion
     xor eax, eax
     ret
-@fwd_modelload:
-    jmp rax
 ?isModelLoaded@Win32IDE@@AEBA_NXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -550,12 +510,8 @@ PUBLIC ?isModelLoaded@Win32IDE@@AEBA_NXZ
 PUBLIC ?HandleCopilotStreamUpdate@Win32IDE@@AEAAXPEBD_K@Z
 ?HandleCopilotStreamUpdate@Win32IDE@@AEAAXPEBD_K@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_HandleCopilotStreamUpdate]
-    test rax, rax
-    jnz @fwd_stream
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_stream:
-    jmp rax
 ?HandleCopilotStreamUpdate@Win32IDE@@AEAAXPEBD_K@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -564,12 +520,8 @@ PUBLIC ?HandleCopilotStreamUpdate@Win32IDE@@AEAAXPEBD_K@Z
 PUBLIC ?HandleCopilotClear@Win32IDE@@AEAAXXZ
 ?HandleCopilotClear@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_HandleCopilotClear]
-    test rax, rax
-    jnz @fwd_clear
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_clear:
-    jmp rax
 ?HandleCopilotClear@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -578,12 +530,8 @@ PUBLIC ?HandleCopilotClear@Win32IDE@@AEAAXXZ
 PUBLIC ?HandleCopilotSend@Win32IDE@@AEAAXXZ
 ?HandleCopilotSend@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_HandleCopilotSend]
-    test rax, rax
-    jnz @fwd_send
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_send:
-    jmp rax
 ?HandleCopilotSend@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -592,13 +540,9 @@ PUBLIC ?HandleCopilotSend@Win32IDE@@AEAAXXZ
 PUBLIC ?routeCommand@Win32IDE@@AEAA_NH@Z
 ?routeCommand@Win32IDE@@AEAA_NH@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_routeCommand]
-    test rax, rax
-    jnz @fwd_route
+    ; DISABLED: IAT forwarding removed to prevent recursion
     xor eax, eax
     ret
-@fwd_route:
-    jmp rax
 ?routeCommand@Win32IDE@@AEAA_NH@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -607,12 +551,8 @@ PUBLIC ?routeCommand@Win32IDE@@AEAA_NH@Z
 PUBLIC ?shutdownInference@Win32IDE@@AEAAXXZ
 ?shutdownInference@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_shutdownInference]
-    test rax, rax
-    jnz @fwd_shutdown
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_shutdown:
-    jmp rax
 ?shutdownInference@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -621,13 +561,9 @@ PUBLIC ?shutdownInference@Win32IDE@@AEAAXXZ
 PUBLIC ?initializeInference@Win32IDE@@AEAA_NXZ
 ?initializeInference@Win32IDE@@AEAA_NXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_initializeInference]
-    test rax, rax
-    jnz @fwd_init
+    ; DISABLED: IAT forwarding removed to prevent recursion
     mov eax, 1    ; Return true - pretend init succeeded
     ret
-@fwd_init:
-    jmp rax
 ?initializeInference@Win32IDE@@AEAA_NXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -636,12 +572,8 @@ PUBLIC ?initializeInference@Win32IDE@@AEAA_NXZ
 PUBLIC ?createStatusBar@Win32IDE@@AEAAXPEAUHWND__@@@Z
 ?createStatusBar@Win32IDE@@AEAAXPEAUHWND__@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_createStatusBar]
-    test rax, rax
-    jnz @fwd_statusbar
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_statusbar:
-    jmp rax
 ?createStatusBar@Win32IDE@@AEAAXPEAUHWND__@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -650,12 +582,8 @@ PUBLIC ?createStatusBar@Win32IDE@@AEAAXPEAUHWND__@@@Z
 PUBLIC ?createTerminal@Win32IDE@@AEAAXPEAUHWND__@@@Z
 ?createTerminal@Win32IDE@@AEAAXPEAUHWND__@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_createTerminal]
-    test rax, rax
-    jnz @fwd_terminal
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_terminal:
-    jmp rax
 ?createTerminal@Win32IDE@@AEAAXPEAUHWND__@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -664,12 +592,8 @@ PUBLIC ?createTerminal@Win32IDE@@AEAAXPEAUHWND__@@@Z
 PUBLIC ?createEditor@Win32IDE@@AEAAXPEAUHWND__@@@Z
 ?createEditor@Win32IDE@@AEAAXPEAUHWND__@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_createEditor]
-    test rax, rax
-    jnz @fwd_editor
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_editor:
-    jmp rax
 ?createEditor@Win32IDE@@AEAAXPEAUHWND__@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -678,12 +602,8 @@ PUBLIC ?createEditor@Win32IDE@@AEAAXPEAUHWND__@@@Z
 PUBLIC ?createSidebar@Win32IDE@@AEAAXPEAUHWND__@@@Z
 ?createSidebar@Win32IDE@@AEAAXPEAUHWND__@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_createSidebar]
-    test rax, rax
-    jnz @fwd_sidebar
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_sidebar:
-    jmp rax
 ?createSidebar@Win32IDE@@AEAAXPEAUHWND__@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -692,12 +612,8 @@ PUBLIC ?createSidebar@Win32IDE@@AEAAXPEAUHWND__@@@Z
 PUBLIC ?initializeSwarmSystem@Win32IDE@@AEAAXXZ
 ?initializeSwarmSystem@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_initializeSwarmSystem]
-    test rax, rax
-    jnz @fwd_swarm
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_swarm:
-    jmp rax
 ?initializeSwarmSystem@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -706,12 +622,8 @@ PUBLIC ?initializeSwarmSystem@Win32IDE@@AEAAXXZ
 PUBLIC ?createAcceleratorTable@Win32IDE@@AEAAXXZ
 ?createAcceleratorTable@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_createAcceleratorTable]
-    test rax, rax
-    jnz @fwd_accel
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_accel:
-    jmp rax
 ?createAcceleratorTable@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -720,12 +632,8 @@ PUBLIC ?createAcceleratorTable@Win32IDE@@AEAAXXZ
 PUBLIC ?removeTab@Win32IDE@@AEAAXH@Z
 ?removeTab@Win32IDE@@AEAAXH@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_removeTab]
-    test rax, rax
-    jnz @fwd_removetab
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_removetab:
-    jmp rax
 ?removeTab@Win32IDE@@AEAAXH@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -734,12 +642,8 @@ PUBLIC ?removeTab@Win32IDE@@AEAAXH@Z
 PUBLIC ?filePathToUri@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z
 ?filePathToUri@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_filePathToUri]
-    test rax, rax
-    jnz @fwd_uri
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_string
-@fwd_uri:
-    jmp rax
 ?filePathToUri@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -748,12 +652,8 @@ PUBLIC ?filePathToUri@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$
 PUBLIC ?extractLeafName@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z
 ?extractLeafName@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_extractLeafName]
-    test rax, rax
-    jnz @fwd_leaf
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_string
-@fwd_leaf:
-    jmp rax
 ?extractLeafName@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEBV23@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -762,12 +662,8 @@ PUBLIC ?extractLeafName@Win32IDE@@AEBA?AV?$basic_string@DU?$char_traits@D@std@@V
 PUBLIC ?recreateFonts@Win32IDE@@AEAAXXZ
 ?recreateFonts@Win32IDE@@AEAAXXZ PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_recreateFonts]
-    test rax, rax
-    jnz @fwd_fonts
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_fonts:
-    jmp rax
 ?recreateFonts@Win32IDE@@AEAAXXZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -776,13 +672,9 @@ PUBLIC ?recreateFonts@Win32IDE@@AEAAXXZ
 PUBLIC ?findTerminalPane@Win32IDE@@AEAAPEAUTerminalPane@@H@Z
 ?findTerminalPane@Win32IDE@@AEAAPEAUTerminalPane@@H@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_findTerminalPane]
-    test rax, rax
-    jnz @fwd_termpane
+    ; DISABLED: IAT forwarding removed to prevent recursion
     xor eax, eax
     ret
-@fwd_termpane:
-    jmp rax
 ?findTerminalPane@Win32IDE@@AEAAPEAUTerminalPane@@H@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -791,12 +683,8 @@ PUBLIC ?findTerminalPane@Win32IDE@@AEAAPEAUTerminalPane@@H@Z
 PUBLIC ?setWindowText@Win32IDE@@AEAAXPEAUHWND__@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z
 ?setWindowText@Win32IDE@@AEAAXPEAUHWND__@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_setWindowText]
-    test rax, rax
-    jnz @fwd_setwnd
+    ; DISABLED: IAT forwarding removed to prevent recursion
     ret
-@fwd_setwnd:
-    jmp rax
 ?setWindowText@Win32IDE@@AEAAXPEAUHWND__@@AEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -805,12 +693,8 @@ PUBLIC ?setWindowText@Win32IDE@@AEAAXPEAUHWND__@@AEBV?$basic_string@DU?$char_tra
 PUBLIC ?getWindowText@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEAUHWND__@@@Z
 ?getWindowText@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEAUHWND__@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_Win32IDE_getWindowText]
-    test rax, rax
-    jnz @fwd_getwnd
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_string
-@fwd_getwnd:
-    jmp rax
 ?getWindowText@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEAUHWND__@@@Z ENDP
 
 ;------------------------------------------------------------------------------
@@ -819,13 +703,9 @@ PUBLIC ?getWindowText@Win32IDE@@AEAA?AV?$basic_string@DU?$char_traits@D@std@@V?$
 PUBLIC ?GetSubAgentManager@AgenticBridge@@QEAAPEAVSubAgentManager@@XZ
 ?GetSubAgentManager@AgenticBridge@@QEAAPEAVSubAgentManager@@XZ PROC FRAME
     .endprolog
-    mov rax, [iat_AgenticBridge_GetSubAgentManager]
-    test rax, rax
-    jnz @fwd_subagent
+    ; DISABLED: IAT forwarding removed to prevent recursion
     xor eax, eax
     ret
-@fwd_subagent:
-    jmp rax
 ?GetSubAgentManager@AgenticBridge@@QEAAPEAVSubAgentManager@@XZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -834,12 +714,8 @@ PUBLIC ?GetSubAgentManager@AgenticBridge@@QEAAPEAVSubAgentManager@@XZ
 PUBLIC ?getStatusSummary@SubAgentManager@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ
 ?getStatusSummary@SubAgentManager@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ PROC FRAME
     .endprolog
-    mov rax, [iat_SubAgentManager_getStatusSummary]
-    test rax, rax
-    jnz @fwd_status
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_string
-@fwd_status:
-    jmp rax
 ?getStatusSummary@SubAgentManager@@QEBA?AV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@XZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -848,12 +724,8 @@ PUBLIC ?getStatusSummary@SubAgentManager@@QEBA?AV?$basic_string@DU?$char_traits@
 PUBLIC ?getTodoList@SubAgentManager@@QEBA?AV?$vector@UTodoItem@@V?$allocator@UTodoItem@@@std@@@std@@XZ
 ?getTodoList@SubAgentManager@@QEBA?AV?$vector@UTodoItem@@V?$allocator@UTodoItem@@@std@@@std@@XZ PROC FRAME
     .endprolog
-    mov rax, [iat_SubAgentManager_getTodoList]
-    test rax, rax
-    jnz @fwd_todo
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_vector
-@fwd_todo:
-    jmp rax
 ?getTodoList@SubAgentManager@@QEBA?AV?$vector@UTodoItem@@V?$allocator@UTodoItem@@@std@@@std@@XZ ENDP
 
 ;------------------------------------------------------------------------------
@@ -863,12 +735,8 @@ PUBLIC ?getTodoList@SubAgentManager@@QEBA?AV?$vector@UTodoItem@@V?$allocator@UTo
 PUBLIC __trmp_SubAgentManager_executeSwarm
 __trmp_SubAgentManager_executeSwarm PROC FRAME
     .endprolog
-    mov rax, [iat_SubAgentManager_executeSwarm]
-    test rax, rax
-    jnz @fwd_execswarm
+    ; DISABLED: IAT forwarding removed to prevent recursion
     jmp __trampoline_string
-@fwd_execswarm:
-    jmp rax
 __trmp_SubAgentManager_executeSwarm ENDP
 
 ;------------------------------------------------------------------------------
@@ -877,13 +745,9 @@ __trmp_SubAgentManager_executeSwarm ENDP
 PUBLIC ??0SubAgentManager@@QEAA@PEAVAgenticEngine@@@Z
 ??0SubAgentManager@@QEAA@PEAVAgenticEngine@@@Z PROC FRAME
     .endprolog
-    mov rax, [iat_SubAgentManager_ctor]
-    test rax, rax
-    jnz @fwd_ctor
+    ; DISABLED: IAT forwarding removed to prevent recursion
     mov rax, rcx    ; Return 'this' for chained calls
     ret
-@fwd_ctor:
-    jmp rax
 ??0SubAgentManager@@QEAA@PEAVAgenticEngine@@@Z ENDP
 
 ;==============================================================================

@@ -7,3 +7,4 @@ RawrXD_StubDetector_Init PROC
     ret
 RawrXD_StubDetector_Init ENDP
 END
+

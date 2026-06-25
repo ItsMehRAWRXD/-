@@ -106,7 +106,7 @@ SovereignAttention_Softmax PROC FRAME
     vbroadcastss ymm3, xmm10
     vdivps ymm0, ymm0, ymm3
     
-    ; Approximate exp using polynomial: exp(x) ≈ 1 + x + x^2/2 + x^3/6 + x^4/24
+    ; Approximate exp using polynomial: exp(x) ? 1 + x + x^2/2 + x^3/6 + x^4/24
     vmulps ymm1, ymm0, ymm0       ; x^2
     vmulps ymm4, ymm1, ymm0       ; x^3
     vmulps ymm5, ymm4, ymm0       ; x^4
@@ -277,7 +277,7 @@ SovereignAttention_Forward PROC FRAME
     cmp ecx, r15d
     jge .n_done
     
-    ; Dot product Q[m] · K[n]
+    ; Dot product Q[m] ? K[n]
     vxorps ymm0, ymm0, ymm0
     xor rax, rax
 .dot_loop:
@@ -605,3 +605,4 @@ SovereignAttention_KVCacheUpdate PROC FRAME
 SovereignAttention_KVCacheUpdate ENDP
 
 END
+

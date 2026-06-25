@@ -1,5 +1,5 @@
-; RawrXD Agent Core — Self-directing task execution
-; X+4: ProcessOneAgentMessage dispatches MODEL_HOTSWAP_REQUEST → HotSwapModel
+; RawrXD Agent Core ? Self-directing task execution
+; X+4: ProcessOneAgentMessage dispatches MODEL_HOTSWAP_REQUEST ? HotSwapModel
 
 EXTERN BeaconSend:PROC
 EXTERN BeaconRecv:PROC
@@ -49,7 +49,7 @@ g_agentRetryCount     dd ?
 align 4
 g_completionMsg dd MODEL_HOTSWAP_COMPLETE, 0   ; type, result (updated on hotswap)
 
-; Priority dispatch table — 8 entries x 16 bytes
+; Priority dispatch table ? 8 entries x 16 bytes
 ; Layout per entry: dd msgType, dd priority, dq handlerPtr
 align 16
 g_dispatchTable:
@@ -101,7 +101,7 @@ MSG_HEARTBEAT_PING        equ 0FFFFh
 .code
 AgentCoreInit PROC FRAME
     ; ===========================================================================
-    ; AgentCoreInit — Full agent subsystem initialization
+    ; AgentCoreInit ? Full agent subsystem initialization
     ;   Allocates task ring, scratch buffer, retry queue; seeds dispatch table,
     ;   telemetry counters, heartbeat, and birth timestamp.  Sends AGENT_ONLINE
     ;   beacon to slot 0.
@@ -324,7 +324,7 @@ AgentCoreInit PROC FRAME
 AgentCoreInit ENDP
 
 ; ---------------------------------------------------------------------------
-; DefaultDispatchHandler — Dispatch-table fallback for unhandled message types
+; DefaultDispatchHandler ? Dispatch-table fallback for unhandled message types
 ;   RCX = pMsgData (pointer to message payload)
 ;   EDX = msgType  (message type that had no specific handler)
 ;
@@ -372,7 +372,7 @@ DefaultDispatchHandler PROC FRAME
 DefaultDispatchHandler ENDP
 
 ; ---------------------------------------------------------------------------
-; SpawnTask — Enqueue a task into the agent task ring + beacon notify
+; SpawnTask ? Enqueue a task into the agent task ring + beacon notify
 ;   ECX = taskType  (e.g. MSG_TASK_EXECUTE, MSG_INFERENCE_REQUEST)
 ;   RDX = pContext  (pointer to task-specific context data)
 ;
@@ -453,7 +453,7 @@ SpawnTask PROC FRAME
     ret
 SpawnTask ENDP
 
-; ProcessOneAgentMessage — poll slot 1; if MODEL_HOTSWAP_REQUEST, call HotSwapModel and notify slot 0
+; ProcessOneAgentMessage ? poll slot 1; if MODEL_HOTSWAP_REQUEST, call HotSwapModel and notify slot 0
 ProcessOneAgentMessage PROC FRAME
     push    rbx
     .pushreg rbx
@@ -488,3 +488,4 @@ ProcessOneAgentMessage PROC FRAME
 ProcessOneAgentMessage ENDP
 
 END
+

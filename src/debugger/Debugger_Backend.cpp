@@ -2,25 +2,72 @@
 // Phase 23: CDB/WinDbg Integration Implementation
 // ============================================================================
 
-#include "debugger/Debugger_Backend.h"
+#include "Debugger_Backend.h"
 #include <dbghelp.h>
 #include <tlhelp32.h>
 #include <sstream>
 #include <iomanip>
+#include <memory>
+#include <vector>
 
 #pragma comment(lib, "dbghelp.lib")
 
 namespace RawrXD {
 namespace Debugger {
 
+namespace {
+std::wstring FormatWin32Error(DWORD code) {
+    if (code == 0) {
+        return L"";
+    }
+
+    LPWSTR buffer = nullptr;
+    const DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                        FORMAT_MESSAGE_FROM_SYSTEM |
+                        FORMAT_MESSAGE_IGNORE_INSERTS;
+    const DWORD length = FormatMessageW(
+        flags,
+        nullptr,
+        code,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        reinterpret_cast<LPWSTR>(&buffer),
+        0,
+        nullptr
+    );
+
+    std::wstringstream ss;
+    ss << L"error=" << code;
+    if (length > 0 && buffer) {
+        std::wstring message(buffer, length);
+        while (!message.empty() && (message.back() == L'\r' || message.back() == L'\n')) {
+            message.pop_back();
+        }
+        if (!message.empty()) {
+            ss << L" (" << message << L")";
+        }
+    }
+
+    if (buffer) {
+        LocalFree(buffer);
+    }
+    return ss.str();
+}
+}
+
 // Symbol resolver implementation using DbgHelp
 class DbgHelpSymbolResolver : public SymbolResolver {
 public:
     bool Initialize(const std::wstring& symbolPath) override {
         SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+        std::string symbolPathA;
+        PCSTR userSearchPath = nullptr;
+        if (!symbolPath.empty()) {
+            symbolPathA.assign(symbolPath.begin(), symbolPath.end());
+            userSearchPath = symbolPathA.c_str();
+        }
         
         // Initialize symbols for current process (will be used as template)
-        if (!SymInitialize(GetCurrentProcess(), symbolPath.empty() ? nullptr : symbolPath.c_str(), TRUE)) {
+        if (!SymInitialize(GetCurrentProcess(), userSearchPath, TRUE)) {
             return false;
         }
         
@@ -138,10 +185,19 @@ void DebugSession::Shutdown() {
 bool DebugSession::LaunchProcess(const std::wstring& executable,
                                   const std::wstring& arguments,
                                   const std::wstring& workingDirectory) {
+    lastError_.clear();
+    if (executable.empty()) {
+        lastError_ = L"LaunchProcess: executable path is empty";
+        return false;
+    }
+
     std::wstring commandLine = L"\"" + executable + L"\"";
     if (!arguments.empty()) {
         commandLine += L" " + arguments;
     }
+
+    std::vector<wchar_t> commandLineBuffer(commandLine.begin(), commandLine.end());
+    commandLineBuffer.push_back(L'\0');
     
     STARTUPINFOW si = { sizeof(si) };
     PROCESS_INFORMATION pi = {};
@@ -150,7 +206,7 @@ bool DebugSession::LaunchProcess(const std::wstring& executable,
     
     BOOL result = CreateProcessW(
         nullptr,
-        commandLine.data(),
+        commandLineBuffer.data(),
         nullptr,
         nullptr,
         FALSE,
@@ -162,6 +218,10 @@ bool DebugSession::LaunchProcess(const std::wstring& executable,
     );
     
     if (!result) {
+        const DWORD error = ::GetLastError();
+        std::wstringstream ss;
+        ss << L"CreateProcessW failed for '" << executable << L"': " << FormatWin32Error(error);
+        lastError_ = ss.str();
         return false;
     }
     
@@ -172,8 +232,10 @@ bool DebugSession::LaunchProcess(const std::wstring& executable,
     pImpl_->hProcess_ = pi.hProcess;
     
     if (!pImpl_->InitializeDebugSymbols()) {
-        TerminateProcess(processHandle_, 1);
-        return false;
+        const DWORD error = ::GetLastError();
+        std::wstringstream ss;
+        ss << L"Launch succeeded but SymInitialize failed: " << FormatWin32Error(error);
+        lastError_ = ss.str();
     }
     
     return true;
@@ -530,9 +592,13 @@ void DebugSession::SetEventCallback(DebugEventCallback callback) {
     eventCallback_ = callback;
 }
 
+bool DebugSession::WaitForDebugEvent(DEBUG_EVENT& event, uint32_t timeoutMs) {
+    return ::WaitForDebugEvent(&event, timeoutMs) != FALSE;
+}
+
 void DebugSession::ProcessEvents(uint32_t timeoutMs) {
     DEBUG_EVENT event;
-    if (WaitForDebugEvent(&event, timeoutMs)) {
+    if (WaitForDebugEvent(event, timeoutMs)) {
         HandleDebugEvent(event);
     }
 }
@@ -540,7 +606,7 @@ void DebugSession::ProcessEvents(uint32_t timeoutMs) {
 void DebugSession::RunEventLoop() {
     DEBUG_EVENT event;
     while (IsActive()) {
-        if (WaitForDebugEvent(&event, INFINITE)) {
+        if (WaitForDebugEvent(event, INFINITE)) {
             if (!HandleDebugEvent(event)) {
                 break;
             }

@@ -72,6 +72,25 @@ struct StackFrame {
     uint32_t line;
     uint32_t column;
     std::string module;
+
+    // Wide string versions for UI display (persist to avoid dangling pointers)
+    mutable std::wstring wname;
+    mutable std::wstring wsource;
+    mutable std::wstring wmodule;
+    mutable std::wstring lineStr;  // Persist line number as string for ListView
+
+    // Initialize wide strings on first access
+    void EnsureWideStrings() const {
+        if (wname.empty() && !name.empty()) {
+            wname = std::wstring(name.begin(), name.end());
+        }
+        if (wsource.empty() && !source.empty()) {
+            wsource = std::wstring(source.begin(), source.end());
+        }
+        if (wmodule.empty() && !module.empty()) {
+            wmodule = std::wstring(module.begin(), module.end());
+        }
+    }
 };
 
 /// @brief Variable information (scalars, objects, arrays)

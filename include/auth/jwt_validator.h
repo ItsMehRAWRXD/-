@@ -14,6 +14,7 @@ public:
 
     void setHS256Secret(const std::string& secret);
     void setRS256PublicKey(const std::string& publicKey);
+    void setES256PublicKey(const std::string& publicKey);
     bool validateToken(const std::string& token);
 
     /** Claims after validateToken; values as string (or JSON string for nested). */
@@ -22,9 +23,11 @@ public:
 private:
     bool validateHS256(const std::string& token);
     bool validateRS256(const std::string& token);
+    bool validateES256(const std::string& token);
 
     std::string m_hs256Secret;
     std::string m_rs256PublicKey;
+    std::string m_es256PublicKey;
     std::map<std::string, std::string> m_claims;
 };
 

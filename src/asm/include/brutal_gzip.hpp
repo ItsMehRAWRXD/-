@@ -15,3 +15,4 @@ extern "C" std::uint8_t* deflate_brutal_neon(const std::uint8_t* src,
                                               size_t              len,
                                               size_t*             out_len);
 #endif
+

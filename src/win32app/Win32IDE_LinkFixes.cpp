@@ -10,6 +10,8 @@
 
 #include "BATCH2_CONTEXT.h"
 #include "Win32IDE.h"
+#include "AnnotationTypes.h"
+#include "DiagnosticTranslator.h"
 #include "resource.h"
 #include <windows.h>
 #include <commctrl.h>
@@ -197,7 +199,31 @@ extern "C" __declspec(dllexport) void handleHelpAbout() {
 
 // Window procedure implementations
 extern "C" __declspec(dllexport) LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    // Get IDE instance from window data
+    Win32IDE* pThis = (Win32IDE*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    
     switch (msg) {
+        // AgentBridge Integration - Annotation update messages
+        case WM_USER_UPDATE_ANNOTATIONS:
+        {
+            if (pThis) {
+                auto* pAnnotations = reinterpret_cast<std::vector<RawrXD::UI::AnnotationData>*>(wParam);
+                if (pAnnotations) {
+                    pThis->OnAgentBridgeDiagnostics(*pAnnotations);
+                    delete pAnnotations;
+                }
+            }
+            return 0;
+        }
+        
+        case WM_USER_CLEAR_ANNOTATIONS:
+        {
+            if (pThis) {
+                pThis->OnAgentBridgeAnnotationsCleared(L"");
+            }
+            return 0;
+        }
+        
         case WM_COMMAND:
             // Route commands to handlers
             switch (LOWORD(wParam)) {

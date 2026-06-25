@@ -1,6 +1,6 @@
 #pragma once
 
-// Qt-free compression wrappers — uses zlib directly
+// Qt-free compression wrappers ? uses zlib directly
 // Replaces: QString, QByteArray, qCompress, qUncompress, qint64
 
 #include <memory>
@@ -164,3 +164,4 @@ private:
     int64_t m_lastInputSize = 0;
     int64_t m_lastOutputSize = 0;
 };
+

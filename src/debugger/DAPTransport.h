@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <string>
 #include <functional>
+#include <memory>
 
 namespace RawrXD {
 namespace DAP {

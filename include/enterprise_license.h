@@ -124,8 +124,21 @@ enum class FeatureID : uint32_t
     TamperDetection = 63,
     SecureBootChain = 64,
 
+    // ── AI IDE Features (65–75) ───────────────────────────────────
+    AIInlineEditor = 65,           // Cmd+K style inline editing
+    AISmartCompletion = 66,          // Whole-line, multi-line completion
+    AIDebugger = 67,                 // Intelligent debugging assistant
+    AICodeReview = 68,               // Automated code review
+    AINaturalLanguageQuery = 69,     // Chat-based code queries
+    AICodeExplanation = 70,            // Explain selected code
+    AICodeGeneration = 71,             // Generate code from description
+    AITestGeneration = 72,             // Generate unit tests
+    AIDocumentationGeneration = 73,  // Generate documentation
+    AIRefactoring = 74,                // AI-powered refactoring
+    AICodeTranslation = 75,            // Translate between languages
+
     // Sentinel
-    COUNT = 65
+    COUNT = 76
 };
 
 // ============================================================================

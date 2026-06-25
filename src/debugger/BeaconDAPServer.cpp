@@ -9,13 +9,21 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <string>
 #include <sstream>
+#include <memory>
+#include <fstream>
 
 // Include DAP components
 #include "DAPTransport.h"
 #include "DAPAdapter.h"
-#include "debugger/Debugger_Backend.h"
+#include "Debugger_Backend.h"
+
+// CRITICAL: Set binary mode for stdin/stdout on Windows
+// This prevents CRLF translation which breaks Content-Length framing
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 using namespace RawrXD;
 
@@ -109,6 +117,13 @@ static Logger g_logger;
 // Main Entry Point
 // ============================================================================
 int main(int argc, char* argv[]) {
+    // CRITICAL: Set binary mode BEFORE any I/O operations
+    // This prevents Windows from translating LF to CRLF
+    #ifdef _WIN32
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+    #endif
+    
     ServerConfig config;
     
     if (!ParseCommandLine(argc, argv, config)) {
@@ -118,6 +133,7 @@ int main(int argc, char* argv[]) {
     // Initialize logging
     g_logger.Initialize(config.logFile);
     g_logger.Log("BeaconDAPServer starting...");
+    g_logger.Log("Binary mode set for stdin/stdout");
     
     // Set console mode for binary I/O
     HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
@@ -129,7 +145,10 @@ int main(int argc, char* argv[]) {
     
     // Create transport
     DAP::DAPTransport transport;
-    if (!transport.Initialize(hStdin, hStdout)) {
+    DAP::DAPTransportConfig transportConfig{};
+    transportConfig.hInput = hStdin;
+    transportConfig.hOutput = hStdout;
+    if (!transport.Initialize(transportConfig)) {
         g_logger.Log("Failed to initialize DAP transport");
         return 1;
     }
@@ -151,7 +170,7 @@ int main(int argc, char* argv[]) {
     g_logger.Log("DAP adapter initialized");
     
     // Run the DAP adapter
-    auto* adapter = GetDAPAdapter();
+    auto* adapter = DAP::GetDAPAdapter();
     if (adapter) {
         g_logger.Log("DAP server running - waiting for client...");
         adapter->Run();
@@ -159,7 +178,7 @@ int main(int argc, char* argv[]) {
     
     // Cleanup
     g_logger.Log("Shutting down...");
-    ShutdownDAPAdapter();
+    DAP::ShutdownDAPAdapter();
     debugSession->Shutdown();
     
     g_logger.Log("BeaconDAPServer exited");

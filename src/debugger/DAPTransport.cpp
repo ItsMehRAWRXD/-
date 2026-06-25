@@ -5,6 +5,7 @@
 #include "DAPTransport.h"
 #include <sstream>
 #include <iomanip>
+#include <memory>
 
 namespace RawrXD {
 namespace DAP {

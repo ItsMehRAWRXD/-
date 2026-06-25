@@ -3,6 +3,7 @@
 #include <atomic>
 #include <string>
 #include <mutex>
+#include <algorithm>
 
 namespace RawrXD {
 
@@ -100,6 +101,9 @@ public:
         bool is_converged = false;   // Variance below threshold
     };
     Stats get_stats() const;
+
+    // Allow ScopedAlphaOverride to access private members
+    friend class ScopedAlphaOverride;
 
 private:
     AdaptiveFusionEngine();

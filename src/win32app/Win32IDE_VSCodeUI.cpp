@@ -1244,13 +1244,14 @@ void Win32IDE::addProblem(const std::string& file, int line, int col, const std:
     ListView_InsertItem(m_hwndProblemsListView, &lvi);
 
     // Set item text using direct SendMessage calls with ANSI structures
+    // Use the stored strings in m_problems to avoid dangling pointers
     LVITEMA lviSet = {0};
     lviSet.iSubItem = 1;
-    lviSet.pszText = const_cast<char*>(msg.c_str());
+    lviSet.pszText = const_cast<char*>(m_problems.back().message.c_str());
     SendMessage(m_hwndProblemsListView, LVM_SETITEMTEXTA, lvi.iItem, (LPARAM)&lviSet);
 
     lviSet.iSubItem = 2;
-    lviSet.pszText = const_cast<char*>(file.c_str());
+    lviSet.pszText = const_cast<char*>(m_problems.back().file.c_str());
     SendMessage(m_hwndProblemsListView, LVM_SETITEMTEXTA, lvi.iItem, (LPARAM)&lviSet);
 
     char lineStrBuf[32];

@@ -278,21 +278,27 @@ void DigestionGuiWidget::onProgress(int done, int total, int /*stubs*/, int /*pe
 void DigestionGuiWidget::onFileScanned(const std::string& path, const std::string& lang, int stubs)
 {
     if (!m_hwndResultsLV) return;
-    int row = ListView_GetItemCount(m_hwndResultsLV);
+    int row = static_cast<int>(m_scannedFiles.size());
 
-    std::wstring wPath(path.begin(), path.end());
-    std::wstring wLang(lang.begin(), lang.end());
-    std::wstring wStubs = std::to_wstring(stubs);
+    // Store data persistently to avoid dangling pointers
+    FileScannedMsg msg;
+    msg.path = path;
+    msg.lang = lang;
+    msg.stubs = stubs;
+    msg.EnsureWideStrings();
+    m_scannedFiles.push_back(std::move(msg));
+
+    const auto& stored = m_scannedFiles.back();
 
     LVITEMW item{};
     item.mask     = LVIF_TEXT;
     item.iItem    = row;
     item.iSubItem = 0;
-    item.pszText  = const_cast<LPWSTR>(wPath.c_str());
+    item.pszText  = const_cast<LPWSTR>(stored.wpath.c_str());
     ListView_InsertItem(m_hwndResultsLV, &item);
-    ListView_SetItemText(m_hwndResultsLV, row, 1, const_cast<LPWSTR>(wLang.c_str()));
-    ListView_SetItemText(m_hwndResultsLV, row, 2, const_cast<LPWSTR>(wStubs.c_str()));
-    ListView_SetItemText(m_hwndResultsLV, row, 3, stubs > 0 ? const_cast<LPWSTR>(L"Stubs Found") : const_cast<LPWSTR>(L"OK"));
+    ListView_SetItemText(m_hwndResultsLV, row, 1, const_cast<LPWSTR>(stored.wlang.c_str()));
+    ListView_SetItemText(m_hwndResultsLV, row, 2, const_cast<LPWSTR>(stored.wstubs.c_str()));
+    ListView_SetItemText(m_hwndResultsLV, row, 3, const_cast<LPWSTR>(stored.status.c_str()));
 }
 
 void DigestionGuiWidget::onFinished(int totalFiles, int totalStubs, int64_t elapsedMs)

@@ -1,4 +1,4 @@
-; RawrXD LSP Bridge — JSON-RPC over stdin/stdout of LSP subprocess
+; RawrXD LSP Bridge ? JSON-RPC over stdin/stdout of LSP subprocess
 ; Full FRAME compliance for stack unwinding and SEH
 
 EXTERN CreatePipe:PROC
@@ -65,14 +65,14 @@ szLspExitMsg     db 'Content-Length: 33', 13, 10, 13, 10
                  db '{', '"jsonrpc":"2.0","method":"exit"', '}'
 
 .code
-; ────────────────────────────────────────────────────────────────
-; LSPBridgeInit — create pipes and launch LSP subprocess
+; ????????????????????????????????????????????????????????????????
+; LSPBridgeInit ? create pipes and launch LSP subprocess
 ;   RCX = lspPath (LPCWSTR); NULL = deferred init (no-op)
 ;   Returns: EAX = 0 on success, -1 on failure
 ;   FRAME: 2 pushes (rbp, rbx) + 58h alloc
-;     ABI: 8(ret) + 16(pushes) + 58h(88) = 112 → 112/16=7. Good.
-;     CreateProcessW: 10 params → 4 regs + 6 stack (20h..48h) = needs 50h min
-; ────────────────────────────────────────────────────────────────
+;     ABI: 8(ret) + 16(pushes) + 58h(88) = 112 ? 112/16=7. Good.
+;     CreateProcessW: 10 params ? 4 regs + 6 stack (20h..48h) = needs 50h min
+; ????????????????????????????????????????????????????????????????
 LSPBridgeInit PROC FRAME
     push    rbp
     .pushreg rbp
@@ -90,13 +90,13 @@ LSPBridgeInit PROC FRAME
     test    rbx, rbx
     jz      @lsp_deferred               ; NULL path = deferred init
 
-    ; ── Set up SECURITY_ATTRIBUTES for inheritable handles ──
+    ; ?? Set up SECURITY_ATTRIBUTES for inheritable handles ??
     lea     rcx, saInherit
     mov     dword ptr [rcx], SA_SIZE     ; nLength = 24
     mov     qword ptr [rcx+8], 0        ; lpSecurityDescriptor = NULL
     mov     dword ptr [rcx+16], 1       ; bInheritHandle = TRUE
 
-    ; ── Create stdin pipe (parent writes → child reads) ──
+    ; ?? Create stdin pipe (parent writes ? child reads) ??
     lea     rcx, hLSPInRead             ; pRead
     lea     rdx, hLSPInWrite            ; pWrite
     lea     r8, saInherit               ; lpPipeAttributes
@@ -105,7 +105,7 @@ LSPBridgeInit PROC FRAME
     test    eax, eax
     jz      @lsp_fail
 
-    ; ── Create stdout pipe (child writes → parent reads) ──
+    ; ?? Create stdout pipe (child writes ? parent reads) ??
     lea     rcx, hLSPOutRead
     lea     rdx, hLSPOutWrite
     lea     r8, saInherit
@@ -114,7 +114,7 @@ LSPBridgeInit PROC FRAME
     test    eax, eax
     jz      @lsp_fail_close_in
 
-    ; ── Zero STARTUPINFOW ──
+    ; ?? Zero STARTUPINFOW ??
     lea     rdi, startInfo
     mov     rcx, STARTUPINFO_SIZE / 8
     xor     eax, eax
@@ -131,7 +131,7 @@ LSPBridgeInit PROC FRAME
     mov     [rax+72], rcx                       ; hStdOutput
     mov     [rax+80], rcx                       ; hStdError = same as stdout
 
-    ; ── CreateProcessW ──
+    ; ?? CreateProcessW ??
     xor     ecx, ecx                    ; lpApplicationName = NULL
     mov     rdx, rbx                    ; lpCommandLine = lspPath
     xor     r8d, r8d                    ; lpProcessAttributes
@@ -191,14 +191,14 @@ LSPBridgeInit PROC FRAME
     ret
 LSPBridgeInit ENDP
 
-; ────────────────────────────────────────────────────────────────
-; LSPSendRequest — write a JSON-RPC request to the LSP pipe
+; ????????????????????????????????????????????????????????????????
+; LSPSendRequest ? write a JSON-RPC request to the LSP pipe
 ;   RCX = pRequest (pointer to UTF-8 buffer)
 ;   EDX = length (bytes)
 ;   Returns: EAX = bytes written, or 0 on failure
 ;   FRAME: 1 push (rbp) + 30h alloc
-;     ABI: 8 + 8 + 30h = 64 → 64/16=4. Good.
-; ────────────────────────────────────────────────────────────────
+;     ABI: 8 + 8 + 30h = 64 ? 64/16=4. Good.
+; ????????????????????????????????????????????????????????????????
 LSPSendRequest PROC FRAME
     push    rbp
     .pushreg rbp
@@ -232,16 +232,16 @@ LSPSendRequest PROC FRAME
     ret
 LSPSendRequest ENDP
 
-; ────────────────────────────────────────────────────────────────
-; LSPBridgeShutdown — graceful JSON-RPC shutdown + full cleanup
+; ????????????????????????????????????????????????????????????????
+; LSPBridgeShutdown ? graceful JSON-RPC shutdown + full cleanup
 ;   Returns: EAX = 0 on clean shutdown, -1 on timeout / send failure
 ;   FRAME: 4 pushes (rbp,rbx,rsi,rdi) + 148h alloc
-;     ABI: 8(ret) + 32(pushes) + 148h(328) = 368 → 368/16=23. Aligned.
-;     PeekNamedPipe: 6 params → 4 regs + 2 stack (20h,28h)
+;     ABI: 8(ret) + 32(pushes) + 148h(328) = 368 ? 368/16=23. Aligned.
+;     PeekNamedPipe: 6 params ? 4 regs + 2 stack (20h,28h)
 ;     Local readBuffer[256] at [rsp+48h..147h]
 ;     bytesWritten at [rsp+30h], totalAvail at [rsp+38h]
 ;     shutdownResult at [rsp+40h]
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 LSPBridgeShutdown PROC FRAME
     push    rbp
     .pushreg rbp
@@ -257,14 +257,14 @@ LSPBridgeShutdown PROC FRAME
     .allocstack 148h
     .endprolog
 
-    ; ── Step 1: Check if LSP bridge is initialized (g_lspState != 0) ──
+    ; ?? Step 1: Check if LSP bridge is initialized (g_lspState != 0) ??
     cmp     g_lspReady, 0
     je      @sd_not_init
 
     ; Assume success; overwrite on timeout/failure
     mov     dword ptr [rsp+40h], 0      ; shutdownResult = 0
 
-    ; ── Step 2: Send JSON-RPC "shutdown" request via pipe ──
+    ; ?? Step 2: Send JSON-RPC "shutdown" request via pipe ??
     ; Content-Length: 44\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"shutdown"}
     mov     rcx, hLSPInWrite            ; hFile = pipe write handle
     lea     rdx, szLspShutdownMsg       ; lpBuffer
@@ -275,7 +275,7 @@ LSPBridgeShutdown PROC FRAME
     test    eax, eax
     jz      @sd_write_fail
 
-    ; ── Step 3: Wait for shutdown response — 5-second poll via PeekNamedPipe ──
+    ; ?? Step 3: Wait for shutdown response ? 5-second poll via PeekNamedPipe ??
     call    GetTickCount64
     mov     rsi, rax                    ; rsi = poll-start timestamp
 
@@ -290,7 +290,7 @@ LSPBridgeShutdown PROC FRAME
     mov     qword ptr [rsp+28h], 0      ; lpBytesLeftThisMessage = NULL
     call    PeekNamedPipe
     test    eax, eax
-    jz      @sd_check_elapsed           ; peek failed → check timeout
+    jz      @sd_check_elapsed           ; peek failed ? check timeout
 
     cmp     dword ptr [rsp+38h], 0      ; any bytes available?
     jne     @sd_drain_response
@@ -301,7 +301,7 @@ LSPBridgeShutdown PROC FRAME
     cmp     rax, 5000                   ; 5 000 ms deadline
     jae     @sd_timeout
 
-    mov     ecx, 50                     ; Sleep(50) — yield between polls
+    mov     ecx, 50                     ; Sleep(50) ? yield between polls
     call    Sleep
     jmp     @sd_poll
 
@@ -323,7 +323,7 @@ LSPBridgeShutdown PROC FRAME
     mov     dword ptr [rsp+40h], -1     ; shutdownResult = -1 (write err)
 
 @sd_exit_notify:
-    ; ── Step 4: Send "exit" notification (no id — JSON-RPC notification) ──
+    ; ?? Step 4: Send "exit" notification (no id ? JSON-RPC notification) ??
     mov     rcx, hLSPInWrite
     test    rcx, rcx
     jz      @sd_close_handles           ; pipe already gone
@@ -331,9 +331,9 @@ LSPBridgeShutdown PROC FRAME
     mov     r8d, LSP_EXIT_MSG_LEN       ; nNumberOfBytesToWrite = 55
     lea     r9, [rsp+30h]               ; &bytesWritten
     mov     qword ptr [rsp+20h], 0
-    call    WriteFile                   ; result ignored — shutting down
+    call    WriteFile                   ; result ignored ? shutting down
 
-    ; ── Step 5: Close pipe handles (hPipeRead, hPipeWrite, hProcess, hThread) ──
+    ; ?? Step 5: Close pipe handles (hPipeRead, hPipeWrite, hProcess, hThread) ??
 @sd_close_handles:
     mov     rcx, hLSPInWrite
     test    rcx, rcx
@@ -356,7 +356,7 @@ LSPBridgeShutdown PROC FRAME
     call    CloseHandle
 @sd_c4:
 
-    ; ── Step 6: Free allocated buffers (request, response, diagnostic) ──
+    ; ?? Step 6: Free allocated buffers (request, response, diagnostic) ??
     mov     rcx, g_lspReqBuf
     test    rcx, rcx
     jz      @sd_f1
@@ -379,7 +379,7 @@ LSPBridgeShutdown PROC FRAME
     call    VirtualFree
 @sd_f3:
 
-    ; ── Step 7: Zero out all LSP state globals ──
+    ; ?? Step 7: Zero out all LSP state globals ??
     xor     eax, eax
     mov     g_lspReady, eax
     mov     g_lspState, eax
@@ -393,7 +393,7 @@ LSPBridgeShutdown PROC FRAME
     mov     qword ptr g_lspRspBuf, 0
     mov     qword ptr g_lspDiagBuf, 0
 
-    ; ── Step 8: Update telemetry — increment shutdown count, stamp timestamp ──
+    ; ?? Step 8: Update telemetry ? increment shutdown count, stamp timestamp ??
     lock inc dword ptr g_lspShutdownCount
     call    GetTickCount64
     mov     g_lspShutdownTs, rax        ; shutdown timestamp (ms since boot)
@@ -403,7 +403,7 @@ LSPBridgeShutdown PROC FRAME
     jmp     @sd_epilogue
 
 @sd_not_init:
-    xor     eax, eax                    ; not initialized → return 0 (no-op)
+    xor     eax, eax                    ; not initialized ? return 0 (no-op)
 
 @sd_epilogue:
     lea     rsp, [rbp]
@@ -415,3 +415,4 @@ LSPBridgeShutdown PROC FRAME
 LSPBridgeShutdown ENDP
 
 END
+

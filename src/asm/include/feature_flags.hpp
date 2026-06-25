@@ -8,3 +8,4 @@ namespace rxd::features {
     constexpr bool AVX_512_TEXT_PROC   = true;       // MASM bridge active
     constexpr bool INCREMENTAL_SYNC    = true;       // Myers diff active
 }
+

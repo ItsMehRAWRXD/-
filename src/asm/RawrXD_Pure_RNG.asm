@@ -1,13 +1,13 @@
 ; ============================================================================
-; RawrXD_Pure_RNG.asm — Deterministic PRNG for Pure MASM64 (No External Dependencies)
-; Uses xorshift128+ algorithm — fast, high-quality, zero dependencies
+; RawrXD_Pure_RNG.asm ? Deterministic PRNG for Pure MASM64 (No External Dependencies)
+; Uses xorshift128+ algorithm ? fast, high-quality, zero dependencies
 ; ============================================================================
 ; Exports:
-;   RawrXD_RNG_Seed      — Initialize with 64-bit seed
-;   RawrXD_RNG_Next64   — Get next 64-bit random value
-;   RawrXD_RNG_Next32   — Get next 32-bit random value
-;   RawrXD_RNG_NextFloat— Get random float in [0, 1)
-;   RawrXD_RNG_Range    — Get random value in [min, max]
+;   RawrXD_RNG_Seed      ? Initialize with 64-bit seed
+;   RawrXD_RNG_Next64   ? Get next 64-bit random value
+;   RawrXD_RNG_Next32   ? Get next 32-bit random value
+;   RawrXD_RNG_NextFloat? Get random float in [0, 1)
+;   RawrXD_RNG_Range    ? Get random value in [min, max]
 ; ============================================================================
 
 OPTION CASEMAP:NONE
@@ -21,7 +21,7 @@ rng_initialized DB 0
 .code
 
 ; ----------------------------------------------------------------------------
-; RawrXD_RNG_Seed — Initialize PRNG state from 64-bit seed
+; RawrXD_RNG_Seed ? Initialize PRNG state from 64-bit seed
 ; RCX = seed value (can be from RDTSC, process ID, etc.)
 ; ----------------------------------------------------------------------------
 PUBLIC RawrXD_RNG_Seed
@@ -75,7 +75,7 @@ RawrXD_RNG_Seed PROC FRAME
 RawrXD_RNG_Seed ENDP
 
 ; ----------------------------------------------------------------------------
-; RawrXD_RNG_Next64 — xorshift128+ algorithm
+; RawrXD_RNG_Next64 ? xorshift128+ algorithm
 ; Returns: RAX = 64-bit random value
 ; ----------------------------------------------------------------------------
 PUBLIC RawrXD_RNG_Next64
@@ -122,7 +122,7 @@ RawrXD_RNG_Next64 PROC FRAME
 RawrXD_RNG_Next64 ENDP
 
 ; ----------------------------------------------------------------------------
-; RawrXD_RNG_Next32 — Get 32-bit random value
+; RawrXD_RNG_Next32 ? Get 32-bit random value
 ; Returns: EAX = 32-bit random value
 ; ----------------------------------------------------------------------------
 PUBLIC RawrXD_RNG_Next32
@@ -139,7 +139,7 @@ RawrXD_RNG_Next32 PROC FRAME
 RawrXD_RNG_Next32 ENDP
 
 ; ----------------------------------------------------------------------------
-; RawrXD_RNG_NextFloat — Get random float in [0, 1)
+; RawrXD_RNG_NextFloat ? Get random float in [0, 1)
 ; Returns: XMM0 = float in [0, 1)
 ; ----------------------------------------------------------------------------
 PUBLIC RawrXD_RNG_NextFloat
@@ -167,7 +167,7 @@ RawrXD_RNG_NextFloat PROC FRAME
 RawrXD_RNG_NextFloat ENDP
 
 ; ----------------------------------------------------------------------------
-; RawrXD_RNG_Range — Get random value in [min, max]
+; RawrXD_RNG_Range ? Get random value in [min, max]
 ; RCX = min, RDX = max
 ; Returns: RAX = random value in [min, max]
 ; ----------------------------------------------------------------------------
@@ -203,7 +203,7 @@ RawrXD_RNG_Range PROC FRAME
 RawrXD_RNG_Range ENDP
 
 ; ----------------------------------------------------------------------------
-; RawrXD_RNG_InitFromEntropy — Initialize from system entropy (RDTSC + process info)
+; RawrXD_RNG_InitFromEntropy ? Initialize from system entropy (RDTSC + process info)
 ; No parameters, uses RDTSC and GetCurrentProcessId
 ; ----------------------------------------------------------------------------
 EXTERN GetCurrentProcessId:PROC

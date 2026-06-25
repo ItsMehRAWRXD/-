@@ -78,6 +78,7 @@ extern "C" {
     void* SparseGather_Initialize(void* config, void* telemetry_handle);
     int SparseGather_Execute(void* context, float* input, float* router_logits, float* output, uint32_t layer_index);
     void SparseGather_FlushCache(void* context);
+    // Note: SparseGather_GetStats is now a no-op in ASM - returns immediately
     void SparseGather_GetStats(void* context, uint64_t* loaded, uint64_t* skipped);
     
     // Sampler (AVX-512)

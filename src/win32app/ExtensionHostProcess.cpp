@@ -169,7 +169,7 @@ namespace RawrXD::Extensions {
         }
 
         m_processHandle = hProcess;
-        m_processId = GetProcessId(hProcess);
+        m_processId = ::GetProcessId(hProcess);
         
         // Note: Thread handle is not currently returned by this version of the MASM broker.
         // If needed, we could update the MASM routine to return the PROCESS_INFORMATION struct.

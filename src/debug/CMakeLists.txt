@@ -37,6 +37,28 @@ set_target_properties(DebugTest PROPERTIES
     LINK_FLAGS "/SUBSYSTEM:CONSOLE"
 )
 
+# Vertical Slice Test executable
+add_executable(VerticalTest
+    VerticalTest.cpp
+    DebugBackend.cpp
+    DebugBridge.cpp
+    DAPAdapter.cpp
+)
+
+target_include_directories(VerticalTest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(VerticalTest PRIVATE
+    dbghelp.lib
+    kernel32.lib
+    user32.lib
+)
+
+set_target_properties(VerticalTest PROPERTIES
+    LINK_FLAGS "/SUBSYSTEM:CONSOLE"
+)
+
 # Install targets
 install(TARGETS RawrXD_DebugBackend DebugTest
     RUNTIME DESTINATION bin

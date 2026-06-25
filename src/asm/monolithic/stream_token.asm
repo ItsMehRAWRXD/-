@@ -1,4 +1,4 @@
-; stream_token.asm — Token streaming bridge for Ollama/UI
+; stream_token.asm ? Token streaming bridge for Ollama/UI
 OPTION CASEMAP:NONE
 
 EXTERN BeaconSend:PROC
@@ -187,3 +187,4 @@ StreamToken_GetStats PROC FRAME
 StreamToken_GetStats ENDP
 
 END
+

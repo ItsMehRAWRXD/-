@@ -27,6 +27,8 @@ static constexpr size_t kMaxClaimValueBytes = 2048;
 static constexpr size_t kMaxHs256SecretBytes = 4096;
 static constexpr size_t kMaxRs256PublicKeyBytes = 128 * 1024;
 
+static constexpr size_t kMaxEs256PublicKeyBytes = 128 * 1024;
+
 int base64url_decode_char(char c)
 {
     if (c >= 'A' && c <= 'Z')
@@ -242,9 +244,6 @@ bool validate_registered_time_claims(const std::string& payload)
 
 }  // namespace
 
-JWTValidator::JWTValidator() = default;
-JWTValidator::~JWTValidator() = default;
-
 void JWTValidator::setHS256Secret(const std::string& secret)
 {
     if (secret.size() > kMaxHs256SecretBytes)
@@ -263,6 +262,16 @@ void JWTValidator::setRS256PublicKey(const std::string& publicKey)
         return;
     }
     m_rs256PublicKey = publicKey;
+}
+
+void JWTValidator::setES256PublicKey(const std::string& publicKey)
+{
+    if (publicKey.size() > kMaxEs256PublicKeyBytes)
+    {
+        m_es256PublicKey.clear();
+        return;
+    }
+    m_es256PublicKey = publicKey;
 }
 
 static bool verifyHmacSha256(const std::string& secret, const std::string& message, const std::string& signature)
@@ -361,6 +370,8 @@ bool JWTValidator::validateToken(const std::string& token)
     if (alg == "HS256" && !m_hs256Secret.empty() && verifyHmacSha256(m_hs256Secret, message, sig))
         return true;
     if (alg == "RS256" && !m_rs256PublicKey.empty() && validateRS256(token))
+        return true;
+    if (alg == "ES256" && !m_es256PublicKey.empty() && validateES256(token))
         return true;
     m_claims.clear();
     return false;
@@ -518,6 +529,151 @@ bool JWTValidator::validateRS256(const std::string& token)
     st = BCryptVerifySignature(hKey, &paddingInfo, hash, hashLen,
                                reinterpret_cast<PUCHAR>(const_cast<char*>(sig.data())),
                                static_cast<ULONG>(sig.size()), BCRYPT_PAD_PKCS1);
+    BCryptDestroyKey(hKey);
+    return BCRYPT_SUCCESS(st);
+#else
+    (void)token;
+    return false;
+#endif
+}
+
+bool JWTValidator::validateES256(const std::string& token)
+{
+#ifdef _WIN32
+    if (m_es256PublicKey.empty())
+        return false;
+    if (token.empty() || token.size() > kMaxJwtTokenBytes)
+        return false;
+
+    size_t d1 = token.find('.');
+    if (d1 == std::string::npos) return false;
+    size_t d2 = token.find('.', d1 + 1);
+    if (d2 == std::string::npos) return false;
+    if (token.find('.', d2 + 1) != std::string::npos) return false;
+
+    std::string sig_b64 = token.substr(d2 + 1);
+    std::string sig;
+    if (!base64url_decode_strict(sig_b64, sig))
+        return false;
+    std::string message = token.substr(0, d2);
+
+    // Strip PEM armor from public key
+    std::string pemBody;
+    {
+        std::istringstream ss(m_es256PublicKey);
+        std::string line;
+        while (std::getline(ss, line)) {
+            if (line.find("-----") != std::string::npos) continue;
+            while (!line.empty() && (line.back() == '\r' || line.back() == '\n'))
+                line.pop_back();
+            pemBody += line;
+        }
+    }
+    if (pemBody.empty())
+        return false;
+
+    // Standard base64 decode PEM body -> DER
+    DWORD derSize = 0;
+    if (!CryptStringToBinaryA(pemBody.c_str(), (DWORD)pemBody.size(),
+                              CRYPT_STRING_BASE64, nullptr, &derSize, nullptr, nullptr))
+        return false;
+    std::vector<BYTE> der(derSize);
+    if (!CryptStringToBinaryA(pemBody.c_str(), (DWORD)pemBody.size(),
+                              CRYPT_STRING_BASE64, der.data(), &derSize, nullptr, nullptr))
+        return false;
+
+    // Decode SubjectPublicKeyInfo from DER
+    CERT_PUBLIC_KEY_INFO* pKeyInfo = nullptr;
+    DWORD cbKeyInfo = 0;
+    if (!CryptDecodeObjectEx(X509_ASN_ENCODING, X509_PUBLIC_KEY_INFO,
+                             der.data(), derSize,
+                             CRYPT_DECODE_ALLOC_FLAG, nullptr,
+                             &pKeyInfo, &cbKeyInfo))
+        return false;
+
+    // Import CNG key from public key info
+    BCRYPT_KEY_HANDLE hKey = nullptr;
+    BOOL ok = CryptImportPublicKeyInfoEx2(X509_ASN_ENCODING, pKeyInfo, 0, nullptr, &hKey);
+    LocalFree(pKeyInfo);
+    if (!ok || !hKey)
+        return false;
+
+    // Hash the message (header.payload) with SHA-256
+    BCRYPT_ALG_HANDLE hAlg = nullptr;
+    NTSTATUS st = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_SHA256_ALGORITHM, nullptr, 0);
+    if (!BCRYPT_SUCCESS(st) || !hAlg) {
+        BCryptDestroyKey(hKey);
+        return false;
+    }
+    UCHAR hash[32];
+    ULONG hashLen = sizeof(hash);
+    BCRYPT_HASH_HANDLE hHash = nullptr;
+    st = BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0);
+    if (!BCRYPT_SUCCESS(st) || !hHash) {
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        BCryptDestroyKey(hKey);
+        return false;
+    }
+    st = BCryptHashData(hHash, reinterpret_cast<PUCHAR>(const_cast<char*>(message.data())),
+                        static_cast<ULONG>(message.size()), 0);
+    if (!BCRYPT_SUCCESS(st)) {
+        BCryptDestroyHash(hHash);
+        BCryptCloseAlgorithmProvider(hAlg, 0);
+        BCryptDestroyKey(hKey);
+        return false;
+    }
+    st = BCryptFinishHash(hHash, hash, hashLen, 0);
+    BCryptDestroyHash(hHash);
+    BCryptCloseAlgorithmProvider(hAlg, 0);
+    if (!BCRYPT_SUCCESS(st)) {
+        BCryptDestroyKey(hKey);
+        return false;
+    }
+
+    // ECDSA signatures in JWT are raw r||s, each coordinate exactly half the curve order length.
+    // For P-256 each coordinate is 32 bytes, total 64 bytes.
+    if (sig.size() != 64) {
+        BCryptDestroyKey(hKey);
+        return false;
+    }
+
+    // CNG expects a DER-encoded ECDSA signature (SEQUENCE { INTEGER r, INTEGER s }).
+    auto makeDerEcdsaSignature = [](const std::string& raw) -> std::vector<BYTE> {
+        if (raw.size() != 64) return {};
+        const uint8_t* r = reinterpret_cast<const uint8_t*>(raw.data());
+        const uint8_t* s = r + 32;
+        auto encodeInt = [](const uint8_t* data, size_t len) -> std::vector<BYTE> {
+            size_t start = 0;
+            while (start + 1 < len && data[start] == 0) ++start;
+            bool needsPad = (data[start] & 0x80) != 0;
+            std::vector<BYTE> out;
+            out.push_back(0x02);
+            out.push_back(static_cast<BYTE>(len - start + (needsPad ? 1 : 0)));
+            if (needsPad) out.push_back(0x00);
+            out.insert(out.end(), data + start, data + len);
+            return out;
+        };
+        std::vector<BYTE> rInt = encodeInt(r, 32);
+        std::vector<BYTE> sInt = encodeInt(s, 32);
+        std::vector<BYTE> seq;
+        seq.push_back(0x30);
+        seq.push_back(static_cast<BYTE>(rInt.size() + sInt.size()));
+        seq.insert(seq.end(), rInt.begin(), rInt.end());
+        seq.insert(seq.end(), sInt.begin(), sInt.end());
+        return seq;
+    };
+
+    std::vector<BYTE> derSig = makeDerEcdsaSignature(sig);
+    if (derSig.empty()) {
+        BCryptDestroyKey(hKey);
+        return false;
+    }
+
+    BCRYPT_PKCS1_PADDING_INFO paddingInfo;
+    paddingInfo.pszAlgId = BCRYPT_SHA256_ALGORITHM;
+    st = BCryptVerifySignature(hKey, &paddingInfo, hash, hashLen,
+                               derSig.data(), static_cast<ULONG>(derSig.size()),
+                               BCRYPT_PAD_PKCS1);
     BCryptDestroyKey(hKey);
     return BCRYPT_SUCCESS(st);
 #else

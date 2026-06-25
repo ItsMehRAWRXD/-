@@ -73,7 +73,7 @@
 extern "C" PVOID CALLBACK Sovereign_VEH_Handler(PEXCEPTION_POINTERS pExc);
 
 // Definition of the sovereign telemetry bus
-PulseRingBuffer g_pulseRing;
+RawrXD::Pulse::PulseRingBuffer g_pulseRing;
 SovereignPulseBuffer g_SovereignPulse;
 
 extern "C" {
@@ -98,6 +98,24 @@ extern "C" {
 #include <sstream>
 #include <string>
 #include <thread>
+
+// ============================================================================
+// SENTINEL DIAGNOSTIC TRACER - Synchronous crash detection
+// ============================================================================
+inline void SentinelTrace(const char* msg) {
+    FILE* f = nullptr;
+    errno_t err = fopen_s(&f, "d:\\rawrxd\\crash_trace.log", "a");
+    if (f) {
+        fprintf(f, "[%lu] %s\n", GetTickCount(), msg);
+        fflush(f); // FORCE SYNC TO DISK
+        fclose(f);
+    }
+    // Also output to debugger
+    OutputDebugStringA(msg);
+    OutputDebugStringA("\n");
+}
+
+#define SENTINEL_CHECKPOINT(name) SentinelTrace("Checkpoint: " name)
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -2507,6 +2525,7 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
     if (name == "createWindow")
     {
         startupTrace("createWindow_start");
+        SENTINEL_CHECKPOINT("Phase_createWindow_Start");
         if (!ide.createWindow())
         {
             startupTrace("createWindow_FAILED");
@@ -2514,6 +2533,7 @@ static bool runPhase(const std::string& name, Win32IDE& ide, HINSTANCE, LPSTR lp
         }
         s_mainWindowHwnd = ide.getMainWindow();  // Set for VEH to post WM_DEFERRED_INIT_FAILED
         startupTrace("createWindow_ok");
+        SENTINEL_CHECKPOINT("Phase_createWindow_Success");
         try
         {
             pumpMessages();
@@ -4459,6 +4479,11 @@ static void traceConjoinedE0PanelsDeepBatch(Win32IDE& ide)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow)
 {
     // ========================================================================
+    // SENTINEL ENTRY - First checkpoint before anything else
+    // ========================================================================
+    SENTINEL_CHECKPOINT("WinMain_Entry");
+
+    // ========================================================================
     // ABSOLUTE ENTRY PROBE — Ultra-early WinMain boundary marker
     // Fires immediately upon WinMain entry to distinguish CRT vs WinMain failures
     // ========================================================================
@@ -4490,7 +4515,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         }
     }
 
+    SENTINEL_CHECKPOINT("WinMain_PostProbe");
+
     emitStartupHeapSnapshot("winmain.entry");
+
+    SENTINEL_CHECKPOINT("WinMain_PostHeapSnapshot");
 
     // ========================================================================
     // CWD FIX — Set working directory to exe's folder (before any relative paths)
@@ -4499,6 +4528,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     // ========================================================================
     s_mainThreadId = GetCurrentThreadId();
 
+    SENTINEL_CHECKPOINT("WinMain_PreVEH");
+
     // ========================================================================
     // TELEPORTATION SHIELD — Sovereign Vectored Exception Handler Initialization
     // Architect: Gemini / Reverse Engineer
@@ -4506,12 +4537,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
     // ========================================================================
     AddVectoredExceptionHandler(1 /* First */, (PVECTORED_EXCEPTION_HANDLER)Sovereign_VEH_Handler);
 
+    SENTINEL_CHECKPOINT("WinMain_PostVEH");
+
     AddVectoredExceptionHandler(0 /* last-chance */, bgThreadAvExceptionFilter);
     setCwdToExeDirectory();
     applyCurrentFileContextCliOverride(lpCmdLine);
     earlyWinMainMilestone("winmain_early_b1",
                           "[IDE-Pipeline:WinMain-Early] Batch 1/8: working directory pinned to exe folder\n",
                           "[Init:WinMain-Early] Batch 1/8: process CWD set to executable directory\n");
+
+    SENTINEL_CHECKPOINT("WinMain_PreCommonControls");
 
     // ========================================================================
     // UI INITIALIZATION HARDENING — Load critical system libraries FIRST
@@ -4536,6 +4571,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
             OutputDebugStringA("[WinMain Init] WARNING: InitCommonControlsEx failed\n");
         }
     }
+    SENTINEL_CHECKPOINT("WinMain_PostCommonControls");
     earlyWinMainMilestone("winmain_early_b2",
                           "[IDE-Pipeline:WinMain-Early] Batch 2/8: RichEdit + common controls v6 primed\n",
                           "[Init:WinMain-Early] Batch 2/8: system control libraries loaded and initialized\n");
@@ -5294,8 +5330,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         OutputDebugStringA(buildStamp);
     }
 
+    SENTINEL_CHECKPOINT("WinMain_PreIdeCtor");
+
     Win32IDE ide(hInstance);
+
+    SENTINEL_CHECKPOINT("WinMain_PostIdeCtor");
+
     emitStartupHeapSnapshot("ide_constructed");
+
+    SENTINEL_CHECKPOINT("WinMain_PostIdeHeapSnapshot");
 
     // ========================================================================
     // SKILL SYSTEM INITIALIZATION — Cursor-style .cursorrules injection
@@ -5731,12 +5774,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
 
     // Run message loop with exception safety
     int exitCode = 0;
+    SENTINEL_CHECKPOINT("WinMain_PreMessageLoop");
     try
     {
         OutputDebugStringA("[main_win32] About to call ide.runMessageLoop()...\n");
+        SENTINEL_CHECKPOINT("WinMain_EnteringMessageLoop");
         exitCode = ide.runMessageLoop();
         OutputDebugStringA(("[main_win32] ide.runMessageLoop() returned: " + std::to_string(exitCode) + "\n").c_str());
         startupTrace("message_loop_exited", std::to_string(exitCode).c_str());
+        SENTINEL_CHECKPOINT("WinMain_MessageLoopExited");
     }
     catch (const std::exception& ex)
     {
@@ -5958,6 +6004,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpCmdLine, int nCmdShow
         delete s_startupLog;
         s_startupLog = nullptr;
     }
+
+    SENTINEL_CHECKPOINT("WinMain_Return");
 
     return exitCode;
 }

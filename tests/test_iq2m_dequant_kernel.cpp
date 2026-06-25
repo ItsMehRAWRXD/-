@@ -13,7 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <math>
+#include <cmath>
 #include <vector>
 #include <chrono>
 
@@ -240,19 +240,20 @@ static bool Test_BatchDequant() {
 static bool Test_NullSafety() {
     printf("TEST: Null Pointer Safety\n");
 
-    float dummy[256];
+    alignas(32) uint8_t dummy_input[256];
+    alignas(32) float dummy_output[256];
 
-    uint32_t r1 = IQ2M_DequantBlock_Scalar(nullptr, dummy);
-    uint32_t r2 = IQ2M_DequantBlock_Scalar(dummy, nullptr);
+    uint32_t r1 = IQ2M_DequantBlock_Scalar(nullptr, dummy_output);
+    uint32_t r2 = IQ2M_DequantBlock_Scalar(dummy_input, nullptr);
 
     if (r1 != 0 || r2 != 0) {
         fprintf(stderr, "  FAIL: Null pointers should return 0 (got %u, %u)\n", r1, r2);
         return false;
     }
 
-    uint32_t r3 = IQ2M_DequantBatch(nullptr, dummy, 1, 68);
-    uint32_t r4 = IQ2M_DequantBatch(dummy, nullptr, 1, 68);
-    uint32_t r5 = IQ2M_DequantBatch(dummy, dummy, 0, 68);
+    uint32_t r3 = IQ2M_DequantBatch(nullptr, dummy_output, 1, 68);
+    uint32_t r4 = IQ2M_DequantBatch(dummy_input, nullptr, 1, 68);
+    uint32_t r5 = IQ2M_DequantBatch(dummy_input, dummy_output, 0, 68);
 
     if (r3 != 0 || r4 != 0 || r5 != 0) {
         fprintf(stderr, "  FAIL: Invalid batch params should return 0\n");

@@ -1,9 +1,9 @@
 // ============================================================================
-// RawrXD_TridentBeacon.h — COM Trident Host & Beacon Protocol C++ Bridge
+// RawrXD_TridentBeacon.h ? COM Trident Host & Beacon Protocol C++ Bridge
 // ============================================================================
 //
 // MASM64 IE/Trident WebBrowser COM host with:
-//   - window.external.BeaconInvoke() JS→native bridge
+//   - window.external.BeaconInvoke() JS?native bridge
 //   - Async Ollama streaming integration
 //   - Runtime JS injection (window.RawrXD namespace)
 //   - GPU acceleration registry setup (via GPU companion module)
@@ -47,7 +47,7 @@ constexpr uint32_t TRIDENT_ENABLE_ALL    = 0x0003;
 typedef void (*RawrXD_StreamCallback)(const char* chunk, uint32_t len);
 
 // ============================================================================
-// C-Linkage Declarations — TridentBeacon core (RawrXD_TridentBeacon.asm)
+// C-Linkage Declarations ? TridentBeacon core (RawrXD_TridentBeacon.asm)
 // ============================================================================
 #ifdef __cplusplus
 extern "C" {
@@ -125,7 +125,7 @@ int64_t TridentBeacon_GetHitCount(void);
 int64_t TridentBeacon_InjectBeaconRuntime(void);
 
 // ============================================================================
-// C-Linkage Declarations — GPU Module (RawrXD_TridentBeacon_GPU.asm)
+// C-Linkage Declarations ? GPU Module (RawrXD_TridentBeacon_GPU.asm)
 // ============================================================================
 
 // ---------------------------------------------------------------------------
@@ -298,3 +298,4 @@ private:
 };
 
 #endif // __cplusplus
+

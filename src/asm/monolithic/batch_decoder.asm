@@ -1,20 +1,20 @@
-; ═══════════════════════════════════════════════════════════════════
-; RawrXD Batch Decoder — Parallel Transformer Execution
+; ???????????????????????????????????????????????????????????????????
+; RawrXD Batch Decoder ? Parallel Transformer Execution
 ; Reuses KV Cache for multiple parallel inference slots (16-32)
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
 
 PUBLIC Batch_Init
 PUBLIC Batch_AddSlot
 PUBLIC Batch_Step
 PUBLIC Batch_GetOutput
 
-; ── Batch Constants ──────────────────────────────────────────────
+; ?? Batch Constants ??????????????????????????????????????????????
 MAX_BATCH_SIZE      equ 20h         ; 32 parallel slots
 SLOT_STATE_EMPTY    equ 0
 SLOT_STATE_ACTIVE   equ 1
 SLOT_STATE_DONE     equ 2
 
-; ── Imports ──────────────────────────────────────────────────────
+; ?? Imports ??????????????????????????????????????????????????????
 EXTERN g_modelbase:QWORD
 EXTERN TokenGenerate:PROC
 EXTERN KVPage_GetSegment:PROC
@@ -102,17 +102,17 @@ Batch_Step PROC FRAME
     jl      @slot_loop
     jmp     @step_done
 @step_avx512:
-    ; ═══════════════════════════════════════════════════════════════
+    ; ???????????????????????????????????????????????????????????????
     ; Real Q4_0 AVX-512 Dequantize + Dot-Product Path
     ;
     ; Q4_0 block layout (18 bytes per 32-value block):
-    ;   +0:  fp16 scale (2 bytes)           → delta
-    ;   +2:  16 bytes of packed 4-bit values → 32 quantized weights
+    ;   +0:  fp16 scale (2 bytes)           ? delta
+    ;   +2:  16 bytes of packed 4-bit values ? 32 quantized weights
     ;
     ; For each batch of 16 tokens:
     ;   1. Load 16 token embeddings (input activations) from g_batch_tokens
     ;   2. Load Q4_0 weight block from g_modelbase
-    ;   3. Dequantize: expand nibbles → i32, subtract 8, multiply by scale
+    ;   3. Dequantize: expand nibbles ? i32, subtract 8, multiply by scale
     ;   4. Accumulate dot-product: token * dequant_weight
     ;   5. Store result back as next-layer input
     ;
@@ -125,7 +125,7 @@ Batch_Step PROC FRAME
     ;   zmm3 = accumulator
     ;   zmm4 = scale broadcast
     ;   zmm5 = nibble mask (0Fh)
-    ; ═══════════════════════════════════════════════════════════════
+    ; ???????????????????????????????????????????????????????????????
     xor     ebx, ebx
 
     ; Setup constant vectors
@@ -136,7 +136,7 @@ Batch_Step PROC FRAME
 
     mov     r8, g_modelbase
     test    r8, r8
-    jz      @step_done                 ; no model loaded → skip
+    jz      @step_done                 ; no model loaded ? skip
 
 @zmm_loop:
     lea     rdx, g_batch_tokens
@@ -162,7 +162,7 @@ Batch_Step PROC FRAME
     ; Clamp scale to [0, 15] for practical range
     test    eax, eax
     jns     @scale_pos
-    xor     eax, eax                   ; negative → 0
+    xor     eax, eax                   ; negative ? 0
 @scale_pos:
     cmp     eax, 15
     jle     @scale_ok
@@ -182,14 +182,14 @@ Batch_Step PROC FRAME
     lea     r10, [r9 + 10]            ; second 8 bytes of quant data
 
 @zmm_dequant:
-    ; Expand 8 bytes → 16 dwords (low nibble, then high nibble interleaved)
+    ; Expand 8 bytes ? 16 dwords (low nibble, then high nibble interleaved)
     ; Load 8 bytes, zero-extend each byte to 32-bit
-    vpmovzxbd zmm1, xmmword ptr [r10] ; 16 bytes → 16 dwords (loads 16 bytes but we only have 8 valid)
+    vpmovzxbd zmm1, xmmword ptr [r10] ; 16 bytes ? 16 dwords (loads 16 bytes but we only have 8 valid)
 
     ; Actually we have 8 packed bytes. Use a different approach:
     ; Load 8 bytes into xmm, expand nibbles manually
     movq    xmm6, qword ptr [r10]     ; load 8 bytes
-    vpmovzxbd zmm1, xmm6              ; expand 8 bytes → 8 dwords in low half
+    vpmovzxbd zmm1, xmm6              ; expand 8 bytes ? 8 dwords in low half
 
     ; Extract low nibbles (even indices)
     vpandd  zmm6, zmm1, zmm5          ; low nibbles
@@ -205,8 +205,8 @@ Batch_Step PROC FRAME
     ; Actually for batch_tokens we have 16 slots, so pack both halves
 
     ; Subtract zero-point (8) from each quantized value
-    vpsubd  zmm6, zmm6, zmm2          ; low_nibbles - 8 → signed offsets
-    vpsubd  zmm7, zmm7, zmm2          ; high_nibbles - 8 → signed offsets
+    vpsubd  zmm6, zmm6, zmm2          ; low_nibbles - 8 ? signed offsets
+    vpsubd  zmm7, zmm7, zmm2          ; high_nibbles - 8 ? signed offsets
 
     ; Multiply by scale
     vpmulld zmm6, zmm6, zmm4          ; low_dequant = (nibble - 8) * scale
@@ -245,3 +245,4 @@ Batch_GetOutput PROC
 Batch_GetOutput ENDP
 
 END
+

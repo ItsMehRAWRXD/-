@@ -41,3 +41,4 @@ inline std::function<std::string(const std::string&)> ExistingDirectory(const st
         std::cerr << e.what() << std::endl; \
         return 1; \
     }
+

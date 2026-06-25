@@ -1,5 +1,5 @@
 ; =============================================================================
-; rawrxd_unresolved_stubs.asm — Internal stub implementations for all unresolved
+; rawrxd_unresolved_stubs.asm ? Internal stub implementations for all unresolved
 ; symbols so RawrXD.exe links without external C++ bridges or Vulkan SDK libs.
 ; All functions are no-op / safe-default implementations.
 ; =============================================================================
@@ -133,7 +133,7 @@ STUB0 Sample_Logits_TopP
 STUB0 Titan_ResetDMAStats
 
 ; ---------------------------------------------------------------------------
-; C++ class stubs — LlamaNativeBridge
+; C++ class stubs ? LlamaNativeBridge
 ; ---------------------------------------------------------------------------
 
 ; public: bool __cdecl LlamaNativeBridge::Initialize(wchar_t const *)
@@ -182,7 +182,7 @@ STUB0 Titan_ResetDMAStats
 ?UnloadModel@LlamaNativeBridge@@QEAAXXZ ENDP
 
 ; ---------------------------------------------------------------------------
-; C++ class stubs — RawrXD::GPU::VulkanContext
+; C++ class stubs ? RawrXD::GPU::VulkanContext
 ; ---------------------------------------------------------------------------
 
 ; public: struct VkDevice_T * __cdecl RawrXD::GPU::VulkanContext::device(void)
@@ -221,3 +221,4 @@ szEmpty DB 0
 ; ---------------------------------------------------------------------------
 
 END
+

@@ -251,3 +251,4 @@ concept HasMemorySemantics = requires(T t) {
 } // namespace RawrXD
 
 #endif // RAWRXD_MEMORY_UTILS_HPP
+

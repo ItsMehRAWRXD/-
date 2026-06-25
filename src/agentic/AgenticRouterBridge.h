@@ -58,6 +58,16 @@ struct AgenticSuggestion {
     int lineEnd = 0;
     float confidence = 0.0f;
     bool autoApplicable = false;
+    
+    // Wide string for UI display (persist to avoid dangling pointers)
+    mutable std::wstring wdisplay;
+    
+    void EnsureWideDisplay() const {
+        if (wdisplay.empty()) {
+            std::string display = title + " - " + filePath;
+            wdisplay = std::wstring(display.begin(), display.end());
+        }
+    }
 };
 
 class AgenticRouterBridge {

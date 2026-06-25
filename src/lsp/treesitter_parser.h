@@ -201,17 +201,17 @@ private:
         uint32_t m_col = 0;
         mutable Token m_peek;
         mutable bool m_hasPeek = false;
-        Token readToken();
+        Token readToken() const;  // Made const to allow calling from peek()
     };
 
     // C++ recursive descent
     std::shared_ptr<ASTNode> parseCppTranslationUnit(TokenStream& ts);
     std::shared_ptr<ASTNode> parseCppDeclaration(TokenStream& ts);
-    std::shared_ptr<ASTNode> parseCppFunction(TokenStream& ts, bool isDef);
+    std::shared_ptr<ASTNode> parseCppFunction(TokenStream& ts, const std::string& name, const std::string& retType);
     std::shared_ptr<ASTNode> parseCppClass(TokenStream& ts);
     std::shared_ptr<ASTNode> parseCppStruct(TokenStream& ts);
     std::shared_ptr<ASTNode> parseCppEnum(TokenStream& ts);
-    std::shared_ptr<ASTNode> parseCppVariable(TokenStream& ts);
+    std::shared_ptr<ASTNode> parseCppVariable(TokenStream& ts, const std::string& name, const std::string& typeName);
     std::shared_ptr<ASTNode> parseCppNamespace(TokenStream& ts);
 
     // Python recursive descent

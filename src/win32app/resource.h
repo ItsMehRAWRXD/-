@@ -61,6 +61,8 @@
 #define ID_QUICKOPEN_SEARCH     5001
 #define ID_QUICKOPEN_RESULTS    5002
 #define IDD_QUICKOPEN           6001
+#define IDD_INPUT_DIALOG        6002
+#define IDC_INPUT_EDIT          6003
 
 // --- Build menu (7001–7099) --------------------------------------------------
 #define ID_BUILD_COMPILE        7001
@@ -146,5 +148,11 @@
 #define IDM_VIEW_OUTPUT_PANEL       ID_VIEW_OUTPUT
 #define IDM_VIEW_TERMINAL           ID_VIEW_TERMINAL
 #define IDM_TOOLS_SETTINGS          ID_TOOLS_SETTINGS
+
+// --- Agent / LSP Control IDs (13000–13099) --------------------------------
+#define IDC_AGENT_CHAT_PANEL        13000
+#define IDC_AGENT_DIFF_PANEL          13001
+#define IDC_LSP_STATUS                13002
+#define ID_AGENT_APPLY_FIX            13003
 
 #endif // RAWRXD_RESOURCE_H

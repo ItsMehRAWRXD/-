@@ -75,3 +75,4 @@ void rxd_cpp_diagnostic_ready(const char* uri, rxd_diagnostic_t* diags, size_t c
 #endif
 
 #endif // MASM_LSP_BRIDGE_H
+

@@ -7,3 +7,4 @@ trinity_beacon_arbiter_Init PROC
     ret
 trinity_beacon_arbiter_Init ENDP
 END
+

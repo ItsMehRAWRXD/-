@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_UnifiedOverclockGovernor.inc — Structure layouts for x64 MASM
+; RawrXD_UnifiedOverclockGovernor.inc ? Structure layouts for x64 MASM
 ; Matches unified_overclock_governor.h (no C++ dependency)
 ; =============================================================================
 
@@ -25,7 +25,7 @@ AUTO_TUNE_ADAPTIVE_ML  EQU 4
 ; ClockResult (RAX=success 0/1, RDX=detail ptr, R8=errorCode)
 ; Caller uses: test eax,eax / jz fail; mov rdx,[rdx] for message
 
-; ClockProfile — per-domain settings
+; ClockProfile ? per-domain settings
 CLOCK_PROFILE STRUCT 8
     domain              DWORD   ?
     direction           DWORD   ?
@@ -40,7 +40,7 @@ CLOCK_PROFILE STRUCT 8
 CLOCK_PROFILE ENDS
 CLOCK_PROFILE_SIZE      EQU 40
 
-; PIDState — per-domain PID controller
+; PIDState ? per-domain PID controller
 PID_STATE STRUCT 8
     kp                  REAL4   ?
     ki                  REAL4   ?
@@ -83,3 +83,4 @@ GOV_MUTEX_OFF           EQU (GOV_EMERGENCY_OFF + 4) ; CRITICAL_SECTION
 GOV_CONTROL_THREAD_OFF  EQU (GOV_MUTEX_OFF + 40)    ; HANDLE
 GOV_APP_STATE_OFF       EQU (GOV_CONTROL_THREAD_OFF + 8)
 GOV_STATE_SIZE          EQU (GOV_APP_STATE_OFF + 8)
+

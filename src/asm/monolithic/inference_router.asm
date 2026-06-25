@@ -1,27 +1,27 @@
-; ═══════════════════════════════════════════════════════════════════
-; inference_router.asm — Phase A: Sovereign Inference Router
+; ???????????????????????????????????????????????????????????????????
+; inference_router.asm ? Phase A: Sovereign Inference Router
 ;
-; Unified text→text inference gateway. Routes between:
-;   BACKEND_LOCAL  (0) — Native RunInference + TokenGenerate
-;   BACKEND_OLLAMA (1) — OllamaClient_Generate2 (HTTP REST)
-;   BACKEND_AUTO   (2) — Try LOCAL first, fallback to OLLAMA
+; Unified text?text inference gateway. Routes between:
+;   BACKEND_LOCAL  (0) ? Native RunInference + TokenGenerate
+;   BACKEND_OLLAMA (1) ? OllamaClient_Generate2 (HTTP REST)
+;   BACKEND_AUTO   (2) ? Try LOCAL first, fallback to OLLAMA
 ;
 ; Closes the critical loop:
-;   type → tokenize → infer → display
+;   type ? tokenize ? infer ? display
 ;
 ; Exports:
-;   InferenceRouter_Init       — probe backends, populate vocab
-;   InferenceRouter_Generate   — text in → text out (same ABI as Generate2)
-;   InferenceRouter_Abort      — cancel pending inference
-;   InferenceRouter_SetBackend — select backend (0/1/2)
-;   InferenceRouter_GetStats   — telemetry (reqs, tokens, latency)
-;   InferenceRouter_LoadVocab  — populate vocab table from GGUF base
-;   g_routerBackend            — current backend selector
-;   g_routerAbort              — abort flag (set by UI on keystroke)
+;   InferenceRouter_Init       ? probe backends, populate vocab
+;   InferenceRouter_Generate   ? text in ? text out (same ABI as Generate2)
+;   InferenceRouter_Abort      ? cancel pending inference
+;   InferenceRouter_SetBackend ? select backend (0/1/2)
+;   InferenceRouter_GetStats   ? telemetry (reqs, tokens, latency)
+;   InferenceRouter_LoadVocab  ? populate vocab table from GGUF base
+;   g_routerBackend            ? current backend selector
+;   g_routerAbort              ? abort flag (set by UI on keystroke)
 ;
 ; ABI: All procs use Windows x64 calling convention.
 ;      Shadow space + FRAME directives on every leaf that calls.
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
 
 PUBLIC InferenceRouter_Init
 PUBLIC InferenceRouter_Generate
@@ -35,7 +35,7 @@ PUBLIC g_routerAbort
 PUBLIC g_vocabLoaded
 PUBLIC g_vocabCount
 
-; ── Inference engine imports (inference.asm) ─────────────────────
+; ?? Inference engine imports (inference.asm) ?????????????????????
 EXTERN RunInference:PROC
 EXTERN TokenGenerate:PROC
 EXTERN g_modelbase:QWORD
@@ -43,20 +43,20 @@ EXTERN g_kv_len:QWORD
 EXTERN g_hasAVX512:DWORD
 EXTERN ClearKVCache:PROC
 
-; ── Ollama client imports (ollama_client.asm) ────────────────────
+; ?? Ollama client imports (ollama_client.asm) ????????????????????
 EXTERN OllamaClient_Generate2:PROC
 EXTERN OllamaClient_IsConnected:PROC
 EXTERN OllamaClient_Abort:PROC
 
-; ── Win32 imports ────────────────────────────────────────────────
+; ?? Win32 imports ????????????????????????????????????????????????
 EXTERN GetTickCount64:PROC
 EXTERN VirtualAlloc:PROC
 EXTERN VirtualFree:PROC
 
-; ── Beacon telemetry ─────────────────────────────────────────────
+; ?? Beacon telemetry ?????????????????????????????????????????????
 EXTERN BeaconSend:PROC
 
-; ── Constants ────────────────────────────────────────────────────
+; ?? Constants ????????????????????????????????????????????????????
 BACKEND_LOCAL       equ 0
 BACKEND_OLLAMA      equ 1
 BACKEND_AUTO        equ 2
@@ -91,7 +91,7 @@ MAX_GEN_TOKENS      equ 128          ; Max tokens per suggestion
 MIN_GEN_TOKENS      equ 4            ; Minimum useful suggestion length
 MAX_OUT_BYTES       equ 2048         ; Max UTF-8 output bytes
 
-; Vocab table: maps token_id → UTF-8 string (up to 16 bytes each)
+; Vocab table: maps token_id ? UTF-8 string (up to 16 bytes each)
 VOCAB_ENTRY_SIZE    equ 16           ; 15 bytes text + 1 byte length
 VOCAB_MAX_ENTRIES   equ 32000        ; Match g_modelVocab
 VOCAB_TABLE_SIZE    equ (VOCAB_MAX_ENTRIES * VOCAB_ENTRY_SIZE) ; 512KB
@@ -140,7 +140,7 @@ g_routerMemUsed     dq  0            ; Memory used by inference (bytes)
 g_routerModelSize   dq  0            ; Model file size in bytes
 g_routerPatternInit dd  0            ; CPU fallback pattern matcher initialized
 
-; Vocab table pointer (VirtualAlloc'd — 512KB)
+; Vocab table pointer (VirtualAlloc'd ? 512KB)
 g_vocabTable        dq  0            ; Pointer to vocab entries
 g_vocabCount        dd  0            ; Number of populated entries
 
@@ -158,16 +158,16 @@ g_promptTokens      dd  4096 dup(?)  ; Token ID buffer for input prompt
 
 .code
 
-; ════════════════════════════════════════════════════════════════════
-; InferenceRouter_Init — Probe available backends, allocate vocab
+; ????????????????????????????????????????????????????????????????????
+; InferenceRouter_Init ? Probe available backends, allocate vocab
 ;   No args. Returns: EAX = 0 success, -1 failure
 ;
 ;   Called after InferenceEngineInit + OllamaClient_Init in bootstrap.
 ;   Detects:
-;     1. Is a model mapped in g_modelbase? → g_hasLocalModel = 1
-;     2. Is Ollama reachable? → g_hasOllama = 1
-;     3. Allocates vocab table (512KB) for token→text decode
-; ════════════════════════════════════════════════════════════════════
+;     1. Is a model mapped in g_modelbase? ? g_hasLocalModel = 1
+;     2. Is Ollama reachable? ? g_hasOllama = 1
+;     3. Allocates vocab table (512KB) for token?text decode
+; ????????????????????????????????????????????????????????????????????
 InferenceRouter_Init PROC FRAME
     push    rbx
     .pushreg rbx
@@ -179,7 +179,7 @@ InferenceRouter_Init PROC FRAME
     mov     rax, g_modelbase
     test    rax, rax
     jz      @iri_no_local
-    ; Verify it's not just the KV cache base — check if it points beyond cache
+    ; Verify it's not just the KV cache base ? check if it points beyond cache
     ; (Simple heuristic: if g_modelbase != 0 and points to valid mapped memory)
     mov     g_hasLocalModel, 1
     jmp     @iri_check_ollama
@@ -213,7 +213,7 @@ InferenceRouter_Init PROC FRAME
     mov     g_hasLocalModel, 0
 
 @iri_build_ascii:
-    ; Fallback: build ASCII byte-level vocab (token 0-255 → single byte)
+    ; Fallback: build ASCII byte-level vocab (token 0-255 ? single byte)
     mov     rdi, g_vocabTable
     xor     ecx, ecx                     ; token ID = 0
 @iri_ascii_loop:
@@ -253,8 +253,8 @@ InferenceRouter_Init PROC FRAME
 InferenceRouter_Init ENDP
 
 
-; ════════════════════════════════════════════════════════════════════
-; InferenceRouter_LoadVocab — Extract vocab from GGUF model metadata
+; ????????????????????????????????????????????????????????????????????
+; InferenceRouter_LoadVocab ? Extract vocab from GGUF model metadata
 ;   No args. Returns: EAX = 0 on success, -1 if no vocab found
 ;
 ;   Scans GGUF metadata for `tokenizer.ggml.tokens` string array.
@@ -263,7 +263,7 @@ InferenceRouter_Init ENDP
 ;     Then metadata_kv_count entries:
 ;       [key_len(8)][key_data(key_len)][value_type(4)][value_data(...)]
 ;   We scan for the key "tokenizer.ggml.tokens" (type=8=ARRAY, subtype=8=STRING)
-; ════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????
 InferenceRouter_LoadVocab PROC FRAME
     push    rbx
     .pushreg rbx
@@ -336,14 +336,14 @@ InferenceRouter_LoadVocab PROC FRAME
     ; Found the key! Advance past key data
     add     r14, rcx
 
-    ; Read value_type (u32) — should be 9 (GGUF_TYPE_ARRAY)
+    ; Read value_type (u32) ? should be 9 (GGUF_TYPE_ARRAY)
     mov     eax, dword ptr [r14]
     add     r14, 4
     cmp     eax, 9
     jne     @lv_fail
 
     ; Array header: [subtype(u32)][count(u64)]
-    mov     eax, dword ptr [r14]         ; subtype — should be 8 (STRING)
+    mov     eax, dword ptr [r14]         ; subtype ? should be 8 (STRING)
     add     r14, 4
     cmp     eax, 8
     jne     @lv_fail
@@ -443,7 +443,7 @@ InferenceRouter_LoadVocab PROC FRAME
     je      @lv_skip_8
     cmp     eax, 12                      ; FLOAT64
     je      @lv_skip_8
-    ; Unknown type — bail
+    ; Unknown type ? bail
     jmp     @lv_fail
 
 @lv_skip_1:
@@ -499,7 +499,7 @@ InferenceRouter_LoadVocab PROC FRAME
     je      @lv_skip_arr_8
     cmp     eax, 8                       ; STRING array
     je      @lv_skip_arr_string
-    ; Nested or unknown array subtype — bail
+    ; Nested or unknown array subtype ? bail
     jmp     @lv_fail
 
 @lv_skip_arr_1:
@@ -556,15 +556,15 @@ InferenceRouter_LoadVocab PROC FRAME
 InferenceRouter_LoadVocab ENDP
 
 
-; ════════════════════════════════════════════════════════════════════
-; InferenceRouter_Generate — Text in → text out, routed to best backend
+; ????????????????????????????????????????????????????????????????????
+; InferenceRouter_Generate ? Text in ? text out, routed to best backend
 ;   RCX = pPrompt    (char* UTF-8 prompt, null-terminated)
 ;   RDX = pOutBuf    (char* output buffer for generated text)
 ;   R8D = outBufSize (max bytes to write)
 ;   Returns: EAX = bytes written, or -1 on error / abort
 ;
-;   Same ABI as OllamaClient_Generate2 — drop-in replacement.
-; ════════════════════════════════════════════════════════════════════
+;   Same ABI as OllamaClient_Generate2 ? drop-in replacement.
+; ????????????????????????????????????????????????????????????????????
 InferenceRouter_Generate PROC FRAME
     push    rbx
     .pushreg rbx
@@ -614,7 +614,7 @@ InferenceRouter_Generate PROC FRAME
     je      @rg_try_ollama
     jmp     @rg_fail                     ; No backend available
 
-; ── Local Inference Path ──────────────────────────────────────────
+; ?? Local Inference Path ??????????????????????????????????????????
 @rg_try_local:
     cmp     g_hasLocalModel, 0
     je      @rg_local_fallback           ; Model not loaded
@@ -629,7 +629,7 @@ InferenceRouter_Generate PROC FRAME
     xor     r8d, r8d
     call    BeaconSend
 
-    ; ── Tokenize input prompt (byte-level encoding) ──
+    ; ?? Tokenize input prompt (byte-level encoding) ??
     ; For MVP: each byte of UTF-8 prompt becomes one token ID
     ; Real implementation would use BPE merges from vocab table
     mov     rsi, [rsp+50h]               ; pPrompt
@@ -654,7 +654,7 @@ InferenceRouter_Generate PROC FRAME
     test    r12d, r12d
     jz      @rg_local_fallback
 
-    ; ── Feed tokens through RunInference ──
+    ; ?? Feed tokens through RunInference ??
     ; Clear KV cache for fresh context
     call    ClearKVCache
 
@@ -672,7 +672,7 @@ InferenceRouter_Generate PROC FRAME
     cmp     g_routerAbort, 1
     je      @rg_aborted
 
-    ; ── Detokenize output tokens → UTF-8 text ──
+    ; ?? Detokenize output tokens ? UTF-8 text ??
     mov     rdi, [rsp+48h]               ; pOutBuf
     mov     r13d, dword ptr [rsp+40h]    ; outBufSize
     lea     rsi, g_tokenOutBuf
@@ -698,7 +698,7 @@ InferenceRouter_Generate PROC FRAME
 
     ; Look up vocab table
     cmp     g_vocabLoaded, 0
-    je      @rg_detok_byte               ; No vocab → byte fallback
+    je      @rg_detok_byte               ; No vocab ? byte fallback
 
     mov     rcx, g_vocabTable
     test    rcx, rcx
@@ -734,7 +734,7 @@ InferenceRouter_Generate PROC FRAME
     jmp     @rg_detok_next
 
 @rg_detok_byte:
-    ; Byte-level fallback: token ID → single ASCII byte
+    ; Byte-level fallback: token ID ? single ASCII byte
     cmp     eax, 256
     jge     @rg_detok_next               ; Skip OOV tokens
     mov     byte ptr [rdi + rbx], al
@@ -760,13 +760,13 @@ InferenceRouter_Generate PROC FRAME
     mov     eax, ebx                     ; Return bytes written
     jmp     @rg_ret
 
-; ── Local fallback → try Ollama ───────────────────────────────────
+; ?? Local fallback ? try Ollama ???????????????????????????????????
 @rg_local_fallback:
     cmp     g_routerBackend, BACKEND_LOCAL
     je      @rg_fail                     ; Explicitly local but model not loaded
     ; Fall through to Ollama for AUTO mode
 
-; ── Ollama Path ───────────────────────────────────────────────────
+; ?? Ollama Path ???????????????????????????????????????????????????
 @rg_try_ollama:
     cmp     g_hasOllama, 0
     je      @rg_fail                     ; Ollama not available
@@ -802,7 +802,7 @@ InferenceRouter_Generate PROC FRAME
     jmp     @rg_ret
 
 @rg_ollama_fail:
-    ; Ollama failed — if we're in AUTO mode and haven't tried local...
+    ; Ollama failed ? if we're in AUTO mode and haven't tried local...
     cmp     g_routerBackend, BACKEND_AUTO
     jne     @rg_fail
     cmp     g_hasLocalModel, 1
@@ -815,7 +815,7 @@ InferenceRouter_Generate PROC FRAME
     call    BeaconSend
     jmp     @rg_try_local
 
-; ── Abort ─────────────────────────────────────────────────────────
+; ?? Abort ?????????????????????????????????????????????????????????
 @rg_aborted:
     inc     g_routerAborts
     ; Beacon: abort
@@ -826,7 +826,7 @@ InferenceRouter_Generate PROC FRAME
     mov     eax, -1
     jmp     @rg_ret
 
-; ── Failure ───────────────────────────────────────────────────────
+; ?? Failure ???????????????????????????????????????????????????????
 @rg_fail:
     mov     eax, -1
 
@@ -843,11 +843,11 @@ InferenceRouter_Generate PROC FRAME
 InferenceRouter_Generate ENDP
 
 
-; ════════════════════════════════════════════════════════════════════
-; InferenceRouter_Abort — Signal cancellation of current inference
+; ????????????????????????????????????????????????????????????????????
+; InferenceRouter_Abort ? Signal cancellation of current inference
 ;   No args. Returns: nothing (void)
 ;   Thread-safe: UI thread sets this, worker thread checks it.
-; ════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????
 InferenceRouter_Abort PROC
     mov     g_routerAbort, 1
     ; Also forward to Ollama abort if it's running
@@ -856,19 +856,19 @@ InferenceRouter_Abort PROC
 InferenceRouter_Abort ENDP
 
 
-; ════════════════════════════════════════════════════════════════════
-; InferenceRouter_SetBackend — Select inference backend (full impl)
+; ????????????????????????????????????????????????????????????????????
+; InferenceRouter_SetBackend ? Select inference backend (full impl)
 ;   ECX = API backend ID:
-;         0 = AUTO        — probe local → Ollama → CPU fallback
-;         1 = LOCAL_GGUF  — force native GGUF model inference
-;         2 = OLLAMA      — force Ollama HTTP REST backend
-;         3 = CPU_FALLBACK — CPU-only pattern matcher (limited)
+;         0 = AUTO        ? probe local ? Ollama ? CPU fallback
+;         1 = LOCAL_GGUF  ? force native GGUF model inference
+;         2 = OLLAMA      ? force Ollama HTTP REST backend
+;         3 = CPU_FALLBACK ? CPU-only pattern matcher (limited)
 ;   Returns: EAX = 0 on success, -1 if requested backend unavailable
 ;
 ;   Maps API IDs to internal BACKEND_xxx constants.
 ;   Updates g_routerCapFlags, initializes backend-specific state,
 ;   logs transition timestamp, fires BACKEND_CHANGED beacon.
-; ════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????
 InferenceRouter_SetBackend PROC FRAME
     push    rbx
     .pushreg rbx
@@ -878,11 +878,11 @@ InferenceRouter_SetBackend PROC FRAME
 
     mov     ebx, ecx                     ; save API backend ID
 
-    ; ── Validate range [0..SETBE_MAX] ──
+    ; ?? Validate range [0..SETBE_MAX] ??
     cmp     ecx, SETBE_MAX
     ja      @rsb_invalid
 
-    ; ── Dispatch by API backend ID ──
+    ; ?? Dispatch by API backend ID ??
     cmp     ebx, SETBE_AUTO
     je      @rsb_do_auto
     cmp     ebx, SETBE_LOCAL_GGUF
@@ -893,9 +893,9 @@ InferenceRouter_SetBackend PROC FRAME
     je      @rsb_do_cpu
     jmp     @rsb_invalid                 ; defensive
 
-    ; ────────────────────────────────────────────────────────────────
-    ; AUTO: probe local model → Ollama → CPU fallback
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
+    ; AUTO: probe local model ? Ollama ? CPU fallback
+    ; ????????????????????????????????????????????????????????????????
 @rsb_do_auto:
     ; 1) Probe local: check g_modelbase != 0
     mov     rax, g_modelbase
@@ -928,42 +928,42 @@ InferenceRouter_SetBackend PROC FRAME
     mov     g_routerPatternInit, 1       ; init pattern matcher
     jmp     @rsb_finalize
 
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
     ; LOCAL_GGUF: validate model is loaded in g_modelbase
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
 @rsb_do_local:
     mov     rax, g_modelbase
     test    rax, rax
-    jz      @rsb_unavail                 ; model not mapped → unavailable
+    jz      @rsb_unavail                 ; model not mapped ? unavailable
     mov     g_routerBackend, BACKEND_LOCAL
     mov     g_routerCapFlags, CAP_KV_CACHE
     mov     g_hasLocalModel, 1
     jmp     @rsb_finalize
 
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
     ; OLLAMA: verify server connectivity via OllamaClient_IsConnected
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
 @rsb_do_ollama:
     call    OllamaClient_IsConnected
     test    eax, eax
-    jz      @rsb_unavail                 ; not connected → unavailable
+    jz      @rsb_unavail                 ; not connected ? unavailable
     mov     g_routerBackend, BACKEND_OLLAMA
     mov     g_routerCapFlags, CAP_STREAMING
     mov     g_hasOllama, 1
     jmp     @rsb_finalize
 
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
     ; CPU_FALLBACK: always available, init pattern matcher state
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
 @rsb_do_cpu:
     mov     g_routerBackend, BACKEND_CPU_FALLBACK
     mov     g_routerCapFlags, CAP_LIMITED
     mov     g_routerPatternInit, 1       ; mark pattern matcher active
     jmp     @rsb_finalize
 
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
     ; Finalize: timestamp + beacon
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
 @rsb_finalize:
     ; Log backend transition timestamp
     call    GetTickCount64
@@ -978,9 +978,9 @@ InferenceRouter_SetBackend PROC FRAME
     xor     eax, eax                     ; return 0 = success
     jmp     @rsb_ret
 
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
     ; Error paths
-    ; ────────────────────────────────────────────────────────────────
+    ; ????????????????????????????????????????????????????????????????
 @rsb_unavail:
     ; Requested backend exists but is not currently available
     mov     g_routerLastError, 1         ; ERR_BACKEND_UNAVAILABLE
@@ -1005,8 +1005,8 @@ InferenceRouter_SetBackend PROC FRAME
 InferenceRouter_SetBackend ENDP
 
 
-; ════════════════════════════════════════════════════════════════════
-; InferenceRouter_GetStats — Collect full inference statistics (full impl)
+; ????????????????????????????????????????????????????????????????????
+; InferenceRouter_GetStats ? Collect full inference statistics (full impl)
 ;   RCX = pointer to output buffer (at least 128 bytes / STATS_STRUCT_SIZE)
 ;   Returns: EAX = number of bytes written (88), or 0 on NULL ptr
 ;
@@ -1033,7 +1033,7 @@ InferenceRouter_SetBackend ENDP
 ;     avgTokensSec = totalTokens * 1000 * 65536 / uptimeMs  (16.16)
 ;     cacheHitRate = localHits * 100 / totalReqs
 ;     memUsed      = g_kv_len * 128 + VOCAB_TABLE_SIZE (if vocab alloc'd)
-; ════════════════════════════════════════════════════════════════════
+; ????????????????????????????????????????????????????????????????????
 InferenceRouter_GetStats PROC FRAME
     push    rsi
     .pushreg rsi
@@ -1041,35 +1041,35 @@ InferenceRouter_GetStats PROC FRAME
     .allocstack 20h
     .endprolog
 
-    ; ── Validate output buffer pointer ──
+    ; ?? Validate output buffer pointer ??
     test    rcx, rcx
     jz      @rgs_fail
 
     mov     rsi, rcx                     ; rsi = output buffer (non-volatile)
 
-    ; ── +00h: Total requests processed (QWORD) ──
+    ; ?? +00h: Total requests processed (QWORD) ??
     mov     rax, g_routerReqs
     mov     qword ptr [rsi], rax
 
-    ; ── +08h: Total tokens generated (QWORD) ──
+    ; ?? +08h: Total tokens generated (QWORD) ??
     mov     rax, g_routerTokensGen
     mov     qword ptr [rsi+08h], rax
 
-    ; ── +10h: Current backend ID (DWORD) ──
+    ; ?? +10h: Current backend ID (DWORD) ??
     mov     eax, g_routerBackend
     mov     dword ptr [rsi+10h], eax
 
-    ; ── +14h: Padding ──
+    ; ?? +14h: Padding ??
     mov     dword ptr [rsi+14h], 0
 
-    ; ── +18h: Backend uptime in ms (QWORD) ──
+    ; ?? +18h: Backend uptime in ms (QWORD) ??
     ;   uptime = GetTickCount64() - g_routerInitTick
     call    GetTickCount64
     sub     rax, g_routerInitTick
     mov     qword ptr [rsi+18h], rax
     mov     rcx, rax                     ; rcx = uptimeMs (kept for division)
 
-    ; ── +20h: Average tokens/sec (DWORD, 16.16 fixed-point) ──
+    ; ?? +20h: Average tokens/sec (DWORD, 16.16 fixed-point) ??
     ;   formula: (totalTokens * 1000 * 65536) / uptimeMs
     ;   Uses 128-bit intermediate via MUL to handle large token counts.
     test    rcx, rcx
@@ -1097,11 +1097,11 @@ InferenceRouter_GetStats PROC FRAME
     mov     dword ptr [rsi+20h], 0
 
 @rgs_tps_done:
-    ; ── +24h: Peak tokens/sec (DWORD, 16.16 fixed-point) ──
+    ; ?? +24h: Peak tokens/sec (DWORD, 16.16 fixed-point) ??
     mov     eax, g_routerPeakTPS
     mov     dword ptr [rsi+24h], eax
 
-    ; ── +28h: Cache hit rate (DWORD, percentage 0-100) ──
+    ; ?? +28h: Cache hit rate (DWORD, percentage 0-100) ??
     ;   Approximated as: localHits * 100 / totalReqs
     mov     rax, g_routerLocalHits
     test    rax, rax
@@ -1123,26 +1123,26 @@ InferenceRouter_GetStats PROC FRAME
     mov     dword ptr [rsi+28h], 0
 
 @rgs_cache_done:
-    ; ── +2Ch: Error count (DWORD) ──
+    ; ?? +2Ch: Error count (DWORD) ??
     mov     eax, g_routerErrorCount
     mov     dword ptr [rsi+2Ch], eax
 
-    ; ── +30h: Last error code (DWORD) ──
+    ; ?? +30h: Last error code (DWORD) ??
     mov     eax, g_routerLastError
     mov     dword ptr [rsi+30h], eax
 
-    ; ── +34h: Queue depth (DWORD) ──
+    ; ?? +34h: Queue depth (DWORD) ??
     mov     eax, g_routerQueueDepth
     mov     dword ptr [rsi+34h], eax
 
-    ; ── +38h: Active request flag (DWORD) ──
+    ; ?? +38h: Active request flag (DWORD) ??
     mov     eax, g_routerActiveReq
     mov     dword ptr [rsi+38h], eax
 
-    ; ── +3Ch: Padding ──
+    ; ?? +3Ch: Padding ??
     mov     dword ptr [rsi+3Ch], 0
 
-    ; ── +40h: Memory used by inference (QWORD, estimated) ──
+    ; ?? +40h: Memory used by inference (QWORD, estimated) ??
     ;   Estimate: KV cache entries * 128 bytes/entry + vocab table size
     mov     rax, g_kv_len                ; live KV entry count (QWORD extern)
     shl     rax, 7                       ; * 128 bytes per KV entry
@@ -1153,14 +1153,14 @@ InferenceRouter_GetStats PROC FRAME
 @rgs_no_vocab_mem:
     mov     qword ptr [rsi+40h], rax
 
-    ; ── +48h: KV cache entries (DWORD) ──
-    mov     rax, g_kv_len                ; QWORD → take low 32 bits
+    ; ?? +48h: KV cache entries (DWORD) ??
+    mov     rax, g_kv_len                ; QWORD ? take low 32 bits
     mov     dword ptr [rsi+48h], eax
 
-    ; ── +4Ch: Padding ──
+    ; ?? +4Ch: Padding ??
     mov     dword ptr [rsi+4Ch], 0
 
-    ; ── +50h: Model size in bytes (QWORD) ──
+    ; ?? +50h: Model size in bytes (QWORD) ??
     mov     rax, g_routerModelSize
     mov     qword ptr [rsi+50h], rax
 
@@ -1169,7 +1169,7 @@ InferenceRouter_GetStats PROC FRAME
     jmp     @rgs_ret
 
 @rgs_fail:
-    xor     eax, eax                     ; NULL pointer → 0 bytes
+    xor     eax, eax                     ; NULL pointer ? 0 bytes
 
 @rgs_ret:
     add     rsp, 20h
@@ -1178,3 +1178,4 @@ InferenceRouter_GetStats PROC FRAME
 InferenceRouter_GetStats ENDP
 
 END
+

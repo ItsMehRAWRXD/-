@@ -1,6 +1,13 @@
 #pragma once
 #include <cstdint>
 #include <cstddef>
+#include <string>
+#include <unordered_map>
+#include <filesystem>
+#include <mutex>
+#include <atomic>
+#include <xmmintrin.h>
+#include <intrin.h>
 
 // ============================================================================
 // Beacon-Compatible LoRA Interface
@@ -36,21 +43,21 @@ enum LoRABeaconStatus {
 // ============================================================================
 // These structures ensure SIMD-friendly memory layout for MASM FMA operations
 
-typ struct LORA_ALIGN_32 {
+typedef struct LORA_ALIGN_32 {
     float data[LORA_MAX_RANK * LORA_MAX_HIDDEN_DIM];
 } LoRAMatrixA;  // Shape: [rank, hidden_dim]
 
-typ struct LORA_ALIGN_32 {
+typedef struct LORA_ALIGN_32 {
     float data[LORA_MAX_HIDDEN_DIM * LORA_MAX_RANK];
 } LoRAMatrixB;  // Shape: [hidden_dim, rank]
 
 // Intermediate buffer for A*x computation
-typ struct LORA_ALIGN_32 {
+typedef struct LORA_ALIGN_32 {
     float data[LORA_MAX_RANK];
 } LoRATempBuffer;
 
 // Output buffer for LoRA delta (B*A*x)
-typ struct LORA_ALIGN_32 {
+typedef struct LORA_ALIGN_32 {
     float data[LORA_MAX_HIDDEN_DIM];
 } LoRADeltaBuffer;
 
@@ -60,7 +67,14 @@ typ struct LORA_ALIGN_32 {
 // This is the primary coordination point. MASM polls this struct directly.
 // Layout is fixed and versioned for binary compatibility.
 
-typ struct LORA_ALIGN_64 {
+// ============================================================================
+// Beacon State Structure (Memory-Mapped) - Must be exactly 64 bytes
+// ============================================================================
+// This is the primary coordination point. MASM polls this struct directly.
+// Layout is fixed and versioned for binary compatibility.
+
+#pragma pack(push, 8)
+struct __declspec(align(64)) LoRABeaconState {
     // Header (8 bytes) - Version and status
     uint32_t version;              // Format version (currently 1)
     uint32_t status;               // LoRABeaconStatus enum value
@@ -78,37 +92,49 @@ typ struct LORA_ALIGN_64 {
     float reserved;                // Padding to maintain alignment
     
     // Composite chain (16 bytes) - For Phase 18D
-    struct LoRABeaconState* next_adapter;  // Linked list for chaining
-    float composite_weight;                // Weight in composite blend
+    LoRABeaconState* next_adapter;  // Linked list for chaining
+    float composite_weight;         // Weight in composite blend
     
-    // Cache line padding to prevent false sharing
-    uint8_t padding[32];
-} LoRABeaconState;
+    // Padding to reach exactly 64 bytes
+    // Current size: 8 + 8 + 16 + 8 + 16 = 56 bytes
+    // Need 8 more bytes
+    uint32_t extra_padding[2];      // 8 bytes padding
+};
+#pragma pack(pop)
 
 // Static assertion for size (should be exactly 64 bytes)
 static_assert(sizeof(LoRABeaconState) == 64, "LoRABeaconState must be 64 bytes");
 
 // ============================================================================
-// Beacon Chain Structure (Phase 18D)
+// Beacon Chain Structure (Phase 18D) - Must be exactly 64 bytes
 // ============================================================================
 // For multi-adapter composition: W = W_0 + sum(alpha_i * B_i * A_i)
 
-typ struct LORA_ALIGN_64 {
+#pragma pack(push, 8)
+struct __declspec(align(64)) LoRABeaconChain {
     uint32_t adapter_count;        // Number of adapters in chain
     uint32_t active_count;         // Currently active (for atomic updates)
-    
-    LoRABeaconState* head;         // First adapter in chain
-    LoRABeaconState* tail;         // Last adapter in chain
-    
+
+    LoRABeaconState* head;         // First adapter in chain (8 bytes)
+    LoRABeaconState* tail;         // Last adapter in chain (8 bytes)
+
     // Pre-computed aggregate for fast path
     float aggregate_scale;         // Sum of all scale factors
     uint32_t flags;                // Chain behavior flags
-    
-    // Cache line padding
-    uint8_t padding[40];
-} LoRABeaconChain;
+
+    // Padding to reach exactly 64 bytes
+    // Current: 8 + 16 + 8 = 32 bytes, need 32 more
+    uint32_t chain_padding[8];     // 32 bytes padding
+};
+#pragma pack(pop)
 
 static_assert(sizeof(LoRABeaconChain) == 64, "LoRABeaconChain must be 64 bytes");
+
+// ============================================================================
+// Global Beacon State (for MASM EXTERNDEF access)
+// ============================================================================
+extern LoRABeaconState g_beacon_state;
+extern LoRABeaconChain g_beacon_chain;
 
 // ============================================================================
 // C++ Provider Interface
@@ -145,7 +171,7 @@ uint32_t lora_get_beacon_status(void);
 // ============================================================================
 // These are implemented in MASM and called via function pointer
 
-typ void (*LoRAApplyFunc)(
+typedef void (*LoRAApplyFunc)(
     const float* base_output,      // W_0 * x result
     float* result,                 // Output buffer
     uint64_t token_count,          // Number of tokens
@@ -183,6 +209,7 @@ namespace RawrXD {
 template<size_t Alignment = 32>
 class AlignedBuffer {
 public:
+    AlignedBuffer() = default;  // Default constructor for unordered_map
     AlignedBuffer(size_t num_floats);
     ~AlignedBuffer();
     

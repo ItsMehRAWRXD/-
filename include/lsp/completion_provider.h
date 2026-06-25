@@ -139,6 +139,10 @@ private:
     bool isAfterArrow(const std::string& content,
                       uint32_t line,
                       uint32_t column);
+
+    // Utility
+    std::vector<std::string> splitLines(const std::string& text);
+
     bool isAfterScope(const std::string& content,
                       uint32_t line,
                       uint32_t column);

@@ -1,5 +1,5 @@
 ; =============================================================================
-; agent_tools.asm  —  x64 MASM  —  Agentic IDE Tool Registry
+; agent_tools.asm  ?  x64 MASM  ?  Agentic IDE Tool Registry
 ; Complete monolithic implementation: tool dispatch, file I/O, process exec,
 ; code search, diagnostics, and symbol extraction.
 ; Build: ml64 /c /Fo agent_tools.obj agent_tools.asm
@@ -136,7 +136,7 @@ SA_bInheritHandle       equ 16
 SA_SIZE                 equ 24
 
 ; ---------------------------------------------------------------------------
-; .DATA — Initialized variables
+; .DATA ? Initialized variables
 ; ---------------------------------------------------------------------------
 .data
 ALIGN 4
@@ -181,7 +181,7 @@ szLinePfx           db "line ", 0
 szSymPfx            db "sym:", 0
 
 ; ---------------------------------------------------------------------------
-; .DATA? — Uninitialized variables
+; .DATA? ? Uninitialized variables
 ; ---------------------------------------------------------------------------
 .data?
 ALIGN 8
@@ -197,7 +197,7 @@ g_pipeBuf       db TOOL_BUF_SIZE dup(?)    ; pipe read buffer
 .code
 
 ; ============================================================================
-;  _StrLen  —  internal helper
+;  _StrLen  ?  internal helper
 ;  In:  RCX = pointer to null-terminated string
 ;  Out: RAX = length (bytes, excluding null terminator)
 ;  Clobbers: RAX, RDX
@@ -215,7 +215,7 @@ _sl_done:
 _StrLen ENDP
 
 ; ============================================================================
-;  _StrCopy  —  internal helper
+;  _StrCopy  ?  internal helper
 ;  In:  RCX = dst, RDX = src
 ;  Out: RAX = bytes copied (excluding null)
 ;  Clobbers: RAX, R10
@@ -234,7 +234,7 @@ _sc_done:
 _StrCopy ENDP
 
 ; ============================================================================
-;  _AppendStr  —  append src null-term string to dst buffer capped at cap
+;  _AppendStr  ?  append src null-term string to dst buffer capped at cap
 ;  In:  RCX = dst buffer base, RDX = current offset (bytes already in buf),
 ;       R8  = src string ptr,  R9  = capacity (bytes total, including null slot)
 ;  Out: RAX = new offset (dst never overflows capacity-1)
@@ -253,7 +253,7 @@ _as_loop:
         inc     rax
         jmp     _as_loop
 _as_clamp:
-        ; buffer full — back off one so we can write null
+        ; buffer full ? back off one so we can write null
         mov     rax, r9
         dec     rax
 _as_done:
@@ -263,10 +263,10 @@ _as_done:
 _AppendStr ENDP
 
 ; ============================================================================
-;  _AppendUInt32  —  convert DWORD to decimal ASCII and append to buffer
+;  _AppendUInt32  ?  convert DWORD to decimal ASCII and append to buffer
 ;  In:  RCX = dst buf, RDX = offset, R8 = uint32 value, R9 = capacity
 ;  Out: RAX = new offset
-;  Clobbers: RAX, R10, R11, stack (no frame — only internal)
+;  Clobbers: RAX, R10, R11, stack (no frame ? only internal)
 ; ============================================================================
 _AppendUInt32 PROC
         ; Convert uint32 in R8D to decimal string in a local temp on the
@@ -328,9 +328,9 @@ _au_cap:
 _AppendUInt32 ENDP
 
 ; ============================================================================
-;  _JsonExtract  —  pull a string value out of a flat JSON object
+;  _JsonExtract  ?  pull a string value out of a flat JSON object
 ;  In:  RCX = pJson (null-term UTF-8)
-;       RDX = pKey  (just the key name, e.g. "path" — WITHOUT quotes)
+;       RDX = pKey  (just the key name, e.g. "path" ? WITHOUT quotes)
 ;       R8  = pOutBuf (destination)
 ;       R9  = outBufSize (including null slot)
 ;  Out: RAX = length of extracted value (0 = not found or empty)
@@ -440,7 +440,7 @@ _je_ret:
 _JsonExtract ENDP
 
 ; ============================================================================
-;  _JsonExtractUInt  — extract integer value for a key e.g. "timeout_ms":5000
+;  _JsonExtractUInt  ? extract integer value for a key e.g. "timeout_ms":5000
 ;  In:  RCX = pJson, RDX = pKey
 ;  Out: RAX = parsed uint (0 if not found)
 ;  Clobbers: RAX, R10, R11 and scratch regs
@@ -634,7 +634,7 @@ Tool_Execute PROC FRAME
         test    eax, eax
         jnz     _te_check_id
 
-        ; Not initialized — copy error string to pResultBuf
+        ; Not initialized ? copy error string to pResultBuf
         mov     rcx, r14
         lea     rdx, szTool_NoInit
         call    _StrCopy
@@ -670,7 +670,7 @@ _te_call:
         mov     rdx, r14        ; pResultBuf
         mov     r8,  rbx        ; resultBufSize
         call    rsi
-        ; EAX = handler result — fall through
+        ; EAX = handler result ? fall through
 
 _te_ret:
         add     rsp, 32
@@ -719,7 +719,7 @@ Tool_ReadFile PROC FRAME
         ; Extract "path" field from JSON
         mov     rcx, rbx
         lea     rdx, szTool_ReadOK          ; re-use label; actually we need "path"
-        ; We need the literal string "path" — use a temporary on stack
+        ; We need the literal string "path" ? use a temporary on stack
         ; Write "path\0" into scratch above our path buffer
         lea     r14, [rsp + 32 + MAX_PATH]  ; scratch for key name
         mov     dword ptr [r14], 'htap'     ; 'p','a','t','h' reversed = little-endian "path"
@@ -842,7 +842,7 @@ Tool_WriteFile PROC FRAME
         jmp     _wf_ret
 
 _wf_get_content:
-        ; Extract "content" — use heap dynamic buf as content staging area
+        ; Extract "content" ? use heap dynamic buf as content staging area
         mov     rcx, rbx
         lea     rdx, _wf_key_content          ; "content" key
         mov     r8,  qword ptr [g_toolDynBuf]
@@ -1278,7 +1278,7 @@ Tool_RunCommand PROC FRAME
         jmp     _rc_ret
 
 _rc_got_cmd:
-        ; Extract "timeout_ms" — key scratch for "timeout_ms"
+        ; Extract "timeout_ms" ? key scratch for "timeout_ms"
         lea     rcx, _rc_key_timeout
         ; Actually put the key in rdi scratch area
         lea     rdi, [rsp + 32 + SA_SIZE]
@@ -1289,7 +1289,7 @@ _rc_got_cmd:
         and     rdx, 0FFFFFFFFFFFFFFFFh      ; ensure full 64-bit
         ; Actually using local data label:
         mov     rdx, offset _rc_key_timeout  ; this needs a forward-compatible approach
-        ; Use inline stack approach: we already have scratch — write "timeout_ms\0"
+        ; Use inline stack approach: we already have scratch ? write "timeout_ms\0"
         lea     rdi, [rsp + 32 + SA_SIZE]
         ; "timeout_ms\0" = 74 69 6d 65 6f 75 74 5f 6d 73 00
         mov     dword ptr [rdi+0], 656d6974h  ; "time"
@@ -1377,7 +1377,7 @@ _rc_zsi:
         jmp     _rc_ret
 
 _rc_proc_ok:
-        ; Close write end in parent — child now owns it; parent reading DetectEOF
+        ; Close write end in parent ? child now owns it; parent reading DetectEOF
         mov     rcx, qword ptr [g_cmdPipe+8]
         call    CloseHandle
         mov     qword ptr [g_cmdPipe+8], 0
@@ -1409,7 +1409,7 @@ _rc_pipe_loop:
         lea     r9,  [g_toolBytesWritten]
         mov     qword ptr [rsp+32], 0
         call    ReadFile
-        ; if ReadFile returns 0, check GetLastError — broken pipe = EOF, just stop
+        ; if ReadFile returns 0, check GetLastError ? broken pipe = EOF, just stop
         test    eax, eax
         jz      _rc_pipe_done
         mov     eax, dword ptr [g_toolBytesWritten]
@@ -1485,7 +1485,7 @@ _rc_key_timeout db "timeout_ms", 0
 Tool_RunCommand ENDP
 
 ; ============================================================================
-;  _SearchFileForPattern — internal helper for Tool_SearchCode
+;  _SearchFileForPattern ? internal helper for Tool_SearchCode
 ;  Scans an open file's content buffer for a pattern, appending hits to result.
 ;  In:  RCX = pFilePath (for display in output)
 ;       RDX = pPatternBuf (null-term)
@@ -1747,14 +1747,14 @@ _sc_has_pattern:
         xor     rax, rax
         mov     qword ptr [rbp+32], rax     ; writeOffset = 0
 
-        ; Match count in r13 (reuse — save original bufSize on stack now)
+        ; Match count in r13 (reuse ? save original bufSize on stack now)
         ; Push bufSize and resultBuf for _SearchFileForPattern calls via stack args
         push    rbp                             ; save rbp we used for scratch
-        ; r13 was bufSize — save it
+        ; r13 was bufSize ? save it
         push    r13
 
         ; Iterative scan: walk rsi (root path) for files matching ext in r14
-        ; Using g_findData (global) — build search pattern root\* in scratch buf
+        ; Using g_findData (global) ? build search pattern root\* in scratch buf
         ; r13 = total match count (reset to 0)
         xor     r13d, r13d
 
@@ -1780,7 +1780,7 @@ _sc_has_pattern:
         mov     rbx, rax        ; hFind
 
 _sc_enum:
-        ; check FILE_ATTRIBUTE_DIRECTORY bit — skip directories
+        ; check FILE_ATTRIBUTE_DIRECTORY bit ? skip directories
         mov     eax, dword ptr [g_findData + WFDA_dwFileAttributes]
         test    eax, FILE_ATTRIBUTE_DIRECTORY
         jnz     _sc_next
@@ -1805,7 +1805,7 @@ _sc_ext_scan:
         dec     r10d
         jmp     _sc_ext_scan
 _sc_ext_found:
-        ; check if r14 (ext filter) is empty — if so, accept all
+        ; check if r14 (ext filter) is empty ? if so, accept all
         movzx   eax, byte ptr [r14]
         test    al, al
         jz      _sc_ext_ok
@@ -1930,7 +1930,7 @@ _sc_call_search:
         ; Actually I stacked: push rbp (scratch ptr), push r13 (bufSize), then did other ops.
         ; This is getting complex with the realignment. Let me just use r12 directly.
         ; The write offset is tracked via a simple global counter in g_toolBytesWritten.
-        ; For Tool_SearchCode, we collect all matches without global write offset tracking — instead
+        ; For Tool_SearchCode, we collect all matches without global write offset tracking ? instead
         ; we just use _AppendStr with a local counter. 
         ; Simplify: use a global write offset in g_toolBytesWritten for the duration of this call.
         lea     r8, [g_toolBytesWritten]   ; use this as &writeOffset
@@ -2836,7 +2836,7 @@ _gs_kind_struct   db "struct", 0
 Tool_GetSymbols ENDP
 
 ; ============================================================================
-;  _StrEq  — compare two null-terminated strings (case-sensitive)
+;  _StrEq  ? compare two null-terminated strings (case-sensitive)
 ;  In: RCX = s1, RDX = s2
 ;  Out: EAX = 0 if equal, nonzero if different
 ; ============================================================================
@@ -3557,3 +3557,4 @@ Tool_RunCommand_Impl PROC FRAME
 Tool_RunCommand_Impl ENDP
 
 END
+

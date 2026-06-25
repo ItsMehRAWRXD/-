@@ -1,12 +1,12 @@
 // ============================================================================
-// RawrXD_SocketResponder.h — IOCP Zero-Copy HTTP Server C++ Bridge
+// RawrXD_SocketResponder.h ? IOCP Zero-Copy HTTP Server C++ Bridge
 // ============================================================================
 //
 // MASM64 high-performance HTTP responder for RawrXD IDE
 // Serves /health, /status, /models with sub-0.5ms latency via IOCP
 // Pre-serialized responses, zero heap allocation in hot path
 //
-// Binary: RawrXD_SocketResponder.asm → linked into RawrXD-Win32IDE
+// Binary: RawrXD_SocketResponder.asm ? linked into RawrXD-Win32IDE
 // Dependencies: ws2_32.lib
 //
 // Pattern:  RAX=0 success, non-zero failure
@@ -150,3 +150,4 @@ private:
 };
 
 #endif // __cplusplus
+

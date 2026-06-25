@@ -31,6 +31,9 @@ public:
     void Run();
     void Stop();
     
+    // Test helper - process a single message (for testing)
+    void RunSingleTest(const char* json);
+    
     // Send event to client (thread-safe)
     void SendEvent(const DAPEvent& event);
     void SendStoppedEvent(const char* reason, int threadId, uint64_t addr);

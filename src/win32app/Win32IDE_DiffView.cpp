@@ -410,6 +410,10 @@ void Win32IDE::openGitDiffForCurrentFile() {
 LRESULT CALLBACK Win32IDE::DiffPanelProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     Win32IDE* ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
     switch (msg) {
+    case WM_ERASEBKGND:
+        // Prevent flicker - we handle all painting in WM_PAINT
+        return 1;
+
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);

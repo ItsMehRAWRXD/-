@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================================
-// MainWindow — Qt-free stub (replaces QMainWindow-based MainWindow)
+// MainWindow ? Qt-free stub (replaces QMainWindow-based MainWindow)
 // ============================================================================
 // Original Qt: QMainWindow, QWidget, QString, signals. This header provides
 // a C++20 stub for pure Win32/MASM builds. Use Win32 main window (e.g. Win32IDE)
@@ -36,3 +36,4 @@ private:
 };
 
 } // namespace RawrXD::IDE
+

@@ -358,6 +358,11 @@ static void populateList()
     SendMessage(s_gts.hwndList, WM_SETREDRAW, FALSE, 0);
     ListView_DeleteAllItems(s_gts.hwndList);
 
+    // Store display strings persistently to avoid dangling pointers
+    static std::vector<std::wstring> s_displayStrings;
+    s_displayStrings.clear();
+    s_displayStrings.reserve(s_gts.filtered.size() * 2);
+
     LVITEMW lvi = {};
     lvi.mask = LVIF_TEXT;
 
@@ -366,18 +371,18 @@ static void populateList()
         const auto& sym = s_gts.filtered[i];
 
         // Column 0: icon + name
-        std::wstring nameLabel = symbolKindIcon(sym.kindValue) + sym.name;
+        s_displayStrings.push_back(symbolKindIcon(sym.kindValue) + sym.name);
         lvi.iItem = i;
         lvi.iSubItem = 0;
-        lvi.pszText = const_cast<LPWSTR>(nameLabel.c_str());
+        lvi.pszText = const_cast<LPWSTR>(s_displayStrings.back().c_str());
         ListView_InsertItem(s_gts.hwndList, &lvi);
 
         // Column 1: kind
         {
-            std::wstring secondary = s_gts.workspaceMode ? sym.pathOrContainer : sym.kindLabel;
+            s_displayStrings.push_back(s_gts.workspaceMode ? sym.pathOrContainer : sym.kindLabel);
             LVITEMW lvi2 = {};
             lvi2.iSubItem = 1;
-            lvi2.pszText = const_cast<LPWSTR>(secondary.c_str());
+            lvi2.pszText = const_cast<LPWSTR>(s_displayStrings.back().c_str());
             SendMessageW(s_gts.hwndList, LVM_SETITEMTEXTW, i, (LPARAM)&lvi2);
         }
 

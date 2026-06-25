@@ -1,6 +1,6 @@
 #pragma once
 // ============================================================================
-// Win32Handle.h — RAII wrappers for Win32 GDI/HWND/HANDLE resources
+// Win32Handle.h ? RAII wrappers for Win32 GDI/HWND/HANDLE resources
 // Prevents leaks by ensuring automatic cleanup. Finding #5 fix.
 // ============================================================================
 
@@ -9,7 +9,7 @@
 
 namespace RawrXD {
 
-// ── Generic RAII wrapper for Win32 HANDLE objects ────────────────────────────
+// ?? Generic RAII wrapper for Win32 HANDLE objects ????????????????????????????
 // Wraps kernel objects (HANDLE) with auto-close semantics.
 class ScopedHandle {
 public:
@@ -48,7 +48,7 @@ private:
     HANDLE m_handle;
 };
 
-// ── RAII wrapper for GDI objects (HBRUSH, HFONT, HPEN, HBITMAP, etc.) ───────
+// ?? RAII wrapper for GDI objects (HBRUSH, HFONT, HPEN, HBITMAP, etc.) ???????
 template<typename T>
 class ScopedGdi {
 public:
@@ -89,7 +89,7 @@ using ScopedPen     = ScopedGdi<HPEN>;
 using ScopedBitmap  = ScopedGdi<HBITMAP>;
 using ScopedRegion  = ScopedGdi<HRGN>;
 
-// ── RAII wrapper for HMENU ──────────────────────────────────────────────────
+// ?? RAII wrapper for HMENU ??????????????????????????????????????????????????
 class ScopedMenu {
 public:
     ScopedMenu() noexcept : m_menu(nullptr) {}
@@ -122,7 +122,7 @@ private:
     HMENU m_menu;
 };
 
-// ── RAII wrapper for HIMAGELIST ─────────────────────────────────────────────
+// ?? RAII wrapper for HIMAGELIST ?????????????????????????????????????????????
 class ScopedImageList {
 public:
     ScopedImageList() noexcept : m_list(nullptr) {}
@@ -155,7 +155,7 @@ private:
     HIMAGELIST m_list;
 };
 
-// ── RAII wrapper for HDC (Device Context) ───────────────────────────────────
+// ?? RAII wrapper for HDC (Device Context) ???????????????????????????????????
 // For GetDC/ReleaseDC pattern (not CreateDC)
 class ScopedDC {
 public:
@@ -173,7 +173,7 @@ private:
     HDC m_hdc;
 };
 
-// ── Select-into-DC RAII guard ───────────────────────────────────────────────
+// ?? Select-into-DC RAII guard ???????????????????????????????????????????????
 // Selects a GDI object into an HDC on construction, restores on destruction
 class ScopedSelectObject {
 public:
@@ -190,3 +190,4 @@ private:
 };
 
 } // namespace RawrXD
+

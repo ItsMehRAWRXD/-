@@ -1,6 +1,6 @@
 #pragma once
 // ============================================================================
-// Result.h — Unified error handling type for RawrXD (Finding #9 fix)
+// Result.h ? Unified error handling type for RawrXD (Finding #9 fix)
 // 
 // Provides a single consistent error handling pattern across the codebase.
 // All public APIs should return Result<T> instead of mixing exceptions,
@@ -84,7 +84,7 @@ struct Error {
     bool operator==(const Error& other) const { return code == other.code; }
 };
 
-// The unified result type — use this everywhere instead of bool/exceptions
+// The unified result type ? use this everywhere instead of bool/exceptions
 template<typename T>
 using Result = std::expected<T, Error>;
 
@@ -106,3 +106,4 @@ inline VoidResult makeVoidSuccess() {
 }
 
 } // namespace RawrXD
+

@@ -167,7 +167,7 @@ HWND Win32IDE::createVoiceAssistantPanel(HWND hwndParent) {
         wc.lpfnWndProc = VoiceAssistantPanelProc;
         wc.hInstance = m_hInstance;
         wc.lpszClassName = L"VoiceAssistantPanel";
-        wc.hCursor = LoadCursorW(nullptr, (LPCWSTR)IDC_HAND);
+        wc.hCursor = LoadCursor(nullptr, IDC_HAND);
         wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
         RegisterClassExW(&wc);
         classRegistered = true;

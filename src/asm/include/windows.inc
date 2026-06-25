@@ -29,3 +29,4 @@ SYSTEM_INFO STRUCT
     wProcessorLevel WORD ?
     wProcessorRevision WORD ?
 SYSTEM_INFO ENDS
+

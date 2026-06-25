@@ -477,20 +477,25 @@ void LicenseInfoDialog::displayLicenseDetails(HWND hwndList) {
     auto& lic = EnterpriseLicenseV2::Instance();
     std::ostringstream oss;
     oss << "Tier: " << tierName(lic.currentTier());
-    SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)oss.str().c_str());
+    std::string tierStr = oss.str();
+    SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)tierStr.c_str());
     oss.str("");
     oss << "Enabled features: " << lic.enabledFeatureCount();
-    SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)oss.str().c_str());
+    std::string featStr = oss.str();
+    SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)featStr.c_str());
 }
 
 void LicenseInfoDialog::displayFeatureTable(HWND hwndList) {
     auto& lic = EnterpriseLicenseV2::Instance();
     SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)"--- Features ---");
+    std::vector<std::string> featureLines;
+    featureLines.reserve(TOTAL_FEATURES);
     for (uint32_t i = 0; i < TOTAL_FEATURES; ++i) {
         const auto& def = lic.getFeatureDef(static_cast<FeatureID>(i));
         std::string line = lic.isFeatureEnabled(static_cast<FeatureID>(i)) ? "[+] " : "[-] ";
         line += def.name;
-        SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+        featureLines.push_back(std::move(line));
+        SendMessageA(hwndList, LB_ADDSTRING, 0, (LPARAM)featureLines.back().c_str());
     }
 }
 

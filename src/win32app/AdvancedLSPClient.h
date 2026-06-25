@@ -29,6 +29,9 @@ public:
 private:
     AdvancedLSPClient() = default;
     
+    // Allow std::make_unique to access private constructor
+    struct MakeUniqueEnabler;
+    
     uint64_t m_nextRequestId = 1;
     std::string SendRequest(const std::string& method, nlohmann::json params);
 };

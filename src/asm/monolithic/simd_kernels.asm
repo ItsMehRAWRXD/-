@@ -1,23 +1,23 @@
-; ═══════════════════════════════════════════════════════════════════
-; simd_kernels.asm — Phase 9A: AVX2/AVX-512 Attention Kernels
+; ???????????????????????????????????????????????????????????????????
+; simd_kernels.asm ? Phase 9A: AVX2/AVX-512 Attention Kernels
 ;
 ; Production-grade SIMD compute kernels for transformer inference.
 ; All routines auto-dispatch: AVX-512 path if available, else AVX2.
 ;
 ; Dual-path kernels (AVX-512 / AVX2 auto-dispatch):
-;   SIMD_RMSNorm          — Root Mean Square normalization
-;   SIMD_DotProduct       — Q×K^T attention score (one head)
-;   SIMD_MatVecQ4         — Quantized (Q4_0) matrix-vector multiply
+;   SIMD_RMSNorm          ? Root Mean Square normalization
+;   SIMD_DotProduct       ? Q?K^T attention score (one head)
+;   SIMD_MatVecQ4         ? Quantized (Q4_0) matrix-vector multiply
 ;
 ; AVX2 kernels (vectorized, no AVX-512 path needed):
-;   SIMD_Softmax          — Numerically stable softmax
-;   SIMD_ScaledDotBatch   — Batched Q×K^T for all tokens (one head)
-;   SIMD_VAccumulate      — V weighted sum (score × V rows)
-;   SIMD_RoPE             — Rotary Position Embedding
-;   SIMD_SiLU             — SiLU / SwiGLU activation
-; ═══════════════════════════════════════════════════════════════════
+;   SIMD_Softmax          ? Numerically stable softmax
+;   SIMD_ScaledDotBatch   ? Batched Q?K^T for all tokens (one head)
+;   SIMD_VAccumulate      ? V weighted sum (score ? V rows)
+;   SIMD_RoPE             ? Rotary Position Embedding
+;   SIMD_SiLU             ? SiLU / SwiGLU activation
+; ???????????????????????????????????????????????????????????????????
 
-; NOTE: Do NOT include rawrxd.inc — this file DEFINES PUBLIC symbols.
+; NOTE: Do NOT include rawrxd.inc ? this file DEFINES PUBLIC symbols.
 EXTERN g_hasAVX512:DWORD
 
 PUBLIC SIMD_RMSNorm
@@ -38,7 +38,7 @@ c_one           dd 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
                 dd 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 c_rms_eps       dd 1.0e-6              ; RMSNorm epsilon
 c_neg_inf       dd 0FF800000h          ; -inf for softmax stability
-c_inv_sqrt_dim  dd 0.0883883h          ; 1/sqrt(128) ≈ 0.08839 — for head_dim=128
+c_inv_sqrt_dim  dd 0.0883883h          ; 1/sqrt(128) ? 0.08839 ? for head_dim=128
 c_flash_scale_32      dd 03E3504F3h
 c_flash_scale_64      dd 03E000000h
 c_flash_scale_128     dd 03DB504F3h
@@ -56,15 +56,15 @@ g_softmax_sum   dd 0
 
 .code
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_RMSNorm — Root Mean Square Layer Normalization
+; ????????????????????????????????????????????????????????????????
+; SIMD_RMSNorm ? Root Mean Square Layer Normalization
 ;   RCX = pOut      (float* output, normalized)
 ;   RDX = pInput    (float* input vector)
 ;   R8  = pWeight   (float* gamma weights)
 ;   R9D = dim       (vector dimension, must be multiple of 8)
 ;
-;   out[i] = (input[i] / sqrt(mean(input²) + eps)) * weight[i]
-; ────────────────────────────────────────────────────────────────
+;   out[i] = (input[i] / sqrt(mean(input?) + eps)) * weight[i]
+; ????????????????????????????????????????????????????????????????
 SIMD_RMSNorm PROC FRAME
     push    rbx
     .pushreg rbx
@@ -76,7 +76,7 @@ SIMD_RMSNorm PROC FRAME
     test    ebx, ebx
     jz      @rms_done
 
-    ; ── Pass 1: Compute sum of squares ──
+    ; ?? Pass 1: Compute sum of squares ??
     vxorps  ymm0, ymm0, ymm0       ; accumulator = 0
     xor     eax, eax                ; index
 
@@ -88,8 +88,8 @@ SIMD_RMSNorm PROC FRAME
     cmp     eax, ebx
     jae     @rms_reduce
     vmovups ymm1, ymmword ptr [rdx + rax*4]
-    vmulps  ymm1, ymm1, ymm1       ; x²
-    vaddps  ymm0, ymm0, ymm1       ; accum += x²
+    vmulps  ymm1, ymm1, ymm1       ; x?
+    vaddps  ymm0, ymm0, ymm1       ; accum += x?
     add     eax, 8
     jmp     @rms_sum_256
 
@@ -100,7 +100,7 @@ SIMD_RMSNorm PROC FRAME
     cmp     eax, ebx
     jae     @rms_reduce_512
     vmovups zmm1, zmmword ptr [rdx + rax*4]
-    vfmadd231ps zmm0, zmm1, zmm1   ; accum += x²
+    vfmadd231ps zmm0, zmm1, zmm1   ; accum += x?
     add     eax, 16
     jmp     @rms_s512_loop
 
@@ -110,7 +110,7 @@ SIMD_RMSNorm PROC FRAME
     vaddps  ymm0, ymm0, ymm1
 
 @rms_reduce:
-    ; Horizontal sum of ymm0 → xmm0[0]
+    ; Horizontal sum of ymm0 ? xmm0[0]
     vextractf128 xmm1, ymm0, 1
     vaddps  xmm0, xmm0, xmm1
     vhaddps xmm0, xmm0, xmm0
@@ -118,11 +118,11 @@ SIMD_RMSNorm PROC FRAME
 
     ; mean = sum / dim
     vcvtsi2ss xmm1, xmm1, ebx      ; xmm1 = (float)dim
-    vdivss  xmm0, xmm0, xmm1       ; mean(x²)
+    vdivss  xmm0, xmm0, xmm1       ; mean(x?)
     vaddss  xmm0, xmm0, dword ptr [c_rms_eps]  ; + epsilon
-    vrsqrtss xmm0, xmm0, xmm0      ; 1/sqrt(mean + eps) — fast reciprocal sqrt
+    vrsqrtss xmm0, xmm0, xmm0      ; 1/sqrt(mean + eps) ? fast reciprocal sqrt
 
-    ; ── Pass 2: Normalize and scale ──
+    ; ?? Pass 2: Normalize and scale ??
     vbroadcastss ymm2, xmm0        ; ymm2 = scale factor everywhere
     xor     eax, eax
 
@@ -160,15 +160,15 @@ SIMD_RMSNorm PROC FRAME
     ret
 SIMD_RMSNorm ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_Softmax — Numerically stable softmax over float vector
-;   RCX = pInOut    (float*, in-place: scores → probabilities)
-;   EDX = count     (number of elements, must be ≥ 1)
+; ????????????????????????????????????????????????????????????????
+; SIMD_Softmax ? Numerically stable softmax over float vector
+;   RCX = pInOut    (float*, in-place: scores ? probabilities)
+;   EDX = count     (number of elements, must be ? 1)
 ;
 ;   Pass 1: find max
 ;   Pass 2: exp(x - max), accumulate sum
 ;   Pass 3: divide by sum
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_Softmax PROC FRAME
     push    rbx
     .pushreg rbx
@@ -180,7 +180,7 @@ SIMD_Softmax PROC FRAME
     test    ebx, ebx
     jz      @sm_done
 
-    ; ── Pass 1: Find max ──
+    ; ?? Pass 1: Find max ??
     vmovss  xmm0, dword ptr [rcx]   ; max = input[0]
     mov     eax, 1
 @sm_max_loop:
@@ -192,11 +192,11 @@ SIMD_Softmax PROC FRAME
     jmp     @sm_max_loop
 
 @sm_pass2:
-    ; ── Pass 2: exp(x - max) and sum ──
-    ; Scalar exp approximation: exp(x) ≈ (1 + x/256)^256
+    ; ?? Pass 2: exp(x - max) and sum ??
+    ; Scalar exp approximation: exp(x) ? (1 + x/256)^256
     ; For production accuracy, use a polynomial or lookup table.
     ; Here we use a compact 4th-order polynomial:
-    ;   exp(x) ≈ 1 + x + x²/2 + x³/6 + x⁴/24
+    ;   exp(x) ? 1 + x + x?/2 + x?/6 + x?/24
     vxorps  xmm4, xmm4, xmm4       ; sum = 0
     xor     eax, eax
 
@@ -207,22 +207,22 @@ SIMD_Softmax PROC FRAME
     vmovss  xmm1, dword ptr [rcx + rax*4]
     vsubss  xmm1, xmm1, xmm0       ; x = input[i] - max
 
-    ; Polynomial exp(x): 1 + x + x²/2 + x³/6 + x⁴/24
+    ; Polynomial exp(x): 1 + x + x?/2 + x?/6 + x?/24
     vmovaps xmm2, xmm1              ; x
-    vmulss  xmm3, xmm2, xmm2       ; x²
+    vmulss  xmm3, xmm2, xmm2       ; x?
     vmovss  xmm5, dword ptr [c_one] ; 1.0
     vaddss  xmm5, xmm5, xmm2       ; 1 + x
 
-    vmulss  xmm6, xmm3, dword ptr [c_half]  ; x²/2
-    vaddss  xmm5, xmm5, xmm6       ; 1 + x + x²/2
+    vmulss  xmm6, xmm3, dword ptr [c_half]  ; x?/2
+    vaddss  xmm5, xmm5, xmm6       ; 1 + x + x?/2
 
-    vmulss  xmm6, xmm3, xmm2       ; x³
-    vmulss  xmm6, xmm6, dword ptr [c_sixth] ; x³/6
-    vaddss  xmm5, xmm5, xmm6       ; + x³/6
+    vmulss  xmm6, xmm3, xmm2       ; x?
+    vmulss  xmm6, xmm6, dword ptr [c_sixth] ; x?/6
+    vaddss  xmm5, xmm5, xmm6       ; + x?/6
 
-    vmulss  xmm6, xmm3, xmm3       ; x⁴
-    vmulss  xmm6, xmm6, dword ptr [c_24th]  ; x⁴/24
-    vaddss  xmm5, xmm5, xmm6       ; + x⁴/24
+    vmulss  xmm6, xmm3, xmm3       ; x?
+    vmulss  xmm6, xmm6, dword ptr [c_24th]  ; x?/24
+    vaddss  xmm5, xmm5, xmm6       ; + x?/24
 
     ; Clamp to 0 if negative (exp can't be negative)
     vmaxss  xmm5, xmm5, xmm4       ; max(result, 0)
@@ -233,7 +233,7 @@ SIMD_Softmax PROC FRAME
     jmp     @sm_exp_loop
 
 @sm_pass3:
-    ; ── Pass 3: Divide by sum ──
+    ; ?? Pass 3: Divide by sum ??
     ; Avoid division by zero
     vcomiss xmm4, xmm4              ; xmm4 is NaN if 0 somehow
     vrcpss  xmm2, xmm2, xmm4       ; 1/sum (fast approx)
@@ -243,7 +243,7 @@ SIMD_Softmax PROC FRAME
     cmp     eax, ebx
     jae     @sm_done
     vmovss  xmm1, dword ptr [rcx + rax*4]
-    vmulss  xmm1, xmm1, xmm2       ; × (1/sum)
+    vmulss  xmm1, xmm1, xmm2       ; ? (1/sum)
     vmovss  dword ptr [rcx + rax*4], xmm1
     inc     eax
     jmp     @sm_div_loop
@@ -255,13 +255,13 @@ SIMD_Softmax PROC FRAME
     ret
 SIMD_Softmax ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_DotProduct — Dot product of two float vectors (Q · K for one head)
+; ????????????????????????????????????????????????????????????????
+; SIMD_DotProduct ? Dot product of two float vectors (Q ? K for one head)
 ;   RCX = pA (float*, e.g. Q vector)
 ;   RDX = pB (float*, e.g. K vector)
 ;   R8D = dim (must be multiple of 8)
 ;   Returns: XMM0 = dot product (scalar float)
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_DotProduct PROC FRAME
     sub     rsp, 28h
     .allocstack 28h
@@ -299,7 +299,7 @@ SIMD_DotProduct PROC FRAME
     vaddps  ymm0, ymm0, ymm1
 
 @dp_reduce:
-    ; Horizontal sum: ymm0 → xmm0[0]
+    ; Horizontal sum: ymm0 ? xmm0[0]
     vextractf128 xmm1, ymm0, 1
     vaddps  xmm0, xmm0, xmm1
     vhaddps xmm0, xmm0, xmm0
@@ -310,17 +310,17 @@ SIMD_DotProduct PROC FRAME
     ret
 SIMD_DotProduct ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_ScaledDotBatch — Compute attention scores for one head
+; ????????????????????????????????????????????????????????????????
+; SIMD_ScaledDotBatch ? Compute attention scores for one head
 ;   RCX = pQ         (float*, query vector, [head_dim])
-;   RDX = pKBlock    (float*, K vectors in head-major layout, [tokens × head_dim])
+;   RDX = pKBlock    (float*, K vectors in head-major layout, [tokens ? head_dim])
 ;   R8D = numTokens  (number of K vectors)
 ;   R9D = headDim    (dimension, must be multiple of 8)
 ;   [rsp+28h] = pOutScores (float*, output score array [numTokens])
 ;
 ;   For each token t: outScores[t] = dot(Q, K[t]) / sqrt(headDim)
 ;   Uses KVHM head-major layout: K vectors are contiguous per head.
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_ScaledDotBatch PROC FRAME
     push    rbx
     .pushreg rbx
@@ -348,7 +348,7 @@ SIMD_ScaledDotBatch PROC FRAME
 
     ; headStride = headDim * 4 (bytes per K vector)
     mov     eax, r13d
-    shl     eax, 2                  ; × sizeof(float)
+    shl     eax, 2                  ; ? sizeof(float)
 
     xor     ecx, ecx                ; token index
 
@@ -363,7 +363,7 @@ SIMD_ScaledDotBatch PROC FRAME
     movsxd  rdx, eax
     lea     rdx, [rdi + rdx]        ; pK[token]
 
-    ; Dot product Q · K[token]
+    ; Dot product Q ? K[token]
     push    rcx
     push    rbx
     mov     rcx, rsi                ; pQ
@@ -393,16 +393,16 @@ SIMD_ScaledDotBatch PROC FRAME
     ret
 SIMD_ScaledDotBatch ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_VAccumulate — Weighted sum of V vectors (score × V rows)
+; ????????????????????????????????????????????????????????????????
+; SIMD_VAccumulate ? Weighted sum of V vectors (score ? V rows)
 ;   RCX = pOut      (float*, output [head_dim], zeroed by caller)
 ;   RDX = pScores   (float*, softmax probabilities [numTokens])
-;   R8  = pVBlock   (float*, V vectors [numTokens × head_dim])
+;   R8  = pVBlock   (float*, V vectors [numTokens ? head_dim])
 ;   R9D = numTokens
 ;   [rsp+28h] = headDim (DWORD)
 ;
 ;   out += scores[t] * V[t] for each token t
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_VAccumulate PROC FRAME
     push    rbx
     .pushreg rbx
@@ -467,8 +467,8 @@ SIMD_VAccumulate PROC FRAME
     ret
 SIMD_VAccumulate ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_MatVecQ4 — Quantized Q4_0 matrix × float vector
+; ????????????????????????????????????????????????????????????????
+; SIMD_MatVecQ4 ? Quantized Q4_0 matrix ? float vector
 ;   RCX = pOut      (float*, output [rows])
 ;   RDX = pMatrix   (uint8_t*, Q4_0 packed: 32 nibbles + 2-byte scale per block)
 ;   R8  = pVec      (float*, input vector [cols])
@@ -482,7 +482,7 @@ SIMD_VAccumulate ENDP
 ;   Auto-dispatches:
 ;     AVX-512: 2 ZMM FMAs/block via vpmovzxbd zmm (16-wide dequant)
 ;     AVX2:    4 YMM FMAs/block via vpmovzxbd ymm (8-wide dequant)
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_MatVecQ4 PROC FRAME
     push    rbx
     .pushreg rbx
@@ -518,13 +518,13 @@ SIMD_MatVecQ4 PROC FRAME
     cmp     ecx, r12d
     jae     @q4_done
 
-    ; ── AVX-512 / AVX2 dispatch ──
+    ; ?? AVX-512 / AVX2 dispatch ??
     cmp     g_hasAVX512, 1
     je      @q4_row_512
 
-    ; ════════════════════════════════════════════════════════════
-    ; AVX2 path: 4 YMM FMAs per block (8 values × 4 passes = 32)
-    ; ════════════════════════════════════════════════════════════
+    ; ????????????????????????????????????????????????????????????
+    ; AVX2 path: 4 YMM FMAs per block (8 values ? 4 passes = 32)
+    ; ????????????????????????????????????????????????????????????
     vxorps  ymm0, ymm0, ymm0       ; row accumulator
     xor     edx, edx                ; block index within row
 
@@ -545,7 +545,7 @@ SIMD_MatVecQ4 PROC FRAME
     vmovd   xmm4, eax
     vcvtph2ps xmm4, xmm4           ; scale as fp32 (AVX2 F16C)
 
-    ; Dequantize 32 nibbles → 32 floats and dot with vec
+    ; Dequantize 32 nibbles ? 32 floats and dot with vec
     ; Production AVX2 vectorized: vpshufb + vpand parallel nibble extraction
     ; Process 32 nibbles (16 bytes) in two AVX2 passes of 16 nibbles each
     vbroadcastss ymm5, xmm4        ; scale broadcast across 8 lanes
@@ -553,7 +553,7 @@ SIMD_MatVecQ4 PROC FRAME
     mov     r9d, edx
     shl     r9d, 5                  ; vec offset = blockIdx * 32
 
-    ; ── Pass 1: Process nibble bytes [0..7] → 16 Q4 values → 16 floats ──
+    ; ?? Pass 1: Process nibble bytes [0..7] ? 16 Q4 values ? 16 floats ??
     ; Load 8 bytes of nibble data into xmm6 (low 64 bits)
     vmovq   xmm6, qword ptr [r8]
 
@@ -565,11 +565,11 @@ SIMD_MatVecQ4 PROC FRAME
     vpsrlw  xmm2, xmm6, 4
     vpand   xmm2, xmm2, xmm7       ; high nibbles (8 bytes)
 
-    ; Interleave: lo0, hi0, lo1, hi1, ... → 16 nibble values in order
+    ; Interleave: lo0, hi0, lo1, hi1, ... ? 16 nibble values in order
     vpunpcklbw xmm3, xmm1, xmm2    ; interleave low and high nibbles
 
     ; Widen to 32-bit integers: first 8 nibbles
-    vpmovzxbd ymm1, xmm3            ; 8 bytes → 8 DWORDs in YMM
+    vpmovzxbd ymm1, xmm3            ; 8 bytes ? 8 DWORDs in YMM
 
     ; Subtract 8 to center around zero (Q4_0 offset)
     vbroadcastss ymm6, dword ptr [c_q4_offset] ; 8 as int
@@ -596,7 +596,7 @@ SIMD_MatVecQ4 PROC FRAME
 
     add     r9d, 16                 ; Advance vec offset by 16
 
-    ; ── Pass 2: Process nibble bytes [8..15] → 16 Q4 values → 16 floats ──
+    ; ?? Pass 2: Process nibble bytes [8..15] ? 16 Q4 values ? 16 floats ??
     vmovq   xmm6, qword ptr [r8 + 8]
 
     vpand   xmm1, xmm6, xmm7
@@ -628,7 +628,7 @@ SIMD_MatVecQ4 PROC FRAME
     jmp     @q4_block_loop
 
 @q4_store_row:
-    ; Horizontal sum of ymm0 (8 floats → 1 scalar)
+    ; Horizontal sum of ymm0 (8 floats ? 1 scalar)
     ; Extract high 128 bits and add to low 128 bits
     vextractf128 xmm1, ymm0, 1
     vaddps  xmm0, xmm0, xmm1       ; 4 partial sums
@@ -639,14 +639,14 @@ SIMD_MatVecQ4 PROC FRAME
     inc     ecx
     jmp     @q4_row_loop
 
-    ; ════════════════════════════════════════════════════════════
-    ; AVX-512 path: 2 ZMM FMAs per block (16 values × 2 passes = 32)
+    ; ????????????????????????????????????????????????????????????
+    ; AVX-512 path: 2 ZMM FMAs per block (16 values ? 2 passes = 32)
     ;
     ; Key improvement over AVX2 path:
-    ;   - vmovdqu xmm loads all 16 nibble bytes at once (vs 2× vmovq)
-    ;   - vpmovzxbd zmm widens 16 bytes → 16 dwords (vs 8)
+    ;   - vmovdqu xmm loads all 16 nibble bytes at once (vs 2? vmovq)
+    ;   - vpmovzxbd zmm widens 16 bytes ? 16 dwords (vs 8)
     ;   - vfmadd231ps zmm does 16-wide FMA (vs 8-wide)
-    ;   - 2 FMA instructions per block (vs 4) = 2× throughput
+    ;   - 2 FMA instructions per block (vs 4) = 2? throughput
     ;
     ; Register allocation:
     ;   zmm0  = row accumulator (16-wide partial sums)
@@ -657,7 +657,7 @@ SIMD_MatVecQ4 PROC FRAME
     ;   xmm5  = interleaved nibbles pass 2 (last 16 of 32)
     ;   zmm1  = widened dequantized values
     ;   zmm2  = input vector elements
-    ; ════════════════════════════════════════════════════════════
+    ; ????????????????????????????????????????????????????????????
 @q4_row_512:
     vxorps  zmm0, zmm0, zmm0       ; 16-wide row accumulator
 
@@ -671,50 +671,50 @@ SIMD_MatVecQ4 PROC FRAME
     cmp     edx, r14d
     jae     @q4_store_row_512
 
-    ; ── Block address: pMatrix + (row * blocksPerRow + blockIdx) * 18 ──
+    ; ?? Block address: pMatrix + (row * blocksPerRow + blockIdx) * 18 ??
     mov     eax, ecx
     imul    eax, r14d
     add     eax, edx
     imul    eax, eax, 18
     lea     r8, [rdi + rax]         ; r8 = block ptr
 
-    ; ── Read fp16 scale (last 2 bytes), convert to fp32, broadcast to zmm ──
+    ; ?? Read fp16 scale (last 2 bytes), convert to fp32, broadcast to zmm ??
     movzx   eax, word ptr [r8 + 16]
     vmovd   xmm8, eax
-    vcvtph2ps xmm8, xmm8           ; fp16 → fp32 (AVX2 F16C)
+    vcvtph2ps xmm8, xmm8           ; fp16 ? fp32 (AVX2 F16C)
     vbroadcastss zmm8, xmm8        ; scale in all 16 lanes
 
-    ; ── Vec offset = blockIdx * 32 (each block covers 32 input elements) ──
+    ; ?? Vec offset = blockIdx * 32 (each block covers 32 input elements) ??
     mov     r9d, edx
     shl     r9d, 5
 
-    ; ── Load all 16 nibble bytes at once ──
+    ; ?? Load all 16 nibble bytes at once ??
     vmovdqu xmm1, xmmword ptr [r8]  ; 16 bytes = 32 packed nibbles
 
-    ; ── Extract low nibbles: byte[i] & 0x0F → value[2*i] ──
+    ; ?? Extract low nibbles: byte[i] & 0x0F ? value[2*i] ??
     vpand   xmm2, xmm1, xmm10      ; low nibbles (16 bytes)
 
-    ; ── Extract high nibbles: (byte[i] >> 4) & 0x0F → value[2*i+1] ──
+    ; ?? Extract high nibbles: (byte[i] >> 4) & 0x0F ? value[2*i+1] ??
     vpsrlw  xmm3, xmm1, 4
     vpand   xmm3, xmm3, xmm10      ; high nibbles (16 bytes)
 
-    ; ── Interleave to sequential order: [nib0, nib1, nib2, ..., nib31] ──
+    ; ?? Interleave to sequential order: [nib0, nib1, nib2, ..., nib31] ??
     vpunpcklbw xmm4, xmm2, xmm3    ; first 16 nibbles (from bytes 0-7)
     vpunpckhbw xmm5, xmm2, xmm3    ; last 16 nibbles (from bytes 8-15)
 
-    ; ── Pass 1: First 16 Q4 values → 16 floats → ZMM FMA ──
-    vpmovzxbd zmm1, xmm4            ; 16 bytes → 16 dwords (AVX-512)
-    vpsubd  zmm1, zmm1, zmm9        ; center: subtract 8 (unsigned→signed Q4_0)
-    vcvtdq2ps zmm1, zmm1            ; int32 → float32
-    vmulps  zmm1, zmm1, zmm8        ; × scale
+    ; ?? Pass 1: First 16 Q4 values ? 16 floats ? ZMM FMA ??
+    vpmovzxbd zmm1, xmm4            ; 16 bytes ? 16 dwords (AVX-512)
+    vpsubd  zmm1, zmm1, zmm9        ; center: subtract 8 (unsigned?signed Q4_0)
+    vcvtdq2ps zmm1, zmm1            ; int32 ? float32
+    vmulps  zmm1, zmm1, zmm8        ; ? scale
     vmovups zmm2, zmmword ptr [rbx + r9*4]       ; 16 input vec elements
     vfmadd231ps zmm0, zmm1, zmm2    ; accum += dequant[0..15] * vec[0..15]
 
-    ; ── Pass 2: Next 16 Q4 values → 16 floats → ZMM FMA ──
-    vpmovzxbd zmm1, xmm5            ; 16 bytes → 16 dwords
+    ; ?? Pass 2: Next 16 Q4 values ? 16 floats ? ZMM FMA ??
+    vpmovzxbd zmm1, xmm5            ; 16 bytes ? 16 dwords
     vpsubd  zmm1, zmm1, zmm9        ; center: subtract 8
-    vcvtdq2ps zmm1, zmm1            ; int32 → float32
-    vmulps  zmm1, zmm1, zmm8        ; × scale
+    vcvtdq2ps zmm1, zmm1            ; int32 ? float32
+    vmulps  zmm1, zmm1, zmm8        ; ? scale
     vmovups zmm2, zmmword ptr [rbx + r9*4 + 64]  ; next 16 input vec elements
     vfmadd231ps zmm0, zmm1, zmm2    ; accum += dequant[16..31] * vec[16..31]
 
@@ -722,7 +722,7 @@ SIMD_MatVecQ4 PROC FRAME
     jmp     @q4_block_512
 
 @q4_store_row_512:
-    ; ── Horizontal sum: zmm0 (16 floats) → scalar ──
+    ; ?? Horizontal sum: zmm0 (16 floats) ? scalar ??
     vextractf64x4 ymm1, zmm0, 1    ; high 256 bits
     vaddps  ymm0, ymm0, ymm1       ; 8 partial sums
     vextractf128 xmm1, ymm0, 1     ; high 128 bits
@@ -745,8 +745,8 @@ SIMD_MatVecQ4 PROC FRAME
     ret
 SIMD_MatVecQ4 ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_RoPE — Rotary Position Embedding (in-place, vectorized)
+; ????????????????????????????????????????????????????????????????
+; SIMD_RoPE ? Rotary Position Embedding (in-place, vectorized)
 ;   RCX = pVec      (float*, interleaved [re0, im0, re1, im1, ...])
 ;   EDX = dim       (must be even, typically head_dim)
 ;   R8D = position  (token position index)
@@ -759,7 +759,7 @@ SIMD_MatVecQ4 ENDP
 ;
 ;   Production implementation: precomputed frequency table, minimax 
 ;   polynomial cos/sin (7-term), vectorized over 4 pairs per iteration.
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_RoPE PROC FRAME
     push    rbx
     .pushreg rbx
@@ -781,7 +781,7 @@ SIMD_RoPE PROC FRAME
     mov     r13d, r8d               ; position
     
     ; Compute ln(theta_base) for angle computation
-    ; ln(10000) ≈ 9.2103404 (we store this as a constant)
+    ; ln(10000) ? 9.2103404 (we store this as a constant)
     ; freq[i] = exp(-(2*i/dim) * ln(theta_base))
     ; angle[i] = position * freq[i]
     
@@ -807,7 +807,7 @@ SIMD_RoPE PROC FRAME
     cmp     eax, ebx                ; Can we do 4 pairs?
     jg      @rope_scalar_tail       ; Less than 4 pairs remaining
 
-    ; ── Compute 4 angles simultaneously ──
+    ; ?? Compute 4 angles simultaneously ??
     ; freq[i] = exp(-2 * i / dim * ln(theta_base))
     ; Build vector of pair indices: [i, i+1, i+2, i+3]
     vcvtsi2ss xmm0, xmm0, ecx
@@ -825,7 +825,7 @@ SIMD_RoPE PROC FRAME
     vmulps  xmm0, xmm0, xmm1       ; -(2i/dim) * ln(base)
 
     ; Compute exp(x) via polynomial approximation (range-reduced)
-    ; exp(x) ≈ 2^(x/ln2) = 2^n * 2^f where f = frac part
+    ; exp(x) ? 2^(x/ln2) = 2^n * 2^f where f = frac part
     ; Use minimax polynomial for 2^f on [0, 1)
     vbroadcastss xmm1, dword ptr [c_log2e]  ; 1/ln(2) = 1.4426950
     vmulps  xmm0, xmm0, xmm1       ; x / ln(2) = full exponent
@@ -834,7 +834,7 @@ SIMD_RoPE PROC FRAME
     vroundps xmm1, xmm0, 1         ; floor(x/ln2) = n
     vsubps  xmm2, xmm0, xmm1       ; f = frac part [0, 1)
 
-    ; 2^f ≈ minimax polynomial (degree 4)
+    ; 2^f ? minimax polynomial (degree 4)
     ; p(f) = c0 + f*(c1 + f*(c2 + f*(c3 + f*c4)))
     vbroadcastss xmm3, dword ptr [c_exp_c4]
     vmulps  xmm3, xmm3, xmm2       ; c4 * f
@@ -848,7 +848,7 @@ SIMD_RoPE PROC FRAME
     vaddps  xmm3, xmm3, xmm4       ; c1 + ...
     vmulps  xmm3, xmm3, xmm2       ; f * (c1 + ...)
     vbroadcastss xmm4, dword ptr [c_exp_c0]
-    vaddps  xmm3, xmm3, xmm4       ; 2^f ≈ p(f)
+    vaddps  xmm3, xmm3, xmm4       ; 2^f ? p(f)
 
     ; Scale by 2^n using float bit manipulation
     ; 2^n: convert n to int, shift left 23, add to exponent
@@ -861,45 +861,45 @@ SIMD_RoPE PROC FRAME
     vbroadcastss xmm0, dword ptr [rsp+44h]  ; position
     vmulps  xmm0, xmm0, xmm3       ; 4 angles
 
-    ; ── Compute cos and sin via Cody-Waite range reduction + minimax polynomial ──
-    ; Range reduce: angle mod 2π (approximate via repeated subtraction)
+    ; ?? Compute cos and sin via Cody-Waite range reduction + minimax polynomial ??
+    ; Range reduce: angle mod 2? (approximate via repeated subtraction)
     vbroadcastss xmm7, dword ptr [c_twopi]
     vbroadcastss xmm6, dword ptr [c_twopi_recip]
-    vmulps  xmm1, xmm0, xmm6        ; angle / 2π
+    vmulps  xmm1, xmm0, xmm6        ; angle / 2?
     vroundps xmm1, xmm1, 0          ; round to nearest int
-    vmulps  xmm1, xmm1, xmm7        ; n * 2π
-    vsubps  xmm0, xmm0, xmm1        ; reduced angle in [-π, π]
+    vmulps  xmm1, xmm1, xmm7        ; n * 2?
+    vsubps  xmm0, xmm0, xmm1        ; reduced angle in [-?, ?]
 
-    ; cos(x) via minimax polynomial (degree 6): cos(x) ≈ 1 - x²/2 + x⁴/24 - x⁶/720
-    vmulps  xmm1, xmm0, xmm0       ; x²
-    vmulps  xmm2, xmm1, xmm1       ; x⁴
-    vmulps  xmm3, xmm2, xmm1       ; x⁶
+    ; cos(x) via minimax polynomial (degree 6): cos(x) ? 1 - x?/2 + x?/24 - x?/720
+    vmulps  xmm1, xmm0, xmm0       ; x?
+    vmulps  xmm2, xmm1, xmm1       ; x?
+    vmulps  xmm3, xmm2, xmm1       ; x?
 
     vbroadcastss xmm4, dword ptr [c_cos_c2]  ; -1/2
-    vmulps  xmm4, xmm4, xmm1       ; -x²/2
+    vmulps  xmm4, xmm4, xmm1       ; -x?/2
     vbroadcastss xmm5, dword ptr [c_cos_c4]  ; 1/24
-    vmulps  xmm5, xmm5, xmm2       ; x⁴/24
+    vmulps  xmm5, xmm5, xmm2       ; x?/24
     vaddps  xmm4, xmm4, xmm5
     vbroadcastss xmm5, dword ptr [c_cos_c6]  ; -1/720
-    vmulps  xmm5, xmm5, xmm3       ; -x⁶/720
+    vmulps  xmm5, xmm5, xmm3       ; -x?/720
     vaddps  xmm4, xmm4, xmm5
     vbroadcastss xmm5, dword ptr [c_one]
-    vaddps  xmm4, xmm4, xmm5       ; cos(x) ≈ 1 - x²/2 + x⁴/24 - x⁶/720
+    vaddps  xmm4, xmm4, xmm5       ; cos(x) ? 1 - x?/2 + x?/24 - x?/720
 
-    ; sin(x) via minimax polynomial (degree 7): sin(x) ≈ x - x³/6 + x⁵/120 - x⁷/5040
-    vmulps  xmm5, xmm1, xmm0       ; x³
+    ; sin(x) via minimax polynomial (degree 7): sin(x) ? x - x?/6 + x?/120 - x?/5040
+    vmulps  xmm5, xmm1, xmm0       ; x?
     vbroadcastss xmm6, dword ptr [c_sin_c3]  ; -1/6
-    vmulps  xmm6, xmm6, xmm5       ; -x³/6
-    vaddps  xmm6, xmm6, xmm0       ; x - x³/6
+    vmulps  xmm6, xmm6, xmm5       ; -x?/6
+    vaddps  xmm6, xmm6, xmm0       ; x - x?/6
 
-    vmulps  xmm5, xmm2, xmm0       ; x⁵
+    vmulps  xmm5, xmm2, xmm0       ; x?
     vbroadcastss xmm7, dword ptr [c_sin_c5]  ; 1/120
-    vmulps  xmm7, xmm7, xmm5       ; x⁵/120
+    vmulps  xmm7, xmm7, xmm5       ; x?/120
     vaddps  xmm6, xmm6, xmm7
 
-    vmulps  xmm5, xmm3, xmm0       ; x⁷
+    vmulps  xmm5, xmm3, xmm0       ; x?
     vbroadcastss xmm7, dword ptr [c_sin_c7]  ; -1/5040
-    vmulps  xmm7, xmm7, xmm5       ; -x⁷/5040
+    vmulps  xmm7, xmm7, xmm5       ; -x?/5040
     vaddps  xmm6, xmm6, xmm7       ; sin(x) complete
 
     ; xmm4 = cos4, xmm6 = sin4 (4 values each)
@@ -951,7 +951,7 @@ SIMD_RoPE PROC FRAME
     add     ecx, 4
     jmp     @rope_vec_loop
 
-    ; ── Scalar tail for remaining 0-3 pairs ──
+    ; ?? Scalar tail for remaining 0-3 pairs ??
 @rope_scalar_tail:
     cmp     ecx, ebx
     jge     @rope_done
@@ -986,11 +986,11 @@ SIMD_RoPE PROC FRAME
     vmulss  xmm0, xmm3, dword ptr [rsp+44h]
 
     ; cos/sin scalar poly
-    vmulss  xmm1, xmm0, xmm0       ; x²
-    vmulss  xmm2, xmm1, xmm1       ; x⁴
-    vmulss  xmm3, xmm2, xmm1       ; x⁶
+    vmulss  xmm1, xmm0, xmm0       ; x?
+    vmulss  xmm2, xmm1, xmm1       ; x?
+    vmulss  xmm3, xmm2, xmm1       ; x?
 
-    ; cos = 1 - x²/2 + x⁴/24 - x⁶/720
+    ; cos = 1 - x?/2 + x?/24 - x?/720
     vmulss  xmm4, xmm1, dword ptr [c_cos_c2]
     vmulss  xmm5, xmm2, dword ptr [c_cos_c4]
     vaddss  xmm4, xmm4, xmm5
@@ -998,14 +998,14 @@ SIMD_RoPE PROC FRAME
     vaddss  xmm4, xmm4, xmm5
     vaddss  xmm4, xmm4, dword ptr [c_one]
 
-    ; sin = x - x³/6 + x⁵/120 - x⁷/5040
-    vmulss  xmm5, xmm1, xmm0       ; x³
+    ; sin = x - x?/6 + x?/120 - x?/5040
+    vmulss  xmm5, xmm1, xmm0       ; x?
     vmulss  xmm6, xmm5, dword ptr [c_sin_c3]
     vaddss  xmm6, xmm6, xmm0
-    vmulss  xmm5, xmm2, xmm0       ; x⁵
+    vmulss  xmm5, xmm2, xmm0       ; x?
     vmulss  xmm7, xmm5, dword ptr [c_sin_c5]
     vaddss  xmm6, xmm6, xmm7
-    vmulss  xmm5, xmm3, xmm0       ; x⁷
+    vmulss  xmm5, xmm3, xmm0       ; x?
     vmulss  xmm7, xmm5, dword ptr [c_sin_c7]
     vaddss  xmm6, xmm6, xmm7
 
@@ -1041,16 +1041,16 @@ SIMD_RoPE PROC FRAME
     ret
 SIMD_RoPE ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_SiLU — SiLU (Swish) activation: x * sigmoid(x)
+; ????????????????????????????????????????????????????????????????
+; SIMD_SiLU ? SiLU (Swish) activation: x * sigmoid(x)
 ;   RCX = pInOut    (float*, in-place)
 ;   EDX = count     (elements)
 ;
 ;   SiLU(x) = x / (1 + exp(-x))
 ;   Vectorized: rational sigmoid approximation
-;     sig(x) ≈ 0.5 + 0.5 * x / (1 + |x|)
+;     sig(x) ? 0.5 + 0.5 * x / (1 + |x|)
 ;   8-wide AVX2 main loop, scalar tail for remainder
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_SiLU PROC FRAME
     sub     rsp, 28h
     .allocstack 28h
@@ -1099,7 +1099,7 @@ SIMD_SiLU PROC FRAME
 
     ; sigmoid = 0.5 + 0.5 * ratio
     vmulps  ymm3, ymm3, ymm5            ; 0.5 * ratio
-    vaddps  ymm3, ymm3, ymm5            ; sigmoid ≈ 0.5 + 0.5*(x/(1+|x|))
+    vaddps  ymm3, ymm3, ymm5            ; sigmoid ? 0.5 + 0.5*(x/(1+|x|))
 
     ; SiLU = x * sigmoid
     vmulps  ymm0, ymm0, ymm3
@@ -1108,7 +1108,7 @@ SIMD_SiLU PROC FRAME
     add     eax, 8
     jmp     @silu_vec_loop
 
-    ; ── Scalar tail for remaining 0-7 elements ──
+    ; ?? Scalar tail for remaining 0-7 elements ??
 @silu_scalar_tail:
     cmp     eax, r8d
     jae     @silu_done
@@ -1118,7 +1118,7 @@ SIMD_SiLU PROC FRAME
     vmovss  xmm2, dword ptr [c_one]
     vaddss  xmm1, xmm1, xmm2               ; 1 + |x|
     vdivss  xmm1, xmm0, xmm1               ; x / (1+|x|)
-    vmulss  xmm1, xmm1, dword ptr [c_half_f]; × 0.5
+    vmulss  xmm1, xmm1, dword ptr [c_half_f]; ? 0.5
     vaddss  xmm1, xmm1, dword ptr [c_half_f]; sigmoid
     vmulss  xmm0, xmm0, xmm1               ; silu = x * sig
     vmovss  dword ptr [rcx + rax*4], xmm0
@@ -1132,7 +1132,7 @@ SIMD_SiLU PROC FRAME
     ret
 SIMD_SiLU ENDP
 
-; ── Additional constants for softmax / RoPE / SiLU / Q4 ──────
+; ?? Additional constants for softmax / RoPE / SiLU / Q4 ??????
 .const
 align 16
 c_half          dd 0.5
@@ -1143,26 +1143,26 @@ align 16
 c_abs_mask      dd 7FFFFFFFh, 7FFFFFFFh, 7FFFFFFFh, 7FFFFFFFh
                 dd 7FFFFFFFh, 7FFFFFFFh, 7FFFFFFFh, 7FFFFFFFh  ; 256-bit
 
-; ── Q4 dequantization constants ──────────────────────────────
+; ?? Q4 dequantization constants ??????????????????????????????
 align 16
 c_nibble_mask   dd 0F0F0F0Fh, 0F0F0F0Fh, 0F0F0F0Fh, 0F0F0F0Fh
                 dd 0F0F0F0Fh, 0F0F0F0Fh, 0F0F0F0Fh, 0F0F0F0Fh
-c_q4_offset     dd 8, 8, 8, 8, 8, 8, 8, 8    ; bias for unsigned→signed
+c_q4_offset     dd 8, 8, 8, 8, 8, 8, 8, 8    ; bias for unsigned?signed
 
-; ── RoPE trigonometric constants ─────────────────────────────
+; ?? RoPE trigonometric constants ?????????????????????????????
 align 16
 c_neg_ln_theta  dd -9.2103404          ; -ln(10000)
 c_log2e         dd 1.4426950           ; 1/ln(2)
-c_twopi         dd 6.2831855           ; 2π
-c_twopi_recip   dd 0.1591549           ; 1/(2π)
+c_twopi         dd 6.2831855           ; 2?
+c_twopi_recip   dd 0.1591549           ; 1/(2?)
 
-; Minimax exp2(f) polynomial coefficients (f ∈ [0,1))
-; 2^f ≈ c0 + c1*f + c2*f² + c3*f³ + c4*f⁴
+; Minimax exp2(f) polynomial coefficients (f ? [0,1))
+; 2^f ? c0 + c1*f + c2*f? + c3*f? + c4*f?
 c_exp_c0        dd 1.0
 c_exp_c1        dd 0.6931472           ; ln(2)
-c_exp_c2        dd 0.2402265           ; ln(2)²/2
-c_exp_c3        dd 0.0555041           ; ln(2)³/6
-c_exp_c4        dd 0.0096139           ; ln(2)⁴/24
+c_exp_c2        dd 0.2402265           ; ln(2)?/2
+c_exp_c3        dd 0.0555041           ; ln(2)?/6
+c_exp_c4        dd 0.0096139           ; ln(2)?/24
 
 ; cos(x) Taylor coefficients
 c_cos_c2        dd -0.5                ; -1/2
@@ -1178,14 +1178,14 @@ c_sin_c7        dd -0.00019841270      ; -1/5040
 align 16
 c_rope_offsets  dd 0.0, 1.0, 2.0, 3.0
 
-; ── SiLU vectorized constants ────────────────────────────────
+; ?? SiLU vectorized constants ????????????????????????????????
 align 16
 c_silu_clamp_hi dd 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0
 c_silu_clamp_lo dd -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0
 
 .code
-; ────────────────────────────────────────────────────────────────
-; SIMD_TextSearch — SSE2/AVX2 accelerated byte-pattern search
+; ????????????????????????????????????????????????????????????????
+; SIMD_TextSearch ? SSE2/AVX2 accelerated byte-pattern search
 ;
 ; Scans a haystack buffer for all occurrences of a needle byte
 ; pattern using pcmpeqb + pmovmskb for 16-byte-at-a-time scanning,
@@ -1205,10 +1205,10 @@ c_silu_clamp_lo dd -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0
 ; Algorithm:
 ;   1. Broadcast needle[0] into xmm0 (or ymm0 for AVX2)
 ;   2. Scan haystack in 16/32-byte chunks with pcmpeqb
-;   3. pmovmskb extracts match bits → bsf finds first hit
+;   3. pmovmskb extracts match bits ? bsf finds first hit
 ;   4. For each candidate, memcmp full needle at that offset
 ;   5. Record match offset in results array
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 SIMD_TextSearch PROC FRAME
     push    rbp
     .pushreg rbp
@@ -1276,11 +1276,11 @@ SIMD_TextSearch PROC FRAME
     ; Simple approach: just use SSE2 which is baseline x86-64
     jmp     @ts_sse2_loop
 
-    ; ── AVX2 path: 32 bytes per iteration ─────────────────────
+    ; ?? AVX2 path: 32 bytes per iteration ?????????????????????
 @ts_avx2_path:
     ; Broadcast needle[0] into ymm1 (32 copies)
     vbroadcastss ymm1, xmm0        ; ymm1 = 32x needle[0] (byte broadcast via float)
-    ; Actually need vpbroadcastb — use vinserti128 workaround
+    ; Actually need vpbroadcastb ? use vinserti128 workaround
     vinserti128 ymm0, ymm0, xmm0, 1  ; ymm0 = [xmm0 | xmm0] = 32x needle[0]
 
 @ts_avx2_loop:
@@ -1340,9 +1340,9 @@ SIMD_TextSearch PROC FRAME
     jmp     @ts_avx2_loop
 
 @ts_sse2_tail:
-    vzeroupper                      ; clean AVX→SSE transition
+    vzeroupper                      ; clean AVX?SSE transition
 
-    ; ── SSE2 path: 16 bytes per iteration ─────────────────────
+    ; ?? SSE2 path: 16 bytes per iteration ?????????????????????
 @ts_sse2_loop:
     mov     rax, rdi
     sub     rax, rcx                ; remaining valid positions
@@ -1404,7 +1404,7 @@ SIMD_TextSearch PROC FRAME
     add     ecx, 16
     jmp     @ts_sse2_loop
 
-    ; ── Scalar tail: less than 16 bytes remaining ─────────────
+    ; ?? Scalar tail: less than 16 bytes remaining ?????????????
 @ts_scalar_tail:
     cmp     rcx, rdi
     jge     @ts_done
@@ -1413,7 +1413,7 @@ SIMD_TextSearch PROC FRAME
     cmp     al, byte ptr [r13]
     jne     @ts_scalar_next
 
-    ; First byte matches — verify full needle
+    ; First byte matches ? verify full needle
     lea     r8, [rcx]
     lea     r9, [rsi + r8]
     mov     r10, r13
@@ -1474,11 +1474,11 @@ _FlashApproxExp PROC
     ret
 _FlashApproxExp ENDP
 
-; ────────────────────────────────────────────────────────────────
-; FlashAttention_Forward — scalar fallback implementation
+; ????????????????????????????????????????????????????????????????
+; FlashAttention_Forward ? scalar fallback implementation
 ;   RCX = pQ [M x D], RDX = pK [N x D], R8 = pV [N x D], R9 = pOut [M x D]
 ;   [rbp+30h] = M, [rbp+38h] = N, [rbp+40h] = head_dim
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 FlashAttention_Forward PROC FRAME
     push    rbp
     .pushreg rbp
@@ -1708,10 +1708,10 @@ FlashAttention_Forward PROC FRAME
     ret
 FlashAttention_Forward ENDP
 
-; ────────────────────────────────────────────────────────────────
-; SIMD_FlashAttention — Hybrid Dispatcher for CPU
+; ????????????????????????????????????????????????????????????????
+; SIMD_FlashAttention ? Hybrid Dispatcher for CPU
 ; RCX = *Q, RDX = *K, R8 = *V, R9 = *Out, Stack = M, N, head_dim
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 align 16
 SIMD_FlashAttention PROC
     push    rbp
@@ -1741,3 +1741,4 @@ SIMD_FlashAttention PROC
 SIMD_FlashAttention ENDP
 
 END
+

@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * FileResourceGuard — RAII file/directory guard (C++20, no Qt)
+ * FileResourceGuard ? RAII file/directory guard (C++20, no Qt)
  * Replaces QFile/QDir with std::fstream and std::filesystem.
  */
 
@@ -92,3 +92,4 @@ private:
 };
 
 } // namespace rawrxd
+

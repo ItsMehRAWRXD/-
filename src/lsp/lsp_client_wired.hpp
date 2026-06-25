@@ -77,6 +77,8 @@ using CompletionItem = RawrXD::Agentic::LSPCompletionItem;
 // ============================================================================
 class LSPClientWired : public RawrXD::Agentic::LSPClient {
 public:
+    using RawrXD::Agentic::LSPClient::sendRequest;
+
     static LSPClientWired& instance();
     
     // Phase 22: Lifecycle

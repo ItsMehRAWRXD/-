@@ -99,5 +99,23 @@ public:
 extern "C" RawrXD::Pulse::PulseRingBuffer* g_pulseRing;
 
 // ============================================================================
+// Sovereign Pulse Buffer (Stub) - Added to fix undefined type
+// ============================================================================
+
+struct SovereignPulseBuffer
+{
+    uint32_t stage;
+    uint32_t value;
+    
+    SovereignPulseBuffer() : stage(0), value(0) {}
+    
+    void Log(uint32_t s, uint32_t v)
+    {
+        stage = s;
+        value = v;
+    }
+};
+
+// ============================================================================
 // END OF FILE
 // ============================================================================

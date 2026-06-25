@@ -251,12 +251,15 @@ void KVCacheOwnershipTracker::transferAllForSequence(SeqId from, SeqId to) {
         fireEvent(OwnershipEvent::Transferred, id, to);
     }
 
-    // Update 'from' sequence mapping
-    fromIt->second.erase(
-        std::remove_if(fromIt->second.begin(), fromIt->second.end(),
-            [&](BlockId id) { return m_blocks[id].owner != from; }),
-        fromIt->second.end()
-    );
+    // Update 'from' sequence mapping - remove transferred blocks
+    // Note: Can't use std::remove_if on std::set (const iterators), so use erase-remove idiom manually
+    for (auto it = fromIt->second.begin(); it != fromIt->second.end(); ) {
+        if (m_blocks[*it].owner != from) {
+            it = fromIt->second.erase(it);
+        } else {
+            ++it;
+        }
+    }
 
     if (fromIt->second.empty()) {
         m_seqToBlocks.erase(fromIt);

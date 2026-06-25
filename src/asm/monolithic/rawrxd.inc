@@ -1,12 +1,12 @@
-; ═══════════════════════════════════════════════════════════════════
-; rawrxd.inc — RawrXD Monolithic Kernel Unified Header
+; ???????????????????????????????????????????????????????????????????
+; rawrxd.inc ? RawrXD Monolithic Kernel Unified Header
 ; ML64-only. No NASM, no FASM, no INVOKE, no sizeof, no addr.
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
 ; Usage: INCLUDE rawrxd.inc  (at top of each monolithic module)
-; This file is OPTIONAL — each module can declare inline instead.
-; ═══════════════════════════════════════════════════════════════════
+; This file is OPTIONAL ? each module can declare inline instead.
+; ???????????????????????????????????????????????????????????????????
 
-; ── Win32 API imports ────────────────────────────────────────────
+; ?? Win32 API imports ????????????????????????????????????????????
 ; Kernel32
 EXTERN GetModuleHandleW:PROC
 EXTERN GetCommandLineW:PROC
@@ -63,7 +63,7 @@ EXTERN SelectObject:PROC
 EXTERN DeleteObject:PROC
 EXTERN GetStockObject:PROC
 
-; ── RawrXD cross-module exports ──────────────────────────────────
+; ?? RawrXD cross-module exports ??????????????????????????????????
 ; main.asm
 EXTERN g_hInstance:QWORD
 EXTERN g_hHeap:QWORD
@@ -86,14 +86,14 @@ EXTERN GetTopKIndices:PROC
 EXTERN g_modelbase:QWORD
 EXTERN g_kv_len:QWORD
 
-; inference.asm — Phase 7: KV-Cache Paging via SlotRing
+; inference.asm ? Phase 7: KV-Cache Paging via SlotRing
 EXTERN KVPage_Init:PROC
 EXTERN KVPage_Grow:PROC
 EXTERN KVPage_GetSegment:PROC
 EXTERN KVPage_Shrink:PROC
 EXTERN KVPage_PinWorkingSet:PROC
 
-; inference.asm — Phase 8B: Paged KV Block Table (PagedAttention)
+; inference.asm ? Phase 8B: Paged KV Block Table (PagedAttention)
 EXTERN KVBlock_Init:PROC
 EXTERN KVBlock_AllocBlock:PROC
 EXTERN KVBlock_FreeBlock:PROC
@@ -101,7 +101,7 @@ EXTERN KVBlock_MapToken:PROC
 EXTERN KVBlock_GetTokenPtr:PROC
 EXTERN KVBlock_ReuseBlock:PROC
 
-; inference.asm — Phase 8C: Head-Major KV Layout
+; inference.asm ? Phase 8C: Head-Major KV Layout
 EXTERN KVHM_WriteToken:PROC
 EXTERN KVHM_GetHeadPtr:PROC
 
@@ -176,7 +176,7 @@ EXTERN SwarmCoord_Shutdown:PROC
 EXTERN g_coordReady:DWORD
 EXTERN g_workerCount:DWORD
 
-; swarm_network.asm (X+5 Sovereign Expansion → Phase 14 Cross-Node)
+; swarm_network.asm (X+5 Sovereign Expansion ? Phase 14 Cross-Node)
 EXTERN SwarmNet_Init:PROC
 EXTERN SwarmNet_Listen:PROC
 EXTERN SwarmNet_Connect:PROC
@@ -219,7 +219,7 @@ EXTERN g_totalMigrations:QWORD
 EXTERN g_stealFailures:QWORD
 EXTERN g_crossNodeSteals:QWORD
 
-; stream_loader.asm — Tier 1: demand-paged GGUF VMM
+; stream_loader.asm ? Tier 1: demand-paged GGUF VMM
 EXTERN StreamLoaderInit:PROC
 EXTERN StreamMapModel:PROC
 EXTERN StreamUnmap:PROC
@@ -227,7 +227,7 @@ EXTERN StreamPrefetch:PROC
 EXTERN StreamEvictCold:PROC
 EXTERN StreamGetStats:PROC
 
-; stream_loader.asm — Tier 2: per-tensor slot-ring paging (200B+)
+; stream_loader.asm ? Tier 2: per-tensor slot-ring paging (200B+)
 EXTERN SlotRing_Init:PROC
 EXTERN SlotRing_Destroy:PROC
 EXTERN SlotRing_Attach:PROC
@@ -238,7 +238,7 @@ EXTERN SlotRing_SetBudget:PROC
 EXTERN SlotRing_GetSlotStats:PROC
 EXTERN SlotRing_EvictAll:PROC
 
-; slot_ring.asm — Phase 6: Prefetch + Pin + Tiered Eviction
+; slot_ring.asm ? Phase 6: Prefetch + Pin + Tiered Eviction
 EXTERN SlotRing_Pin:PROC
 EXTERN SlotRing_Unpin:PROC
 EXTERN SlotRing_Prefetch:PROC
@@ -246,7 +246,7 @@ EXTERN SlotRing_BatchEvict:PROC
 EXTERN SlotRing_PredictivePrefetch:PROC
 EXTERN SlotRing_ClockEvict:PROC
 
-; webview2_shell.asm (P1 — WebView2 Monaco embedding)
+; webview2_shell.asm (P1 ? WebView2 Monaco embedding)
 EXTERN WebView2Init:PROC
 EXTERN WebView2Navigate:PROC
 EXTERN WebView2PostMessage:PROC
@@ -257,7 +257,7 @@ EXTERN WebView2CreateEnvironment:PROC
 EXTERN WebView2NavigateToString:PROC
 EXTERN WebView2ExecuteScript:PROC
 
-; extension_host.asm (P2 — sandboxed DLL extension loader)
+; extension_host.asm (P2 ? sandboxed DLL extension loader)
 EXTERN ExtHostInit:PROC
 EXTERN ExtHostLoad:PROC
 EXTERN ExtHostUnload:PROC
@@ -277,7 +277,7 @@ EXTERN SlotRing_EvictAll:PROC
 EXTERN StressTest_Run:PROC
 EXTERN StressTest_LogStats:PROC
 
-; ── Phase 9A: SIMD/AVX-512 Attention Kernels (simd_kernels.asm) ──
+; ?? Phase 9A: SIMD/AVX-512 Attention Kernels (simd_kernels.asm) ??
 EXTERN SIMD_RMSNorm:PROC
 EXTERN SIMD_Softmax:PROC
 EXTERN SIMD_DotProduct:PROC
@@ -287,7 +287,7 @@ EXTERN SIMD_MatVecQ4:PROC
 EXTERN SIMD_RoPE:PROC
 EXTERN SIMD_SiLU:PROC
 
-; ── Phase 9B: Async Pager Thread (async_pager.asm) ──
+; ?? Phase 9B: Async Pager Thread (async_pager.asm) ??
 EXTERN AsyncPage_Init:PROC
 EXTERN AsyncPage_Shutdown:PROC
 EXTERN AsyncPage_Submit:PROC
@@ -295,7 +295,7 @@ EXTERN AsyncPage_Poll:PROC
 EXTERN AsyncPage_Flush:PROC
 EXTERN AsyncPage_GetStats:PROC
 
-; ── Phase 9C: Ollama Inference Client (ollama_client.asm) ──
+; ?? Phase 9C: Ollama Inference Client (ollama_client.asm) ??
 EXTERN OllamaClient_Init:PROC
 EXTERN OllamaClient_Generate:PROC
 EXTERN OllamaClient_Chat:PROC
@@ -304,8 +304,8 @@ EXTERN OllamaClient_SetModel:PROC
 EXTERN OllamaClient_Shutdown:PROC
 EXTERN OllamaClient_IsConnected:PROC
 
-; ── Phase A: Inference Router (inference_router.asm) ──
-; Sovereign backend selection: LOCAL → OLLAMA → fallback
+; ?? Phase A: Inference Router (inference_router.asm) ??
+; Sovereign backend selection: LOCAL ? OLLAMA ? fallback
 EXTERN InferenceRouter_Init:PROC
 EXTERN InferenceRouter_Generate:PROC
 EXTERN InferenceRouter_Abort:PROC
@@ -315,14 +315,14 @@ EXTERN InferenceRouter_LoadVocab:PROC
 EXTERN g_routerBackend:DWORD
 EXTERN g_routerAbort:DWORD
 
-; bridge.asm — Ghost-text bridge
+; bridge.asm ? Ghost-text bridge
 EXTERN Bridge_SubmitCompletion:PROC
 EXTERN Bridge_GetSuggestionText:PROC
 EXTERN Bridge_ClearSuggestion:PROC
 EXTERN Bridge_RequestSuggestion:PROC
 EXTERN Bridge_AbortInference:PROC
 
-; ── Win32 Constants ──────────────────────────────────────────────
+; ?? Win32 Constants ??????????????????????????????????????????????
 ; Window Styles
 WS_OVERLAPPEDWINDOW equ 0CF0000h
 WS_VISIBLE          equ 10000000h
@@ -334,7 +334,7 @@ WS_EX_CLIENTEDGE    equ 200h
 CS_HREDRAW           equ 2
 CS_VREDRAW           equ 1
 
-; Messages (note: MSG is reserved in ML64 — use WINMSG)
+; Messages (note: MSG is reserved in ML64 ? use WINMSG)
 WM_CREATE            equ 1
 WM_DESTROY           equ 2
 WM_PAINT             equ 0Fh
@@ -371,8 +371,8 @@ PAGE_READWRITE       equ 4
 GGUF_MAGIC           equ 046554747h
 Q4_0_ID              equ 2
 
-; ── Structs (ML64 safe names) ────────────────────────────────────
-; PAINTSTRUCT → PAINTST  (PAINTSTRUCT is fine in ML64, but PAINTST
+; ?? Structs (ML64 safe names) ????????????????????????????????????
+; PAINTSTRUCT ? PAINTST  (PAINTSTRUCT is fine in ML64, but PAINTST
 ;   is shorter and avoids any future collision)
 PAINTST STRUCT
     hdc             dq ?
@@ -384,7 +384,7 @@ PAINTST STRUCT
     reserved        db 32 dup(?)
 PAINTST ENDS
 
-; MSG → WINMSG  (MSG is reserved in ML64)
+; MSG ? WINMSG  (MSG is reserved in ML64)
 WINMSG STRUCT
     hwnd            dq ?
     message         dd ?
@@ -395,7 +395,7 @@ WINMSG STRUCT
     pt_y            dd ?
 WINMSG ENDS
 
-; WNDCLASSEXW (cbSize = 80 on x64, hardcode — no sizeof in ML64)
+; WNDCLASSEXW (cbSize = 80 on x64, hardcode ? no sizeof in ML64)
 WNDCLASSEXW STRUCT
     cbSize          dd ?
     style           dd ?
@@ -411,10 +411,10 @@ WNDCLASSEXW STRUCT
     hIconSm         dq ?
 WNDCLASSEXW ENDS
 
-; WNDCLASSEXW.cbSize — hardcoded constant for x64
+; WNDCLASSEXW.cbSize ? hardcoded constant for x64
 WNDCLASSEXW_SIZE    equ 80
 
-; ── Beacon constants ─────────────────────────────────────────────
+; ?? Beacon constants ?????????????????????????????????????????????
 BEACON_SLOTS         equ 16
 RING_SIZE            equ 100000h
 
@@ -424,6 +424,7 @@ AGENT_ID_INFERENCE   equ 0A2h
 AGENT_ID_UI          equ 0A3h
 AGENT_ID_LSP         equ 0A4h
 
-; ═══════════════════════════════════════════════════════════════════
-; End of rawrxd.inc — 15 modules, 1 EXE, zero deps.
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
+; End of rawrxd.inc ? 15 modules, 1 EXE, zero deps.
+; ???????????????????????????????????????????????????????????????????
+

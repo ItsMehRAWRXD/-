@@ -213,6 +213,10 @@ LRESULT CALLBACK PeekOverlayWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, 
 
     switch (msg)
     {
+        case WM_ERASEBKGND:
+            // Prevent flicker - we handle all painting in WM_PAINT
+            return 1;
+
         case WM_PAINT:
         {
             PAINTSTRUCT ps;

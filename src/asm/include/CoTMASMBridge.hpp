@@ -1,5 +1,5 @@
 // =============================================================================
-// CoTMASMBridge.hpp — C++ Bridge to Pure MASM64 Chain-of-Thought Engine DLL
+// CoTMASMBridge.hpp ? C++ Bridge to Pure MASM64 Chain-of-Thought Engine DLL
 // =============================================================================
 //
 // Phase 37.1: Typed C++ interface for rawrxd_cot_engine.asm + rawrxd_cot_dll_entry.asm
@@ -296,7 +296,7 @@ private:
 // Usage in ChainOfThoughtEngine:
 //
 //   void ChainOfThoughtEngine::allocateHugeBuffer() {
-//       m_hugeBuffer = reinterpret_cast<void*>(1); // sentinel — arena is global
+//       m_hugeBuffer = reinterpret_cast<void*>(1); // sentinel ? arena is global
 //       uint32_t rc = CoT_Initialize_Core();       // calls MASM, tries large pages
 //       if (rc != 0) {
 //           logError("CoT arena init failed: 0x%08X", rc);
@@ -322,3 +322,4 @@ private:
 
 } // namespace CoT
 } // namespace RawrXD
+

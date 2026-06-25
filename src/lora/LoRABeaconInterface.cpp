@@ -14,10 +14,11 @@ extern "C" {
 // Static Beacon Storage (Memory-Mapped for MASM)
 // ============================================================================
 // These are placed in a dedicated section for easy memory mapping
+// Exported for MASM access via EXTERNDEF
 
 #pragma data_seg(".lorabeacon")
-LORA_ALIGN_64 static LoRABeaconState g_beacon_state = {0};
-LORA_ALIGN_64 static LoRABeaconChain g_beacon_chain = {0};
+LORA_ALIGN_64 LoRABeaconState g_beacon_state = {0};
+LORA_ALIGN_64 LoRABeaconChain g_beacon_chain = {0};
 #pragma data_seg()
 
 // Aligned storage for matrices (statically allocated)
@@ -278,17 +279,19 @@ bool BeaconAdapterManager::load_adapter(const std::string& name) {
 }
 
 void BeaconAdapterManager::unload_adapter(const std::string& name) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::unique_lock<std::mutex> lock(m_mutex);
     
     if (m_active_adapter == name) {
+        lock.unlock();  // Release before calling deactivate_adapter
         deactivate_adapter();
+        lock.lock();
     }
     
     m_adapter_buffers.erase(name);
 }
 
 bool BeaconAdapterManager::activate_adapter(const std::string& name) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::unique_lock<std::mutex> lock(m_mutex);
     
     auto it = m_adapter_buffers.find(name);
     if (it == m_adapter_buffers.end()) {

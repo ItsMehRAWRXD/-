@@ -1,4 +1,4 @@
-; ui_bridge.asm — MASM/C++ bridge for Qtg integration
+; ui_bridge.asm ? MASM/C++ bridge for Qtg integration
 ; stdcall convention for x64 compatibility
 
 ; --- External C++ Symbols ---
@@ -80,3 +80,4 @@ UIBridge_GenerateFeature PROC FRAME
 UIBridge_GenerateFeature ENDP
 
 END
+

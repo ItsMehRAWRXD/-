@@ -1,8 +1,8 @@
-; ═══════════════════════════════════════════════════════════════════
-; RawrXD UI Engine — Phase X+1: Custom Editor Surface
+; ???????????????????????????????????????????????????????????????????
+; RawrXD UI Engine ? Phase X+1: Custom Editor Surface
 ; Pure Win32 GDI. No Edit control. Own text buffer, cursor, paint.
 ; Exports: UIMainLoop, CreateEditorPane, hMainWnd
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
 
 EXTERN g_hInstance:QWORD
 EXTERN GetModuleHandleW:PROC
@@ -223,7 +223,7 @@ UNDO_MAX_ENTRIES  equ 64          ; Circular undo ring size
 UNDO_BUF_SIZE     equ 512         ; Max chars per undo snapshot
 
 ;=============================================================================
-; PE32+ Header Constants — RawrXD Sovereign PE Writer
+; PE32+ Header Constants ? RawrXD Sovereign PE Writer
 ;=============================================================================
 IMAGE_DOS_SIGNATURE       EQU     5A4Dh          ; 'MZ'
 IMAGE_DOS_HEADER_SIZE     EQU     64             ; 0x40 bytes
@@ -405,12 +405,12 @@ g_ofnFilter   dw  'A','l','l',' ','F','i','l','e','s',0,'*','.','*',0
               dw  'A','S','M',0,'*','.','a','s','m',0
               dw  0  ; double-null terminator
 
-; Handles — g_hInstance is EXTERN from main.asm
+; Handles ? g_hInstance is EXTERN from main.asm
 ; g_hFont                dq  0                        ; Editor system font (COMMENTED OUT TO AVOID REDEFINITION)
 ; hEditorFont            dq  0                        ; Compatibility handle (COMMENTED OUT TO AVOID REDEFINITION)
 ; hMainWnd               dq  0                        ; Window handle (COMMENTED OUT TO AVOID REDEFINITION)
 ;=============================================================================
-; PE32+ Embedded Binary Templates — Corrected RawrXD Sovereign PE Writer
+; PE32+ Embedded Binary Templates ? Corrected RawrXD Sovereign PE Writer
 ;=============================================================================
 ALIGN 16
 g_dosHeader:
@@ -420,13 +420,13 @@ g_dosHeader:
 
 g_ntHeaders:
     dd      IMAGE_NT_SIGNATURE                   ; Signature = 'PE\0\0'
-    ; ── COFF File Header (20 bytes) ──
+    ; ?? COFF File Header (20 bytes) ??
     dw      IMAGE_FILE_MACHINE_AMD64             ; Machine
     dw      3                                    ; NumberOfSections
     dd      0, 0, 0                              ; TimeDateStamp, PtrToSymTab, NumSymbols
     dw      0F0h                                 ; SizeOfOptionalHeader = 240 (PE32+)
     dw      IMAGE_FILE_EXECUTABLE_IMAGE OR IMAGE_FILE_LARGE_ADDRESS_AWARE
-    ; ── Optional Header PE32+ (240 bytes) ──
+    ; ?? Optional Header PE32+ (240 bytes) ??
     dw      IMAGE_NT_OPTIONAL_HDR64_MAGIC        ; Magic = 0x020B
     db      14, 30                               ; LinkerVersion
     dd      0, 0, 0                              ; SizeOfCode, InitData, UninitData
@@ -492,7 +492,7 @@ g_sectionHeaders:
     dw      0, 0
     dd      IMAGE_SCN_CNT_INITIALIZED_DATA OR IMAGE_SCN_MEM_READ OR IMAGE_SCN_MEM_WRITE
 
-; ── .idata section content (copied to file offset 0x600, RVA 0x3000) ──
+; ?? .idata section content (copied to file offset 0x600, RVA 0x3000) ??
 ; Layout within .idata (3 imports from kernel32.dll):
 ;   0x00: Import Dir Entry 0               (20 bytes)
 ;   0x14: Import Dir Entry 1 (null term)   (20 bytes)
@@ -509,7 +509,7 @@ g_sectionHeaders:
 ;   0x84: Hint + "ExitProcess\0"           (14 bytes)
 ;   0x92: "kernel32.dll\0"                 (13 bytes)
 g_importTable:
-    ; Import Directory Entry 0 — kernel32.dll
+    ; Import Directory Entry 0 ? kernel32.dll
     dd      000003028h                           ; OriginalFirstThunk (ILT at +0x28)
     dd      0                                    ; TimeDateStamp
     dd      0                                    ; ForwarderChain
@@ -518,9 +518,9 @@ g_importTable:
     ; Import Directory Entry 1 (null terminator)
     dd      0, 0, 0, 0, 0
     ; ILT (Import Lookup Table) at .idata+0x28
-    dq      000003068h                           ; [0] → GetStdHandle
-    dq      000003078h                           ; [1] → WriteFile
-    dq      000003084h                           ; [2] → ExitProcess
+    dq      000003068h                           ; [0] ? GetStdHandle
+    dq      000003078h                           ; [1] ? WriteFile
+    dq      000003084h                           ; [2] ? ExitProcess
     dq      0                                    ; [3] Terminator
     ; IAT (Import Address Table) at .idata+0x48
     dq      000003068h                           ; [0] GetStdHandle (loader patches)
@@ -540,25 +540,25 @@ g_importTable:
     db      'kernel32.dll', 0
     ALIGN   4
 
-; ── .data section payload (copied to file offset 0x400, RVA 0x2000) ──
+; ?? .data section payload (copied to file offset 0x400, RVA 0x2000) ??
 g_dataPayload:
     db      'RawrXD PE32+ Emitter OK', 0Dh, 0Ah ; 25 bytes at RVA 0x2000
     ALIGN   8
 
-; ── .text section content (copied to file offset 0x200, RVA 0x1000) ──
-; 64-byte entry: GetStdHandle(-11) → WriteFile(stdout,msg,25) → ExitProcess(0)
+; ?? .text section content (copied to file offset 0x200, RVA 0x1000) ??
+; 64-byte entry: GetStdHandle(-11) ? WriteFile(stdout,msg,25) ? ExitProcess(0)
 ;   sub rsp, 38h           48 83 EC 38           (4b, 0x1000)
 ;   mov ecx, -11           B9 F5 FF FF FF        (5b, 0x1004) STD_OUTPUT_HANDLE
-;   call [rip+0x2039]      FF 15 39 20 00 00     (6b, 0x1009) → IAT[0] 0x3048
+;   call [rip+0x2039]      FF 15 39 20 00 00     (6b, 0x1009) ? IAT[0] 0x3048
 ;   mov rcx, rax           48 89 C1              (3b, 0x100F)
-;   lea rdx, [rip+0x0FE7]  48 8D 15 E7 0F 00 00  (7b, 0x1012) → .data 0x2000
+;   lea rdx, [rip+0x0FE7]  48 8D 15 E7 0F 00 00  (7b, 0x1012) ? .data 0x2000
 ;   mov r8d, 19h           41 B8 19 00 00 00     (6b, 0x1019) 25 bytes
 ;   lea r9, [rsp+28h]      4C 8D 4C 24 28        (5b, 0x101F) &written
 ;   mov [rsp+20h], 0       48 C7 44 24 20 0..0   (9b, 0x1024) lpOverlapped
-;   call [rip+0x201D]      FF 15 1D 20 00 00     (6b, 0x102D) → IAT[1] 0x3050
+;   call [rip+0x201D]      FF 15 1D 20 00 00     (6b, 0x102D) ? IAT[1] 0x3050
 ;   xor ecx, ecx           33 C9                 (2b, 0x1033)
-;   call [rip+0x201D]      FF 15 1D 20 00 00     (6b, 0x1035) → IAT[2] 0x3058
-;   int3 × 5 padding                             (5b, 0x103B)
+;   call [rip+0x201D]      FF 15 1D 20 00 00     (6b, 0x1035) ? IAT[2] 0x3058
+;   int3 ? 5 padding                             (5b, 0x103B)
 g_entryCode:
     db      048h, 083h, 0ECh, 038h
     db      0B9h, 0F5h, 0FFh, 0FFh, 0FFh
@@ -586,7 +586,7 @@ PUBLIC g_peBuffer
 g_peSize                dq      0
 g_peBuffer              db      8192 DUP(0)
 
-; ── Phase 4B: Keyword table for ScoreCandidate Heuristic 5 ──
+; ?? Phase 4B: Keyword table for ScoreCandidate Heuristic 5 ??
 ; Each entry: BYTE len, then `len` WCHARs (no null-terminator needed)
 ; Terminated by a zero-length entry (len=0)
 align 2
@@ -852,7 +852,7 @@ WndProc PROC FRAME
     mov     hEditorFont, rax
     mov     g_hFont, rax                 ; Also store as g_hFont for paint
 
-    ; ── Create italic ghost font ──────────────────────────────
+    ; ?? Create italic ghost font ??????????????????????????????
     lea     rdi, [rbp-0C0h]
     xor     eax, eax
     mov     ecx, 24
@@ -878,7 +878,7 @@ WndProc PROC FRAME
     mov     g_cursorCol, 0
     mov     g_scrollY, 0
 
-    ; ── Seed the editor with welcome text ──────────────────────
+    ; ?? Seed the editor with welcome text ??????????????????????
     ;    So the user sees a live surface, not a blank void.
     lea     rdi, g_textBuf
     lea     rsi, szWelcome
@@ -933,13 +933,13 @@ WndProc PROC FRAME
     jmp     @ret_zero
 
 @wm_erasebkgnd:
-    ; Suppress default erase — WM_PAINT handles full background fill
+    ; Suppress default erase ? WM_PAINT handles full background fill
     mov     eax, 1
     jmp     @wp_ret
 
 @wm_char:
     mov     eax, dword ptr [rbp-18h]
-    ; ── Ctrl+key intercepts ──
+    ; ?? Ctrl+key intercepts ??
     cmp     eax, 1                     ; Ctrl+A = Select All
     je      @ctrl_a
     cmp     eax, 3                     ; Ctrl+C = Copy
@@ -960,7 +960,7 @@ WndProc PROC FRAME
     je      @char_tab
     cmp     eax, 20h
     jb      @ret_zero
-    ; ── If selection active, delete it first, then insert ──
+    ; ?? If selection active, delete it first, then insert ??
     call    DeleteSelection
     ; mov     ebx, eax ; REMOVED REDUNDANT/WRONG MIX
     mov     ecx, g_totalChars
@@ -993,13 +993,13 @@ WndProc PROC FRAME
     mov     word ptr [rdi + rcx*2], 0
     inc     g_cursorCol
     
-    ; ── Abort pending inference on new keystroke ──
+    ; ?? Abort pending inference on new keystroke ??
     cmp     byte ptr [g_inferencePending], 0
     je      @char_no_abort
     call    Bridge_AbortInference
 @char_no_abort:
 
-    ; ── Debounced ghost text: reset idle timer (350ms) ──
+    ; ?? Debounced ghost text: reset idle timer (350ms) ??
     ; SetTimer(hwnd, TIMER_GHOST_DEBOUNCE, GHOST_DEBOUNCE_MS, NULL)
     mov     rcx, qword ptr [rbp-8]       ; hwnd
     mov     edx, TIMER_GHOST_DEBOUNCE    ; nIDEvent
@@ -1111,7 +1111,7 @@ WndProc PROC FRAME
     ; --- Insert 0x0A newline between ghost lines ---
     mov     ecx, g_totalChars
     cmp     ecx, TEXT_BUF_SIZE - 2
-    jge     @ghost_finished              ; Buffer full — bail
+    jge     @ghost_finished              ; Buffer full ? bail
 
     ; Compute insertion index = lineOff[cursorLine] + cursorCol
     mov     eax, g_cursorLine
@@ -1157,7 +1157,7 @@ WndProc PROC FRAME
     jmp     @ghost_finished
 
 @char_tab_normal:
-    ; ── Insert 4 spaces at cursor position ──
+    ; ?? Insert 4 spaces at cursor position ??
     call    DeleteSelection
     mov     ecx, g_totalChars
     add     ecx, 4                         ; need room for 4 chars
@@ -1358,9 +1358,9 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
-; (Removed dead @char_tab_secondary — unreachable duplicate)
+; (Removed dead @char_tab_secondary ? unreachable duplicate)
 @ctrl_a:
-    ; Select All — same as IDM_SELECTALL
+    ; Select All ? same as IDM_SELECTALL
     mov     g_selStart, 0
     mov     eax, g_totalChars
     mov     g_selEnd, eax
@@ -1371,20 +1371,20 @@ WndProc PROC FRAME
     jmp     @ret_zero
 
 @ctrl_c:
-    ; Copy — delegate to WM_COMMAND copy logic
+    ; Copy ? delegate to WM_COMMAND copy logic
     mov     dword ptr [rbp-18h], IDM_COPY
     jmp     @cmd_copy
 
 @ctrl_x:
-    ; Cut — delegate to WM_COMMAND cut logic
+    ; Cut ? delegate to WM_COMMAND cut logic
     mov     dword ptr [rbp-18h], IDM_CUT
     jmp     @cmd_cut
 
 @ctrl_v:
-    ; Paste — delegate to WM_COMMAND paste logic
+    ; Paste ? delegate to WM_COMMAND paste logic
     jmp     @cmd_paste
 
-; ── Ctrl+Z: Undo last edit ────────────────────────────────────
+; ?? Ctrl+Z: Undo last edit ????????????????????????????????????
 @ctrl_z:
     ; Check if undo ring has entries
     mov     eax, g_undoCount
@@ -1417,14 +1417,14 @@ WndProc PROC FRAME
     mov     edx, dword ptr [rsi+16]      ; cursorCol
     mov     g_cursorCol, edx
 
-    cmp     eax, 0                       ; 0 = was an INSERT → undo by deleting
+    cmp     eax, 0                       ; 0 = was an INSERT ? undo by deleting
     je      @cz_undo_insert
-    cmp     eax, 1                       ; 1 = was a DELETE → undo by re-inserting
+    cmp     eax, 1                       ; 1 = was a DELETE ? undo by re-inserting
     je      @cz_undo_delete
     jmp     @cz_done                     ; Unknown type
 
 @cz_undo_insert:
-    ; The last edit inserted r8d chars at offset edi → remove them
+    ; The last edit inserted r8d chars at offset edi ? remove them
     lea     r10, g_textBuf
     mov     eax, g_totalChars
     ; Shift left: move [edi+r8d..totalChars) to [edi..)
@@ -1446,7 +1446,7 @@ WndProc PROC FRAME
     jmp     @cz_done
 
 @cz_undo_delete:
-    ; The last edit deleted r8d chars from offset edi → re-insert from undo data
+    ; The last edit deleted r8d chars from offset edi ? re-insert from undo data
     ; Undo data is at g_undoData[head * UNDO_BUF_SIZE]
     mov     eax, g_undoHead              ; We already decremented, so current head
     ; Actually we stored at the original head before decrement...
@@ -1495,7 +1495,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
-; ── Ctrl+S: Save file to disk ──────────────────────────────────
+; ?? Ctrl+S: Save file to disk ??????????????????????????????????
 @ctrl_s:
     ; If we have a file path, save directly; otherwise show Save dialog
     cmp     g_filePathSet, 0
@@ -1571,7 +1571,7 @@ WndProc PROC FRAME
 @wm_keydown:
     mov     eax, dword ptr [rbp-18h]
 
-    ; ── Ctrl+Space: immediate ghost text trigger ──
+    ; ?? Ctrl+Space: immediate ghost text trigger ??
     cmp     eax, VK_SPACE
     jne     @kd_not_ctrl_space
     push    rax
@@ -1580,7 +1580,7 @@ WndProc PROC FRAME
     test    ax, 8000h
     pop     rax
     jz      @kd_not_ctrl_space
-    ; Ctrl+Space pressed — fire suggestion immediately
+    ; Ctrl+Space pressed ? fire suggestion immediately
     ; Kill any pending debounce timer
     cmp     g_ghostTimerActive, 0
     je      @kd_ctrl_space_fire
@@ -1598,7 +1598,7 @@ WndProc PROC FRAME
     jmp     @ret_zero
 @kd_not_ctrl_space:
 
-    ; ── Check Shift state for selection extension ──
+    ; ?? Check Shift state for selection extension ??
     push    rax
     mov     ecx, 10h                   ; VK_SHIFT
     call    GetKeyState
@@ -1606,7 +1606,7 @@ WndProc PROC FRAME
     pop     rax
     jz      @kd_no_shift
 
-    ; Shift is held — start or extend selection
+    ; Shift is held ? start or extend selection
     ; If no selection active, anchor at current cursor pos
     mov     ecx, g_selStart
     cmp     ecx, -1
@@ -1620,7 +1620,7 @@ WndProc PROC FRAME
     mov     g_selEnd, ecx
 
 @kd_shift_check_key:
-    ; Handle shifted nav keys — move cursor, then update selEnd
+    ; Handle shifted nav keys ? move cursor, then update selEnd
     cmp     eax, VK_LEFT
     je      @sk_left
     cmp     eax, VK_RIGHT
@@ -1726,7 +1726,7 @@ WndProc PROC FRAME
     jb      @kd_check_key
     cmp     eax, VK_DOWN
     ja      @kd_check_key
-    ; Arrow key without Shift — clear selection
+    ; Arrow key without Shift ? clear selection
     mov     g_selStart, -1
     mov     g_selEnd, -1
 
@@ -2019,7 +2019,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
-; ── WM_TIMER: debounced ghost text trigger ───────────────────────
+; ?? WM_TIMER: debounced ghost text trigger ???????????????????????
 @wm_timer:
     ; wParam = timer ID
     mov     eax, dword ptr [rbp-18h]
@@ -2062,7 +2062,7 @@ WndProc PROC FRAME
     mov     byte ptr [g_inferencePending], 0
     jmp     @ret_zero
 
-; ── WM_LBUTTONDOWN: click-to-position caret ─────────────────────
+; ?? WM_LBUTTONDOWN: click-to-position caret ?????????????????????
 @wm_lbuttondown:
     ; lParam is in [rbp-20h]: low word = X, high word = Y
     mov     rax, qword ptr [rbp-20h]
@@ -2133,7 +2133,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
-; ── WM_RBUTTONUP: show context menu ─────────────────────────────
+; ?? WM_RBUTTONUP: show context menu ?????????????????????????????
 @wm_rbuttonup:
     ; Get cursor screen pos
     lea     rcx, [rbp-0D0h]  ; POINT struct
@@ -2173,7 +2173,7 @@ WndProc PROC FRAME
     lea     r9, szDelete
     call    AppendMenuW
 
-    ; ── AI Actions ──
+    ; ?? AI Actions ??
     mov     rcx, rbx
     mov     edx, MF_SEPARATOR
     xor     r8d, r8d
@@ -2186,7 +2186,7 @@ WndProc PROC FRAME
     lea     r9, szGenerateFeature
     call    AppendMenuW
 
-    ; ── PE Actions ──
+    ; ?? PE Actions ??
     mov     rcx, rbx
     mov     edx, MF_SEPARATOR
     xor     r8d, r8d
@@ -2232,7 +2232,7 @@ WndProc PROC FRAME
     call    DefWindowProcW
     jmp     @ret_zero
 
-; ── WM_COMMAND: context menu actions ─────────────────────────────
+; ?? WM_COMMAND: context menu actions ?????????????????????????????
 @wm_command:
     mov     eax, dword ptr [rbp-18h]    ; wParam
     and     eax, 0FFFFh                 ; low word = command ID
@@ -2400,7 +2400,7 @@ WndProc PROC FRAME
     ; Re-compute: scan pasted text for newlines
     push    rdi                  ; save paste len
     lea     r10, g_textBuf
-    ; eax was clobbered by copy loop — recompute from cursor
+    ; eax was clobbered by copy loop ? recompute from cursor
     mov     eax, g_cursorLine
     lea     rdx, g_lineOff
     mov     eax, dword ptr [rdx + rax*4]
@@ -2600,7 +2600,7 @@ WndProc PROC FRAME
     call    InvalidateRect
     jmp     @ret_zero
 
-; ── WM_SETCURSOR: set I-beam cursor in client area ──────────────
+; ?? WM_SETCURSOR: set I-beam cursor in client area ??????????????
 @wm_setcursor:
     ; Only change cursor if in client area (LOWORD(lParam) == HTCLIENT == 1)
     mov     eax, dword ptr [rbp-20h]
@@ -2637,7 +2637,7 @@ WndProc PROC FRAME
     call    BeginPaint
     mov     rbx, rax                     ; rbx = hdc
 
-    ; ── Fill entire client rect with dark background ──
+    ; ?? Fill entire client rect with dark background ??
     mov     rcx, BG_COLOR
     call    CreateSolidBrush
     test    rax, rax
@@ -2711,7 +2711,7 @@ WndProc PROC FRAME
 @p_draw:
     mov     dword ptr [rbp-0F0h], eax    ; Save line char count
 
-    ; ── Gutter line number ──
+    ; ?? Gutter line number ??
     mov     eax, esi
     inc     eax                          ; 1-based line number
     call    FormatLineNum
@@ -2739,7 +2739,7 @@ WndProc PROC FRAME
     mov     edx, dword ptr [rbp-0F4h]
     call    SetTextColor
 
-    ; ── Selection highlight check ──
+    ; ?? Selection highlight check ??
     mov     eax, dword ptr [rbp-0F0h]    ; Restore line char count
     test    eax, eax
     jle     @p_next_line
@@ -2769,7 +2769,7 @@ WndProc PROC FRAME
     cmp     edx, r10d
     jle     @p_no_sel
 
-    ; Selection overlaps — set highlight colors
+    ; Selection overlaps ? set highlight colors
     push    rax                          ; save char count
     mov     rcx, rbx
     mov     edx, SEL_BK_COLOR
@@ -2787,7 +2787,7 @@ WndProc PROC FRAME
     jmp     @p_do_textout
 
 @p_no_sel:
-    ; No selection — normal draw
+    ; No selection ? normal draw
 
 @p_do_textout:
     ; TextOutW(hdc, x, y, lpString, count)
@@ -2858,7 +2858,7 @@ WndProc PROC FRAME
     ; maintain 16-byte stack alignment for all Win32 calls.
     ; ================================================================
     cmp     byte ptr [g_ghostActive], 0
-    je      @p_done                      ; No ghost → skip to EndPaint
+    je      @p_done                      ; No ghost ? skip to EndPaint
 
     ; Select italic ghost font
     mov     rcx, rbx                     ; hdc
@@ -3230,7 +3230,7 @@ Bridge_OnSuggestionReady ENDP
 PUBLIC Bridge_OnSuggestionReady
 
 ;=============================================================================
-; Phase 4B: ScoreCandidates — Neural Pruning Scorer (pure register math)
+; Phase 4B: ScoreCandidates ? Neural Pruning Scorer (pure register math)
 ; Scores a single candidate against the current editor context.
 ; Input:  RCX = ptr to candidate WCHAR buffer
 ;         EDX = candidate length (chars)
@@ -3238,7 +3238,7 @@ PUBLIC Bridge_OnSuggestionReady
 ;         R9D = context length (chars before cursor)
 ; Output: EAX = score (0-255, higher = better)
 ;
-; Scoring heuristics (no model weights — pure pattern matching):
+; Scoring heuristics (no model weights ? pure pattern matching):
 ;   1. Prefix continuity:  Does candidate continue the last partial token?
 ;   2. Bracket balance:    Does candidate maintain (){}[] balance?
 ;   3. Line length sanity: Penalize extremely long single lines
@@ -3269,7 +3269,7 @@ ScoreCandidate PROC FRAME
 
     xor     r12d, r12d             ; r12d = total score (accumulator)
 
-    ; ── Heuristic 1: Prefix continuity (0-80 points) ──
+    ; ?? Heuristic 1: Prefix continuity (0-80 points) ??
     ; Check if first 1-4 chars of candidate match last 1-4 chars of context
     mov     esi, r9d
     test    esi, esi
@@ -3304,7 +3304,7 @@ ScoreCandidate PROC FRAME
 @sc_space_bonus:
     add     r12d, 30               ; Natural word boundary
 
-    ; ── Heuristic 2: Bracket balance (0-50 points, penalty if imbalanced) ──
+    ; ?? Heuristic 2: Bracket balance (0-50 points, penalty if imbalanced) ??
 @sc_h2:
     mov     rcx, [rbp-8]           ; candidate ptr
     mov     edx, [rbp-0Ch]         ; candidate len
@@ -3373,7 +3373,7 @@ ScoreCandidate PROC FRAME
     imul    eax, 10
     sub     r12d, eax
 
-    ; ── Heuristic 3: Line length sanity (0-40, penalty for >120 chars) ──
+    ; ?? Heuristic 3: Line length sanity (0-40, penalty for >120 chars) ??
     mov     rcx, [rbp-8]
     mov     edx, [rbp-0Ch]
     xor     esi, esi               ; current line length
@@ -3412,7 +3412,7 @@ ScoreCandidate PROC FRAME
 @sc_ll_pen:
     sub     r12d, edi
 
-    ; ── Heuristic 4: Repetition penalty (0-40, -5 per repeated trigram) ──
+    ; ?? Heuristic 4: Repetition penalty (0-40, -5 per repeated trigram) ??
 @sc_h4:
     add     r12d, 40
     ; Simple check: compare chars [0..2] with chars [3..5], etc.
@@ -3451,7 +3451,7 @@ ScoreCandidate PROC FRAME
 @sc_tri_apply:
     sub     r12d, eax
 
-    ; ── Heuristic 5: Keyword bonus (0-50 points) ──
+    ; ?? Heuristic 5: Keyword bonus (0-50 points) ??
     ; Scan candidate for any keyword from g_kw_tbl.
     ; Each match: +25 (capped at +50 total).
     ; Case-insensitive: OR 0x20 to force lowercase for A-Z range.
@@ -3549,7 +3549,7 @@ ScoreCandidate PROC FRAME
 @sc_kw_apply:
     add     r12d, r13d                ; add keyword bonus to total score
 
-    ; ── Clamp to [0, 255] ──
+    ; ?? Clamp to [0, 255] ??
 @sc_clamp:
     test    r12d, r12d
     jns     @sc_clamp_hi
@@ -3573,7 +3573,7 @@ ScoreCandidate ENDP
 PUBLIC ScoreCandidate
 
 ;=============================================================================
-; PruneCandidates — Score all candidates, pick best, reject below threshold
+; PruneCandidates ? Score all candidates, pick best, reject below threshold
 ; Input:  (uses globals g_candidates, g_candidateCount, etc.)
 ;         RCX = context ptr (g_textBuf near cursor)
 ;         EDX = context len
@@ -3668,7 +3668,7 @@ CreateEditorPane PROC FRAME
     .endprolog
 
     ; The sovereign editor uses hMainWnd as the editor surface directly.
-    ; No child control is created — GDI rendering is done in WndProc/WM_PAINT.
+    ; No child control is created ? GDI rendering is done in WndProc/WM_PAINT.
     ; Initialize editor state: clear buffer, set cursor to 0,0, rebuild line table.
     xor     eax, eax
     mov     g_totalChars, eax
@@ -3686,7 +3686,7 @@ CreateEditorPane PROC FRAME
     ret
 CreateEditorPane ENDP
 
-; ── DeleteSelection: removes selected text, updates cursor ───────
+; ?? DeleteSelection: removes selected text, updates cursor ???????
 ; Returns: eax = number of chars deleted (0 if no selection)
 ; Side effects: updates g_totalChars, g_cursorLine, g_cursorCol,
 ;               clears g_selStart/g_selEnd, calls RebuildLineTable
@@ -3770,7 +3770,7 @@ DeleteSelection PROC
 DeleteSelection ENDP
 
 ;=============================================================================
-; UndoPush — Record an edit in the undo ring
+; UndoPush ? Record an edit in the undo ring
 ; Input: ECX = undoType (0=insert, 1=delete)
 ;        EDX = charOffset
 ;        R8D = charCount
@@ -3843,19 +3843,19 @@ UndoPush PROC
 UndoPush ENDP
 
 ;-----------------------------------------------------------------------------
-; WritePEFile — Generates complete PE32+ in memory using shared buffer
+; WritePEFile ? Generates complete PE32+ in memory using shared buffer
 
-; SavePEToDisk moved to pe_writer.asm — no longer duplicated here
+; SavePEToDisk moved to pe_writer.asm ? no longer duplicated here
 ; (duplicate proc removed to resolve LNK2005)
 
 
-; ═══════════════════════════════════════════════════════════════════
-; UI_OnTokenStream — Streaming ghost text token callback
+; ???????????????????????????????????????????????????????????????????
+; UI_OnTokenStream ? Streaming ghost text token callback
 ;   RCX = WCHAR* token string, EDX = length in WCHARs
 ;   Appends incoming tokens to the ghost buffer incrementally so the
 ;   user sees suggestions appear character-by-character as they stream.
 ;   Thread-safe: called from Bridge_WorkerThread context.
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
 PUBLIC UI_OnTokenStream
 UI_OnTokenStream PROC FRAME
     push    rbp
@@ -3878,7 +3878,7 @@ UI_OnTokenStream PROC FRAME
     mov     rsi, rcx                     ; rsi = incoming token WCHARs
     mov     [rbp-08h], edx               ; save incoming length to stack
 
-    ; ── Append token text to ghost buffer ──
+    ; ?? Append token text to ghost buffer ??
     mov     eax, g_ghostTextLen
     mov     ecx, [rbp-08h]
     add     ecx, eax                     ; ecx = new total length
@@ -3897,13 +3897,13 @@ UI_OnTokenStream PROC FRAME
     lea     rdi, [g_ghostTextBuffer]
     lea     rdi, [rdi + rax*2]           ; rdi = dest at current end
     mov     ecx, [rbp-08h]              ; ecx = copy count
-    rep     movsw                        ; copy rsi→rdi, ecx WCHARs
+    rep     movsw                        ; copy rsi?rdi, ecx WCHARs
 
     ; Update total ghost text length
     mov     eax, [rbp-08h]
     add     g_ghostTextLen, eax
 
-    ; ── Re-parse line offsets from full ghost buffer ──
+    ; ?? Re-parse line offsets from full ghost buffer ??
     lea     rsi, [g_ghostTextBuffer]
     lea     rdi, [g_ghostLineOffsets]
     lea     r8,  [g_ghostLineLengths]
@@ -3938,7 +3938,7 @@ UI_OnTokenStream PROC FRAME
     inc     ecx
     mov     [g_ghostLineCount], ecx
 
-    ; ── Activate ghost text + set cursor anchor ──
+    ; ?? Activate ghost text + set cursor anchor ??
     cmp     byte ptr [g_ghostActive], 1
     je      @stream_skip_anchor
     mov     eax, [g_cursorLine]
@@ -3948,7 +3948,7 @@ UI_OnTokenStream PROC FRAME
 @stream_skip_anchor:
     mov     byte ptr [g_ghostActive], 1
 
-    ; ── Trigger repaint ──
+    ; ?? Trigger repaint ??
     mov     rcx, [hMainWnd]
     test    rcx, rcx
     jz      @stream_done
@@ -4130,9 +4130,9 @@ SwarmV27_History_Folder PROC
     ret
 SwarmV27_History_Folder ENDP
 
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
 ; PHASE 27-ZENITH: GHOST-LEVEL UI ENHANCEMENTS (85-91)
-; ═══════════════════════════════════════════════════════════════════
+; ???????????????????????????????????????????????????????????????????
 
 PUBLIC SwarmV27_UI_GhostAlpha_Sync
 PUBLIC SwarmV27_UI_Temporal_Refresh
@@ -4196,4 +4196,5 @@ SwarmV27_UI_Absolute_Lock_Status PROC
 SwarmV27_UI_Absolute_Lock_Status ENDP
 
 END
+
 

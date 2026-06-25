@@ -548,7 +548,9 @@ bool VSCodeAPIBridge::loadCommandRegistry()
     {
         std::ifstream file(m_registryPath);
         if (!file.is_open()) return true;
-        nlohmann::json reg = nlohmann::json::parse(file);
+        std::string content((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+        nlohmann::json reg = nlohmann::json::parse(content, nullptr, false);
         if (!reg.is_array()) return false;
         for (const auto& item : reg)
         {

@@ -1,5 +1,5 @@
 ; =============================================================================
-; RawrXD_CodebaseAuditSystem.inc — Structure layouts for codebase audit (x64 MASM)
+; RawrXD_CodebaseAuditSystem.inc ? Structure layouts for codebase audit (x64 MASM)
 ; Matches codebase_audit_system.hpp (no C++ dependency)
 ; =============================================================================
 
@@ -48,3 +48,4 @@ PAR_PATH_PTR            EQU 32
 PAR_NAME_PTR            EQU 40
 PAR_SIZE                EQU 48
 PAR_MAX_PATHS           EQU 32
+

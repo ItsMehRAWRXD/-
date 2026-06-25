@@ -16,7 +16,7 @@ include \masm64\macros64\vasily.inc
 MAX_PATH_MAPPINGS   equ 32
 MAX_ROOT_DIRS       equ 8
 MAX_TYPES           equ 16
-PROTO_CONNECT       equ 1       ; _connect.js → _connectweb.js
+PROTO_CONNECT       equ 1       ; _connect.js ? _connectweb.js
 PROTO_STANDARD      equ 2
 
 ; Module types
@@ -505,7 +505,7 @@ TryRootDirs endp
 
 ; -----------------------------------------------------------------------------
 ; Protobuf Connect/Web Fallback Handler
-; Handles: @anysphere/proto/aiserver/v1/server_config_connect.js → _connectweb.js
+; Handles: @anysphere/proto/aiserver/v1/server_config_connect.js ? _connectweb.js
 ; -----------------------------------------------------------------------------
 HandleProtoFallback proc
     sub rsp, 28h

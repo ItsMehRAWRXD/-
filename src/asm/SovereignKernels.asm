@@ -400,13 +400,13 @@ Kernel_SiLU PROC FRAME
     ; Load 8 values
     vmovups ymm0, [r10 + rbx * 4]
     
-    ; Sigmoid approximation: sigmoid(x) ≈ 1 / (1 + exp(-x))
-    ; Using fast approximation: sigmoid(x) ≈ 0.5 * (1 + tanh(x * 0.5))
+    ; Sigmoid approximation: sigmoid(x) ? 1 / (1 + exp(-x))
+    ; Using fast approximation: sigmoid(x) ? 0.5 * (1 + tanh(x * 0.5))
     vmulps ymm1, ymm0, dword ptr [half_const]
     ; tanh approximation would go here
     ; For now, use polynomial approximation
     
-    ; Simplified: x * sigmoid(x) ≈ x * max(0, min(1, 0.5 + 0.25*x))
+    ; Simplified: x * sigmoid(x) ? x * max(0, min(1, 0.5 + 0.25*x))
     vmulps ymm2, ymm0, dword ptr [quarter_const]
     vbroadcastss ymm3, dword ptr [half_const]
     vaddps ymm2, ymm2, ymm3
@@ -600,3 +600,4 @@ Kernel_ElementAdd ENDP
 quarter_const       DD      0.25
 
 END
+

@@ -163,15 +163,9 @@ public:
      * @return true if hook was installed
      */
     static bool InstallHook(const char* fnName, void* realImplementation) {
-        if (!fnName || !realImplementation) return false;
-        
-        // Find the IAT slot for this function name
-        for (const SymbolMapping* m = g_SymbolMappings; m->exportName; ++m) {
-            if (strcmp(m->exportName, fnName) == 0) {
-                void* prev = InstallIATHook(m->iatSlot, realImplementation);
-                return true;
-            }
-        }
+        // DISABLED: IAT hooks cause recursion crashes
+        (void)fnName;
+        (void)realImplementation;
         return false;
     }
     
@@ -182,7 +176,10 @@ public:
      * @return Previous hook value
      */
     static void* InstallHookBySlot(uint64_t slot, void* realImplementation) {
-        return InstallIATHook(slot, realImplementation);
+        // DISABLED: IAT hooks cause recursion crashes
+        (void)slot;
+        (void)realImplementation;
+        return nullptr;
     }
     
     /**
@@ -209,22 +206,9 @@ public:
      * @return Number of successfully resolved symbols
      */
     static int LoadPluginDLL(const char* dllPath) {
-        HMODULE hPlugin = LoadLibraryA(dllPath);
-        if (!hPlugin) {
-            return -1;  // Failed to load
-        }
-        
-        int resolved = 0;
-        
-        for (const SymbolMapping* m = g_SymbolMappings; m->exportName; ++m) {
-            FARPROC proc = GetProcAddress(hPlugin, m->exportName);
-            if (proc) {
-                InstallIATHook(m->iatSlot, reinterpret_cast<void*>(proc));
-                resolved++;
-            }
-        }
-        
-        return resolved;
+        // DISABLED: IAT hooks cause recursion crashes
+        (void)dllPath;
+        return 0;
     }
     
     /**
@@ -300,10 +284,11 @@ int RAWRXD_InitRuntime(HINSTANCE hInstance) {
     // Initialize globals
     RawrXD_GlobalsInit(hInstance, GetProcessHeap());
     
-    // Try to auto-load plugins
-    int resolved = RuntimePatcher::AutoLoadPlugins();
+    // DISABLED: IAT hooks cause recursion crashes
+    // The hooks were redirecting functions to themselves
+    // int resolved = RuntimePatcher::AutoLoadPlugins();
     
-    return resolved;
+    return 0;  // No plugins loaded - using direct exports instead
 }
 
 /**

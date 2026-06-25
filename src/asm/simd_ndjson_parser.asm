@@ -1,5 +1,5 @@
 ; ============================================================================
-; Zero-Copy NDJSON Parser — AVX2/AVX-512 SIMD Implementation
+; Zero-Copy NDJSON Parser ? AVX2/AVX-512 SIMD Implementation
 ; ============================================================================
 ; Extracts "response" and "done" fields from streaming NDJSON tokens
 ; Uses parallel byte comparison and early termination for zero-copy extraction
@@ -380,3 +380,4 @@ simd_ndjson_parse_stream PROC
 simd_ndjson_parse_stream ENDP
 
 end
+

@@ -106,6 +106,11 @@ static void populateListView() {
     SendMessage(s_popup.hwndList, WM_SETREDRAW, FALSE, 0);
     ListView_DeleteAllItems(s_popup.hwndList);
 
+    // Store display strings persistently to avoid dangling pointers
+    static std::vector<std::wstring> s_displayStrings;
+    s_displayStrings.clear();
+    s_displayStrings.reserve(s_popup.filteredItems.size());
+
     for (int i = 0; i < (int)s_popup.filteredItems.size() && i < 50; ++i) {
         const auto& item = s_popup.filteredItems[i];
 
@@ -134,10 +139,13 @@ static void populateListView() {
             }
         }
 
+        // Store the string persistently before getting c_str()
+        s_displayStrings.push_back(std::move(display));
+
         LVITEMW lvi = {};
         lvi.mask     = LVIF_TEXT;
         lvi.iItem    = i;
-        lvi.pszText  = (LPWSTR)display.c_str();
+        lvi.pszText  = (LPWSTR)s_displayStrings.back().c_str();
         SendMessageW(s_popup.hwndList, LVM_INSERTITEMW, 0, (LPARAM)&lvi);
     }
 

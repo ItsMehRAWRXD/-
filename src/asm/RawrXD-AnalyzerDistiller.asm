@@ -59,7 +59,7 @@ OP_FFN    EQU 3
 OP_EMBED  EQU 4
 
 ; ---------------------------------------------------------------------------
-; c_str macro — inline string literal (must be defined before first use)
+; c_str macro ? inline string literal (must be defined before first use)
 ; ---------------------------------------------------------------------------
 c_str MACRO text:VARARG
     LOCAL str_name
@@ -198,7 +198,7 @@ hex_format          DB "%llx", 0
 dec_format          DB "%u", 0
 
 ; ---------------------------------------------------------------------------
-; PROTOTYPES — parameters stripped for ml64 x64 register calling convention
+; PROTOTYPES ? parameters stripped for ml64 x64 register calling convention
 ; ---------------------------------------------------------------------------
 _AD_main_entry                PROTO
 AD_int_PrintBanner         PROTO
@@ -1236,7 +1236,7 @@ AD_int_PrintInfo ENDP
 
 ; (c_str macro moved to top of file for forward-reference safety)
 
-; (External prototypes already declared in rawrxd_win64.inc —
+; (External prototypes already declared in rawrxd_win64.inc ?
 ; removed duplicate PROTO/EQU to avoid A2005 redefinition errors)
 
 ; ---------------------------------------------------------------------------
@@ -1250,7 +1250,7 @@ value_len           DQ ?
 .code
 
 ; =============================================================================
-; PUBLIC API — AD_ prefixed symbols for C ABI linkage (analyzer_distiller.h)
+; PUBLIC API ? AD_ prefixed symbols for C ABI linkage (analyzer_distiller.h)
 ; option proc:private makes all PROCs internal; these PUBLIC aliases export
 ; the correctly-prefixed names that the C++ headers/stubs expect.
 ; VulkanKernel is subsumed by StreamingOrchestrator (SO_ superset).
@@ -1306,7 +1306,7 @@ AD_ExtractLayerIndex PROC
     jmp ExtractLayerIndex
 AD_ExtractLayerIndex ENDP
 
-; AD_ProcessGGUF — full pipeline: open → validate → parse → analyze → write
+; AD_ProcessGGUF ? full pipeline: open ? validate ? parse ? analyze ? write
 ; RCX = input GGUF path, RDX = output .exec path
 ; Returns: EAX = 1 success, 0 failure
 PUBLIC AD_ProcessGGUF
@@ -1383,3 +1383,4 @@ _adpg_done:
 AD_ProcessGGUF ENDP
 
 END
+

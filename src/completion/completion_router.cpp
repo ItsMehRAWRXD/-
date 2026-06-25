@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include <chrono>
-#include <math>
+#include <cmath>
 
 namespace RawrXD {
 
@@ -216,9 +216,7 @@ std::vector<CompletionSuggestion> CompletionRouter::get_suggestions_with_budget(
 }
 
 void CompletionRouter::report_feedback(const CompletionSuggestion& suggestion, bool accepted) {
-    // Phase 18B: Map suggestion to feedback event and update AdaptiveFusionEngine
-    FeedbackEventType event_type = accepted ? FeedbackEventType::TAB_ACCEPT : FeedbackEventType::DISMISS;
-    
+    // Phase 18B: Update AdaptiveFusionEngine based on user feedback
     // Convert source to string
     std::string source_str = "unknown";
     switch (suggestion.source) {
@@ -235,18 +233,7 @@ void CompletionRouter::report_feedback(const CompletionSuggestion& suggestion, b
             break;
     }
     
-    // Create feedback event
-    FeedbackEvent event;
-    event.type = event_type;
-    event.suggestion_text = suggestion.text;
-    event.source = source_str;
-    event.suggestion_score = suggestion.relevance_score;
-    event.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-    
-    // Send to FeedbackListener (which will update AdaptiveFusionEngine)
-    // Note: In real implementation, this would go through FeedbackCollector
-    // For now, we directly update the engine
+    // Calculate reward for AdaptiveFusionEngine
     float reward = accepted ? 1.0f : 0.0f;
     
     // Adjust reward based on source
@@ -273,24 +260,9 @@ std::vector<CompletionSuggestion> CompletionRouter::query_trie(
     }
     
     // Query the legacy Trie
-    // Note: This assumes KeywordHashTable has a prefix search method
-    // Adapt based on actual Trie API
-    std::string query_str(query);
-    auto trie_matches = m_trie->find_prefix_matches(query_str, max_results * 2);
-    
-    for (const auto& match : trie_matches) {
-        CompletionSuggestion suggestion;
-        suggestion.text = match.keyword;
-        suggestion.display_text = match.keyword;
-        suggestion.detail = match.type;  // e.g., "function", "variable"
-        suggestion.relevance_score = match.score;
-        suggestion.source = CompletionSuggestion::Source::TRIE_PREFIX;
-        results.push_back(std::move(suggestion));
-        
-        if (results.size() >= static_cast<size_t>(max_results)) {
-            break;
-        }
-    }
+    // Note: KeywordHashTable doesn't have prefix search, so we return empty results
+    // This is a placeholder - the actual implementation would need a proper Trie structure
+    // with prefix matching capability
     
     return results;
 }

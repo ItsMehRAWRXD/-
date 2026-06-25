@@ -940,74 +940,8 @@ std::string AgenticEngine::referenceSymbol(const std::string& symbol) {
     int refCount = 0;
     const int maxResults = 200;
 
-    auto& lsp = rawrxd::lsp::LSPClientWired::instance();
-    
-    // 1. Semantic Upgrade: Use LSP workspace symbol search for exact disambiguation
-    if (lsp.isInitialized()) {
-        std::mutex mtx;
-        std::condition_variable cv;
-        bool ready = false;
-        std::string lspResults;
-        bool foundSpecific = false;
-
-        auto params = RawrXD::Agentic::JsonValue::object();
-        params["query"] = symbol;
-
-        lsp.sendRequest("workspace/symbol", params, [&](const RawrXD::Agentic::JsonValue& result) {
-            std::lock_guard<std::mutex> lock(mtx);
-            if (result.type() == RawrXD::Agentic::JsonValue::Array) {
-                const auto& arr = result.asArray();
-                for (const auto& sym : arr) {
-                    std::string name = sym.get("name").asString();
-                    std::string container = sym.has("containerName") ? sym.get("containerName").asString() : "";
-                    std::string uri = sym.get("location").get("uri").asString();
-                    int lineNum = sym.get("location").get("range").get("start").get("line").asInt() + 1;
-                    
-                    std::string fullName = container.empty() ? name : (container + "::" + name);
-                    
-                    // Specific check for LocalAICore::Init or NativeSpeedLayer::Init
-                    bool match = false;
-                    if (symbol == "Init") {
-                        if (fullName == "LocalAICore::Init" || fullName == "NativeSpeedLayer::Init") {
-                            match = true;
-                            foundSpecific = true;
-                        } else if (name == "Init") {
-                            match = true; // Still a match for "Init" even if not those specific ones
-                        }
-                    } else if (name == symbol) {
-                        match = true;
-                    }
-
-                    if (match) {
-                        std::ostringstream oss;
-                        oss << "[LSP-DEF] " << uri << ":" << lineNum << ": " << fullName << "\n";
-                        lspResults += oss.str();
-                        defCount++;
-                    }
-                }
-            }
-            ready = true;
-            cv.notify_one();
-        });
-
-        // Wait for LSP response with a small timeout to avoid hanging the engine
-        std::unique_lock<std::mutex> lock(mtx);
-        cv.wait_for(lock, std::chrono::milliseconds(500), [&]{ return ready; });
-
-        if (foundSpecific && !lspResults.empty()) {
-            results << lspResults;
-            std::ostringstream summary;
-            summary << "=== Symbol: " << symbol << " (LSP Disambiguated) ===\n"
-                    << "Definitions: " << defCount << " | References: 0\n\n"
-                    << results.str();
-            return summary.str();
-        }
-        
-        // If we found something but not the specific ones, we still append it to the overall results
-        if (!lspResults.empty()) {
-            results << lspResults;
-        }
-    }
+    // Temporarily disable LSP-wired symbol query in this build lane.
+    // Manual search below remains as the stable fallback.
 
     // Manual search (legacy):
     try {

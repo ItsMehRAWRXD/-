@@ -18,7 +18,6 @@ class MultiResponseEngine;
 class SubAgentManager;
 
 namespace RawrXD {
-    class AutonomousAgenticPipelineCoordinator;
     class GhostTextRenderer;
     namespace LSPServer { class RawrXDLSPServer; }
 }

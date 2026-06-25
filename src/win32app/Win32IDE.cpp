@@ -2767,6 +2767,12 @@ void Win32IDE::createEditor(HWND hwnd)
         {
             SetPropW(m_hwndEditor, kEditorProcProp, (HANDLE)oldEditorProc);
         }
+        
+        // Initialize Annotation Overlay for native feel diagnostics
+        InitializeAnnotationOverlay();
+        
+        // Initialize AgentBridge connection for LSP diagnostic integration
+        InitializeAgentBridgeConnection();
     }
 
     if (lineStripEditorEnabled())
@@ -2805,6 +2811,249 @@ void Win32IDE::createTerminal(HWND hwnd)
         }
     }
     syncCommandInputForActiveTerminal();
+}
+
+void Win32IDE::InitializeAnnotationOverlay()
+{
+    if (!m_hwndEditor || !IsWindow(m_hwndEditor))
+    {
+        LOG_ERROR("Cannot initialize AnnotationOverlay: editor window not valid");
+        return;
+    }
+    
+    if (m_annotationOverlay)
+    {
+        LOG_WARNING("AnnotationOverlay already initialized");
+        return;
+    }
+    
+    try
+    {
+        m_annotationOverlay = std::make_unique<RawrXD::UI::AnnotationOverlay>(this);
+        
+        // HARD DIAGNOSTIC: Overlay object creation
+        char diagBuffer[256];
+        sprintf_s(diagBuffer, "[AnnotationOverlay] Object created at %p\n", m_annotationOverlay.get());
+        OutputDebugStringA(diagBuffer);
+        fprintf(stderr, "%s", diagBuffer);
+        
+        // FILE-BASED DIAGNOSTIC: Write to annotation_overlay_diag.log
+        FILE* diagFile = nullptr;
+        errno_t err = fopen_s(&diagFile, "annotation_overlay_diag.log", "a");
+        if (err == 0 && diagFile) {
+            fprintf(diagFile, "[AnnotationOverlay] Object created at %p\n", m_annotationOverlay.get());
+            fclose(diagFile);
+        }
+        
+        if (m_annotationOverlay->Initialize(m_hwndEditor))
+        {
+            LOG_INFO("AnnotationOverlay initialized successfully");
+            OutputDebugStringA("[AnnotationOverlay] Initialization SUCCESS\n");
+            fprintf(stderr, "[AnnotationOverlay] Initialization SUCCESS\n");
+            
+            // If AgentBridge is already ready, notify the overlay immediately
+            if (m_agentBridgeReady.load()) {
+                m_annotationOverlay->OnAgentBridgeReady();
+            }
+            
+            // Check for mock injection test mode
+            const char* mockTest = std::getenv("RAWRXD_ANNOTATION_MOCK_TEST");
+            bool mockEnabled = (mockTest && (std::strcmp(mockTest, "1") == 0 || std::strcmp(mockTest, "true") == 0));
+            
+            // HARD DIAGNOSTIC: Mock mode detection
+            sprintf_s(diagBuffer, "[AnnotationOverlay] Mock mode detected: %s (env=%s)\n", 
+                     mockEnabled ? "YES" : "NO", mockTest ? mockTest : "(null)");
+            OutputDebugStringA(diagBuffer);
+            fprintf(stderr, "%s", diagBuffer);
+            
+            if (mockEnabled)
+            {
+                LOG_INFO("AnnotationOverlay: Mock test mode enabled - injecting test diagnostics");
+                OutputDebugStringA("[AnnotationOverlay] InjectMockDiagnostics ENTER\n");
+                fprintf(stderr, "[AnnotationOverlay] InjectMockDiagnostics ENTER\n");
+                m_annotationOverlay->InjectMockDiagnostics();
+                OutputDebugStringA("[AnnotationOverlay] InjectMockDiagnostics EXIT\n");
+                fprintf(stderr, "[AnnotationOverlay] InjectMockDiagnostics EXIT\n");
+            }
+            
+            // Check for AgentBridge test mode
+            const char* agentBridgeTest = std::getenv("RAWRXD_AGENTBRIDGE_TEST");
+            if (agentBridgeTest && (std::strcmp(agentBridgeTest, "1") == 0 || std::strcmp(agentBridgeTest, "true") == 0))
+            {
+                LOG_INFO("AgentBridge: Test mode enabled - injecting LSP diagnostics");
+                OutputDebugStringA("[AgentBridge] Test injection ENTER\n");
+                fprintf(stderr, "[AgentBridge] Test injection ENTER\n");
+                
+                // Create test LSP notification
+                nlohmann::json testNotification = {
+                    {"jsonrpc", "2.0"},
+                    {"method", "textDocument/publishDiagnostics"},
+                    {"params", {
+                        {"uri", "file:///test.cpp"},
+                        {"diagnostics", nlohmann::json::array({
+                            {
+                                {"range", {
+                                    {"start", {{"line", 4}, {"character", 0}}},
+                                    {"end", {{"line", 4}, {"character", 10}}}
+                                }},
+                                {"severity", 1},
+                                {"code", "E0001"},
+                                {"message", "AgentBridge: Undefined variable 'foo'"},
+                                {"source", "clangd"}
+                            },
+                            {
+                                {"range", {
+                                    {"start", {{"line", 11}, {"character", 5}}},
+                                    {"end", {{"line", 11}, {"character", 20}}}
+                                }},
+                                {"severity", 2},
+                                {"code", "W0023"},
+                                {"message", "AgentBridge: Unused parameter 'bar'"},
+                                {"source", "clangd"}
+                            }
+                        })}
+                    }}
+                };
+                
+                if (m_agentBridgeConnection)
+                {
+                    m_agentBridgeConnection->OnLSPMessage(testNotification.dump());
+                    OutputDebugStringA("[AgentBridge] Test injection EXIT\n");
+                    fprintf(stderr, "[AgentBridge] Test injection EXIT\n");
+                }
+            }
+        }
+        else
+        {
+            LOG_ERROR("Failed to initialize AnnotationOverlay");
+            OutputDebugStringA("[AnnotationOverlay] Initialization FAILED\n");
+            fprintf(stderr, "[AnnotationOverlay] Initialization FAILED\n");
+            m_annotationOverlay.reset();
+        }
+    }
+    catch (const std::exception& e)
+    {
+        LOG_ERROR(std::string("Exception initializing AnnotationOverlay: ") + e.what());
+        m_annotationOverlay.reset();
+    }
+}
+
+void Win32IDE::ShutdownAnnotationOverlay()
+{
+    if (m_annotationOverlay)
+    {
+        LOG_INFO("Shutting down AnnotationOverlay");
+        m_annotationOverlay->OnAgentBridgeDisconnected();
+        m_annotationOverlay->SetVisible(false);
+        m_annotationOverlay.reset();
+    }
+}
+
+void Win32IDE::ShutdownAgentBridgeConnection()
+{
+    if (m_agentBridgeConnection)
+    {
+        LOG_INFO("Shutting down AgentBridgeConnection");
+        m_agentBridgeReady.store(false);
+        if (m_annotationOverlay) {
+            m_annotationOverlay->OnAgentBridgeDisconnected();
+        }
+        m_agentBridgeConnection.reset();
+    }
+}
+
+// ============================================================================
+// AgentBridge Integration - LSP diagnostic to annotation bridge
+// ============================================================================
+
+void Win32IDE::AgentBridgeConnection::OnLSPMessage(const std::string& jsonMessage) {
+    try {
+        auto msg = nlohmann::json::parse(jsonMessage);
+        
+        if (msg.contains("method") && 
+            msg["method"] == "textDocument/publishDiagnostics") {
+            
+            auto annotations = RawrXD::UI::DiagnosticTranslator::FromLSPPublishDiagnostics(msg);
+            
+            if (!annotations.empty() && m_ide) {
+                // Post to UI thread for thread safety
+                PostMessage(m_ide->m_hwndMain, WM_USER_UPDATE_ANNOTATIONS,
+                    reinterpret_cast<WPARAM>(
+                        new RawrXD::UI::AnnotationDataVector(std::move(annotations))
+                    ), 0);
+            }
+        }
+    }
+    catch (const std::exception& e) {
+        OutputDebugStringA("[AgentBridgeConnection] LSP Parse Error: ");
+        OutputDebugStringA(e.what());
+        OutputDebugStringA("\n");
+    }
+}
+
+void Win32IDE::AgentBridgeConnection::ClearDiagnostics(const std::wstring& source) {
+    if (m_ide) {
+        PostMessage(m_ide->m_hwndMain, WM_USER_CLEAR_ANNOTATIONS, 0, 0);
+    }
+}
+
+void Win32IDE::InitializeAgentBridgeConnection()
+{
+    try {
+        m_agentBridgeConnection = std::make_unique<AgentBridgeConnection>(this);
+        
+        // Mark AgentBridge as ready for AnnotationOverlay integration
+        m_agentBridgeReady.store(true);
+        
+        // Notify AnnotationOverlay that AgentBridge is ready
+        if (m_annotationOverlay) {
+            m_annotationOverlay->OnAgentBridgeReady();
+        }
+        
+        OutputDebugStringA("[Win32IDE] AgentBridgeConnection initialized\n");
+        LOG_INFO("AgentBridgeConnection initialized");
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(std::string("Failed to initialize AgentBridgeConnection: ") + e.what());
+        m_agentBridgeReady.store(false);
+    }
+}
+
+void Win32IDE::OnAgentBridgeDiagnostics(
+    const std::vector<RawrXD::UI::AnnotationData>& diagnostics
+) {
+    if (!m_annotationOverlay) {
+        return;
+    }
+    
+    // Clear existing annotations
+    m_annotationOverlay->ClearAnnotations();
+    
+    // Convert AnnotationData to AnnotationItem and add to overlay
+    for (const auto& data : diagnostics) {
+        RawrXD::UI::AnnotationItem item;
+        item.line = data.lineNumber - 1;  // Convert to 0-based
+        item.startColumn = data.columnStart - 1;
+        item.endColumn = data.columnEnd - 1;
+        item.severity = static_cast<RawrXD::UI::DiagnosticSeverity>(
+            static_cast<int>(data.severity) - 1  // Convert from 1-based to 0-based
+        );
+        item.message = std::string(data.message.begin(), data.message.end());
+        item.code = std::string(data.source.begin(), data.source.end());
+        item.isActive = true;
+        
+        m_annotationOverlay->AddAnnotation(item);
+    }
+    
+    LOG_INFO("AgentBridge: " + std::to_string(diagnostics.size()) + " diagnostics applied");
+}
+
+void Win32IDE::OnAgentBridgeAnnotationsCleared(const std::wstring& source)
+{
+    if (m_annotationOverlay) {
+        m_annotationOverlay->ClearAnnotations();
+        LOG_INFO("AgentBridge: annotations cleared");
+    }
 }
 
 int Win32IDE::createTerminalPane(Win32TerminalManager::ShellType shellType, const std::string& name,
@@ -17467,6 +17716,12 @@ LRESULT CALLBACK Win32IDE::EditorSubclassProc(HWND hwnd, UINT uMsg, WPARAM wPara
                     {
                         pThis->hideGhostDiffOverlayUi();
                     }
+                    // Sync AnnotationOverlay to editor scroll
+                    if (pThis->m_annotationOverlay)
+                    {
+                        int scrollPos = (int)SendMessage(hwnd, EM_GETSCROLLPOS, 0, 0);
+                        pThis->m_annotationOverlay->OnEditorScroll(scrollPos);
+                    }
                     return result;
                 }
                 break;
@@ -17824,6 +18079,13 @@ LRESULT CALLBACK Win32IDE::EditorSubclassProc(HWND hwnd, UINT uMsg, WPARAM wPara
                 pThis->onEditorMouseMoveDebugHover(xPos, yPos);
                 // Also trigger LSP hover
                 pThis->onEditorMouseHover(xPos, yPos);
+                // Forward to AnnotationOverlay for hit-testing (Phase II)
+                if (pThis->m_annotationOverlay)
+                {
+                    POINT pt = { xPos, yPos };
+                    ClientToScreen(hwnd, &pt);
+                    pThis->m_annotationOverlay->OnMouseMove(pt);
+                }
                 break;
             }
 
@@ -17832,6 +18094,11 @@ LRESULT CALLBACK Win32IDE::EditorSubclassProc(HWND hwnd, UINT uMsg, WPARAM wPara
                 // Hide debug hover when mouse leaves editor
                 pThis->hideDebugHoverValue();
                 pThis->dismissHoverTooltip();
+                // Notify AnnotationOverlay that mouse left (Phase II)
+                if (pThis->m_annotationOverlay)
+                {
+                    pThis->m_annotationOverlay->OnMouseLeave();
+                }
                 break;
             }
 
@@ -18825,6 +19092,12 @@ Win32IDE::~Win32IDE()
     if (m_agentBridgeThread && m_agentBridgeThread->joinable()) {
         m_agentBridgeThread->join();
     }
+    
+    // Clean up AgentBridge connection before Annotation Overlay
+    ShutdownAgentBridgeConnection();
+    
+    // Clean up Annotation Overlay
+    ShutdownAnnotationOverlay();
     
     try
     {

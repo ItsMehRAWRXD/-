@@ -869,9 +869,6 @@ void SetIDEAgenticEngineForCommands(AgenticEngine* engine)
 // Constructor / Destructor
 // ============================================================================
 
-// Forward declaration — defined in Win32IDE_AgentStreamingBridge.cpp
-extern "C" void AgentPanel_AppendToken(const wchar_t* token);
-
 AgenticBridge::AgenticBridge(Win32IDE* ide)
     : m_ide(ide), m_initialized(false), m_agentLoopRunning(false), m_hProcess(nullptr), m_hStdoutRead(nullptr),
       m_hStdoutWrite(nullptr), m_hStdinRead(nullptr), m_hStdinWrite(nullptr)
@@ -879,20 +876,15 @@ AgenticBridge::AgenticBridge(Win32IDE* ide)
     // Initialize streaming result channel for Phase 1 (tool result injection)
     m_streamingChannel = std::make_unique<RawrXD::Agentic::StreamingResultChannel>();
 
-    // Wire TitanProxy token callback → IDE streaming bridge so process-to-process
-    // token streaming surfaces incrementally in the Agent output panel.
+    // Wire TitanProxy token callback → IDE output panel via postAgentOutputSafe
+    // (directly on UI thread; avoids the dead AgentPanel_AppendToken path).
     RawrXD::TitanProxy::instance().setTokenCallback(
-        [](const std::string& token)
+        [ide](const std::string& token)
         {
             if (token.empty())
                 return;
-            // Convert UTF-8 token to wide char for AgentPanel_AppendToken
-            const int wLen = MultiByteToWideChar(CP_UTF8, 0, token.c_str(), static_cast<int>(token.size()), nullptr, 0);
-            if (wLen <= 0)
-                return;
-            std::wstring wide(static_cast<size_t>(wLen), L'\0');
-            MultiByteToWideChar(CP_UTF8, 0, token.c_str(), static_cast<int>(token.size()), &wide[0], wLen);
-            AgentPanel_AppendToken(wide.c_str());
+            if (ide)
+                ide->postAgentOutputSafe(token);
         });
 }
 

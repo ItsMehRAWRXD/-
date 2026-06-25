@@ -2,6 +2,9 @@
 
 #include "Win32IDE.h"
 #include "Win32IDE_Types.h"
+#include "AnnotationOverlay.h"  // For native feel diagnostic overlay
+#include "lsp_provenance_router.h"  // LSP request/response lineage tracking
+#include "FMF_LSP_Integration.h"    // FMF LSP fallback detection
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -391,12 +394,18 @@ int Win32IDE::sendLSPRequest(LSPLanguage lang, const std::string& method, const 
         if (!m_lspInitialized)
             initLSPClient();
         if (!startLSPServer(lang))
+        {
+            // FMF: Log LSP server start failure
+            FMF_LSP_ServerStartFailed(m_lspConfigs[(size_t)lang].name.c_str());
             return -1;
+        }
     }
 
     if (!status.hStdinWrite ||
         (status.state != LSPServerState::Running && !(allowDuringStartup && status.state == LSPServerState::Starting)))
     {
+        // FMF: Log LSP client not available
+        FMF_LSP_CLIENT_NULL();
         return -1;
     }
 
@@ -404,6 +413,17 @@ int Win32IDE::sendLSPRequest(LSPLanguage lang, const std::string& method, const 
     {
         std::lock_guard<std::mutex> lock(m_lspMutex);
         id = status.requestIdCounter++;
+    }
+
+    // LSP Provenance Router: Track request
+    uint64_t provenanceId = LSPProvenanceRouter::Instance().GenerateRequestId(method);
+    
+    // Bind file version if available in params
+    if (params.contains("textDocument") && params["textDocument"].contains("uri"))
+    {
+        std::string uri = params["textDocument"]["uri"].get<std::string>();
+        int version = params["textDocument"].value("version", 0);
+        LSPProvenanceRouter::Instance().BindRequestToFile(provenanceId, uri, version);
     }
 
     nlohmann::json msg;
@@ -420,6 +440,8 @@ int Win32IDE::sendLSPRequest(LSPLanguage lang, const std::string& method, const 
     if (!ok || written != (DWORD)packet.size())
     {
         logError("sendLSPRequest", "WriteFile failed for " + m_lspConfigs[(size_t)lang].name);
+        // FMF: Log LSP write failure
+        FMF_LSP_ProcessCreationFailed(m_lspConfigs[(size_t)lang].executablePath.c_str());
         return -1;
     }
 
@@ -474,10 +496,25 @@ nlohmann::json Win32IDE::readLSPResponse(LSPLanguage lang, int requestId, int ti
         {
             nlohmann::json resp = std::move(it->second);
             m_lspPendingResponses.erase(it);
+            
+            // LSP Provenance Router: Validate response
+            if (resp.contains("id"))
+            {
+                uint64_t respId = resp["id"].get<uint64_t>();
+                if (!LSPProvenanceRouter::Instance().ValidateResponse(respId, resp))
+                {
+                    // Response validation failed - log to FMF
+                    FMF_LSP_ResponseParseError("readLSPResponse");
+                }
+            }
+            
             return resp;
         }
         if (m_lspResponseCV.wait_until(lock, deadline) == std::cv_status::timeout)
         {
+            // LSP Provenance Router: Log timeout
+            FMF_LSP_RequestTimeout("readLSPResponse", timeoutMs);
+            
             nlohmann::json err_obj;
             err_obj["code"] = -1;
             err_obj["message"] = "Timeout waiting for response";
@@ -1384,24 +1421,35 @@ void Win32IDE::displayDiagnosticsAsAnnotations(const std::string& uri)
 
     // Clear old LSP annotations
     clearAllAnnotations("lsp");
+    
+    // Also clear AnnotationOverlay diagnostics
+    if (m_annotationOverlay)
+    {
+        m_annotationOverlay->ClearAnnotations();
+    }
 
     auto diags = getDiagnosticsForFile(uri);
     for (const auto& d : diags)
     {
         AnnotationSeverity sev = AnnotationSeverity::Info;
+        RawrXD::UI::DiagnosticSeverity overlaySev = RawrXD::UI::DiagnosticSeverity::Information;
         switch (d.severity)
         {
             case 1:
                 sev = AnnotationSeverity::Error;
+                overlaySev = RawrXD::UI::DiagnosticSeverity::Error;
                 break;
             case 2:
                 sev = AnnotationSeverity::Warning;
+                overlaySev = RawrXD::UI::DiagnosticSeverity::Warning;
                 break;
             case 3:
                 sev = AnnotationSeverity::Info;
+                overlaySev = RawrXD::UI::DiagnosticSeverity::Information;
                 break;
             case 4:
                 sev = AnnotationSeverity::Info;
+                overlaySev = RawrXD::UI::DiagnosticSeverity::Hint;
                 break;  // Hint → Info
         }
 
@@ -1413,7 +1461,25 @@ void Win32IDE::displayDiagnosticsAsAnnotations(const std::string& uri)
             msg += " (" + d.source + ")";
 
         addAnnotation(d.range.start.line + 1, sev, msg, "lsp");
+        
+        // Also add to AnnotationOverlay for native feel rendering
+        if (m_annotationOverlay)
+        {
+            RawrXD::UI::AnnotationItem overlayItem;
+            overlayItem.line = d.range.start.line;  // 0-based for overlay
+            overlayItem.startColumn = d.range.start.character;
+            overlayItem.endColumn = d.range.end.character;
+            overlayItem.severity = overlaySev;
+            overlayItem.message = msg;
+            overlayItem.code = d.code;
+            overlayItem.isActive = true;
+            
+            m_annotationOverlay->AddAnnotation(overlayItem);
+        }
     }
+    
+    LOG_INFO("displayDiagnosticsAsAnnotations: " + std::to_string(diags.size()) + 
+             " diagnostics displayed for " + uri);
 }
 
 bool Win32IDE::applyWorkspaceEdit(const LSPWorkspaceEdit& edit)

@@ -97,6 +97,9 @@ struct DownloadProgress;
 #include "Win32IDE_TabManager.h"
 #include "Win32IDE_Types.h"
 #include "Win32IDE_WebView2.h"
+#include "AnnotationOverlay.h"  // Native Feel Diagnostic Overlay
+#include "AnnotationTypes.h"    // AgentBridge integration types
+#include "DiagnosticTranslator.h" // LSP diagnostic translation
 #include "Win32TerminalManager.h"
 #include "rawrxd/agent_cursor_types.h"
 #include "rawrxd/rawrxd_linestream_raster.h"
@@ -487,6 +490,29 @@ class Win32IDE
     std::atomic<bool> m_agentBridgeReady{false};
     std::atomic<bool> m_agentBridgeInitStarted{false};
     
+    // Annotation Overlay - Native Feel Diagnostic Rendering
+    std::unique_ptr<RawrXD::UI::AnnotationOverlay> m_annotationOverlay;
+    void InitializeAnnotationOverlay();
+    void ShutdownAnnotationOverlay();
+    
+    // AgentBridge Integration - LSP diagnostic to annotation bridge
+    class AgentBridgeConnection {
+    public:
+        AgentBridgeConnection(Win32IDE* ide) : m_ide(ide) {}
+        
+        void OnLSPMessage(const std::string& jsonMessage);
+        void ClearDiagnostics(const std::wstring& source = L"");
+        
+    private:
+        Win32IDE* m_ide;
+    };
+    
+    std::unique_ptr<AgentBridgeConnection> m_agentBridgeConnection;
+    void InitializeAgentBridgeConnection();
+    void ShutdownAgentBridgeConnection();
+    void OnAgentBridgeDiagnostics(const std::vector<RawrXD::UI::AnnotationData>& diagnostics);
+    void OnAgentBridgeAnnotationsCleared(const std::wstring& source);
+    
     std::unique_ptr<RawrXD::PlanOrchestrator> m_planOrchestrator;       // Autonomous task planning and execution
     std::unique_ptr<rawrxd::session::SessionController> m_sessionController;
     bool m_multiAgentEnabled = false;  // Multi-agent orchestration toggle
@@ -578,6 +604,29 @@ class Win32IDE
     /** Sync main menu + agent chat panel checkboxes from AgenticBridge / NativeAgent (after init or config load). */
     void syncAgentModeUiFromBridge();
     void onAIContextSize(int sizeEnum);
+
+    // AI Feature Methods (Win32IDE_AIFeatures.cpp)
+    void initAIFeatures();
+    void shutdownAIFeatures();
+    void aiExplainCode(const std::string& code, const std::string& language);
+    void aiGenerateTests(const std::string& code, const std::string& language);
+    void aiSuggestRefactoring(const std::string& code, const std::string& language);
+    void aiFixError(const std::string& code, const std::string& error, const std::string& language);
+    void aiGenerateFromDescription(const std::string& description, const std::string& language);
+    void aiCodeReview(const std::string& diff);
+    void setAIModelProvider(const std::string& provider);
+
+    // Context-Aware Completions
+    void initContextAwareCompletions();
+    std::vector<std::string> getContextAwareCompletions(const std::string& prefix, const std::string& context);
+
+    // AI Menu Command Handlers
+    void cmdAIExplainSelection();
+    void cmdAIGenerateTests();
+    void cmdAIRefactorSelection();
+    void cmdAIFixCurrentError();
+    void cmdAIGenerateFromPrompt();
+    void cmdAICodeReview();
 
     // Memory Plugin System (Native VSIX Style)
     // Note: loadMemoryPlugin is the legacy single-DLL loader.
@@ -3698,6 +3747,32 @@ class Win32IDE
     std::unordered_map<uint64_t, std::vector<AIFileRollbackRecord>> m_workspaceBatchRollbacks;
     std::deque<AIEditTransaction> m_aiEditTransactionHistory;
     static constexpr size_t kMaxAIEditTransactionHistory = 50;
+
+    // Agent cursor overlay state
+    HWND m_agentCursorOverlayHwnd = nullptr;
+    bool m_agentCursorVisible = false;
+    int m_agentCursorLine = 0;
+    int m_agentCursorCol = 0;
+
+    // Agent proposals
+    struct AgentProposal {
+        std::string filePath;
+        std::string originalText;
+        std::string proposedText;
+        std::string reasoning;
+        uint64_t timestamp = 0;
+        bool applied = false;
+    };
+    std::vector<AgentProposal> m_pendingProposals;
+
+    // LSP completion state
+    std::vector<LSPCompletionItem> m_lspCompletionItems;
+    bool m_lspCompletionActive = false;
+    std::vector<std::string> m_agenticLspConditions;
+
+    // Runtime state
+    bool m_runtimeSurfaceReady = false;
+    std::string m_activeModelPath;
 
     void pushAIEditTransaction(AIEditTransaction&& tx);
     void flushAIWorkspaceBatch(uint64_t batchId);
@@ -8084,6 +8159,146 @@ class Win32IDE
     void showInferenceMetricsPanel();
     void hideInferenceMetricsPanel();
     bool isInferenceMetricsVisible() const;
+
+    // ============================================================================
+    // PRODUCTION-READY MESSAGE LOOP HARDENING (7 Bug Clusters)
+    // ============================================================================
+
+    // --- Cluster 1: Deferred Init Mailbox + Replay Barrier ---
+    struct DeferredMessage
+    {
+        UINT uMsg;
+        WPARAM wParam;
+        LPARAM lParam;
+        ULONGLONG timestamp;
+    };
+    std::vector<DeferredMessage> m_preInitMessageQueue;
+    std::mutex m_preInitMessageMutex;
+    std::atomic<bool> m_preInitReplayActive{false};
+    static constexpr size_t kMaxPreInitMessages = 1024;
+    void queuePreInitMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void replayPreInitMessages();
+    bool shouldQueueDuringInit(UINT uMsg);
+
+    // --- Cluster 2: Message Pump Starvation Guard + Worker Queue ---
+    struct WorkerTask
+    {
+        std::function<void()> work;
+        ULONGLONG enqueueTime;
+        std::string taskName;
+    };
+    std::queue<WorkerTask> m_workerTaskQueue;
+    std::mutex m_workerTaskMutex;
+    std::condition_variable m_workerTaskCV;
+    std::vector<std::thread> m_workerThreads;
+    std::atomic<bool> m_workerThreadShutdown{false};
+    std::atomic<size_t> m_activeWorkerTasks{0};
+    static constexpr size_t kWorkerThreadCount = 4;
+    static constexpr ULONGLONG kWorkerTaskTimeoutMs = 30000;
+    void initWorkerThreadPool();
+    void shutdownWorkerThreadPool();
+    void workerThreadLoop();
+    void enqueueWorkerTask(std::function<void()> work, const char* taskName);
+    bool isUiThread() const;
+    void assertUiThread(const char* operation);
+    void runOnUiThread(std::function<void()> work);
+    DWORD m_uiThreadId = 0;
+
+    // --- Cluster 3: LSP Concurrency Hardening (State Copy Pattern) ---
+    struct LSPHoverSnapshot
+    {
+        std::string content;
+        int line = 0;
+        int column = 0;
+        uint64_t documentVersion = 0;
+    };
+    LSPHoverSnapshot captureHoverStateLocked();
+    void applyHoverStateToUI(const LSPHoverSnapshot& snapshot);
+
+    struct LSPCompletionSnapshot
+    {
+        std::vector<LSPCompletionItem> items;
+        uint64_t documentVersion = 0;
+        bool isIncomplete = false;
+    };
+    LSPCompletionSnapshot captureCompletionStateLocked();
+    void applyCompletionStateToUI(const LSPCompletionSnapshot& snapshot);
+
+    // --- Cluster 4: Debounce Scheduler (replaces timer chaining) ---
+    struct DebounceEntry
+    {
+        UINT_PTR timerId = 0;
+        ULONGLONG lastTriggerTime = 0;
+        ULONGLONG debounceMs = 0;
+        std::function<void()> callback;
+        bool pending = false;
+    };
+    std::unordered_map<UINT_PTR, DebounceEntry> m_debounceMap;
+    std::mutex m_debounceMutex;
+    static constexpr UINT_PTR kDebounceTimerBase = 50000;
+    static constexpr UINT_PTR kDebounceTimerHover = 50001;
+    static constexpr UINT_PTR kDebounceTimerCompletion = 50002;
+    static constexpr UINT_PTR kDebounceTimerSignature = 50003;
+    void initDebounceScheduler();
+    void shutdownDebounceScheduler();
+    void triggerDebounce(UINT_PTR timerId, ULONGLONG debounceMs, std::function<void()> callback);
+    void cancelDebounce(UINT_PTR timerId);
+    void onDebounceTimer(UINT_PTR timerId);
+
+    // --- Cluster 5: Unhandled Message Logging Safety Net ---
+    struct MessageLogEntry
+    {
+        UINT uMsg;
+        WPARAM wParam;
+        LPARAM lParam;
+        ULONGLONG timestamp;
+        DWORD threadId;
+    };
+    std::deque<MessageLogEntry> m_unhandledMessageLog;
+    std::mutex m_unhandledMessageLogMutex;
+    static constexpr size_t kMaxUnhandledMessageLog = 256;
+    std::atomic<bool> m_unhandledMessageLoggingEnabled{true};
+    void logUnhandledMessage(UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void flushUnhandledMessageLog();
+    const char* getMessageName(UINT uMsg);
+
+    // --- Cluster 6: Document/Response Versioning ---
+    struct DocumentVersionState
+    {
+        std::atomic<uint64_t> version{0};
+        std::atomic<uint64_t> pendingLSPRequests{0};
+        std::mutex mutex;
+        std::unordered_map<std::string, uint64_t> lspRequestVersions;
+    };
+    DocumentVersionState m_documentVersion;
+    uint64_t bumpDocumentVersion();
+    uint64_t getCurrentDocumentVersion() const;
+    bool isLSPResponseStale(uint64_t responseVersion, uint64_t currentVersion);
+    uint64_t registerLSPRequest(const std::string& requestId);
+    void completeLSPRequest(const std::string& requestId);
+
+    // --- Cluster 7: Shutdown Barrier State Machine (extends existing isShuttingDown) ---
+    enum class ShutdownState : int
+    {
+        Running = 0,
+        Initiating = 1,
+        Draining = 2,
+        Finalizing = 3,
+        Complete = 4
+    };
+    std::atomic<ShutdownState> m_shutdownState{ShutdownState::Running};
+    std::atomic<bool> m_shutdownComplete{false};
+    std::atomic<uint32_t> m_pendingAsyncOperations{0};
+    std::mutex m_shutdownMutex;
+    std::condition_variable m_shutdownCV;
+    HANDLE m_shutdownEvent = nullptr;
+    static constexpr ULONGLONG kShutdownTimeoutMs = 10000;
+    void initShutdownBarrier();
+    void beginGracefulShutdown();
+    bool waitForShutdownComplete(ULONGLONG timeoutMs);
+    void signalAsyncOperationStart();
+    void signalAsyncOperationComplete();
+    bool canAcceptNewWork() const;
 
   private:
 };

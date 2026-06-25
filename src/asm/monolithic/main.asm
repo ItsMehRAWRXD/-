@@ -1,25 +1,25 @@
-; RawrXD Monolithic Kernel — Main Entry
+; RawrXD Monolithic Kernel ? Main Entry
 ; Assembles: ml64 /c /Fo main.obj main.asm
 ; Links: link main.obj inference.obj ui.obj beacon.obj lsp.obj agent.obj model_loader.obj ...
 ;
 ; Canonical bootstrap order:
-;   1. HeapCreate            — 64MB arena
-;   2. BeaconRouterInit      — ring buffers, slots 0-15
-;   3. InferenceEngineInit   — AVX detection, KV cache
-;   4. StreamLoaderInit      — VEH + LRU for demand-paged GGUF
-;   5. ModelLoaderInit       — X+4 SRWLOCK for hotswap
-;   6. LSPBridgeInit         — stub (no child process)
-;   7. AgentCoreInit         — registers agent, allocates task queue
-;   8. DAP_Init              — debug adapter protocol engine
-;   9. Test_Init             — test explorer tree + state
-;  10. Task_Init             — task runner configs + ring buffer
-;  11. Swarm_Init            — multi-GPU Vulkan orchestrator (graceful fallback)
-;  12. SwarmCoord_Init       — beacon-based work distribution
-;  13. ExtHostInit           — extension host (sandboxed DLL loader)
-;  14. WebView2Init          — WebView2 shell (graceful GDI fallback)
-;  15. CLI parse             — --bench, --model, --prompt, --build flags
-;  16. UIMainLoop            — window + message pump (blocks until WM_QUIT)
-;      OR --build            — WritePEFile + SavePEToDisk (sovereign PE emit)
+;   1. HeapCreate            ? 64MB arena
+;   2. BeaconRouterInit      ? ring buffers, slots 0-15
+;   3. InferenceEngineInit   ? AVX detection, KV cache
+;   4. StreamLoaderInit      ? VEH + LRU for demand-paged GGUF
+;   5. ModelLoaderInit       ? X+4 SRWLOCK for hotswap
+;   6. LSPBridgeInit         ? stub (no child process)
+;   7. AgentCoreInit         ? registers agent, allocates task queue
+;   8. DAP_Init              ? debug adapter protocol engine
+;   9. Test_Init             ? test explorer tree + state
+;  10. Task_Init             ? task runner configs + ring buffer
+;  11. Swarm_Init            ? multi-GPU Vulkan orchestrator (graceful fallback)
+;  12. SwarmCoord_Init       ? beacon-based work distribution
+;  13. ExtHostInit           ? extension host (sandboxed DLL loader)
+;  14. WebView2Init          ? WebView2 shell (graceful GDI fallback)
+;  15. CLI parse             ? --bench, --model, --prompt, --build flags
+;  16. UIMainLoop            ? window + message pump (blocks until WM_QUIT)
+;      OR --build            ? WritePEFile + SavePEToDisk (sovereign PE emit)
 
 EXTERN InferenceEngineInit:PROC
 EXTERN UIMainLoop:PROC
@@ -45,7 +45,7 @@ EXTERN ExtHostInit:PROC
 EXTERN Mesh_Init:PROC
 EXTERN InferenceRouter_Generate:PROC
 
-; PE Writer — Final Directive (Non-Stubbed)
+; PE Writer ? Final Directive (Non-Stubbed)
 
 EXTERN Emit_DOSHeader:PROC
 EXTERN Emit_NTHeaders:PROC
@@ -56,7 +56,7 @@ EXTERN SavePEToDisk:PROC
 EXTERN WritePEFile:PROC
 EXTERN g_peBuffer:QWORD
 EXTERN g_cursor:QWORD
-EXTERN g_peSize:QWORD        ; PE file byte count — set by Emit_* path or WritePEFile
+EXTERN g_peSize:QWORD        ; PE file byte count ? set by Emit_* path or WritePEFile
 
 ; Phase 9B: Async pager
 EXTERN AsyncPage_Init:PROC
@@ -200,11 +200,11 @@ CREATE_ALWAYS      equ 2
 FILE_ATTRIBUTE_NORMAL equ 80h
 
 .code
-; ────────────────────────────────────────────────────────────────
-; WinMain — master init sequence
+; ????????????????????????????????????????????????????????????????
+; WinMain ? master init sequence
 ;   RCX = hInstance, RDX = hPrevInstance, R8 = lpCmdLine, R9D = nCmdShow
 ;   FRAME + shadow space for all callee calls.
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 WinMain PROC FRAME
     push    rbp
     .pushreg rbp
@@ -308,7 +308,7 @@ WinMain PROC FRAME
     cmp     g_benchMode, 0
     jne     @benchmark
 
-    ; ── Interactive mode ──────────────────────────────────────────
+    ; ?? Interactive mode ??????????????????????????????????????????
     ; Bring up full IDE subsystems on the canonical runtime path.
     ; This keeps ghost-text + router + debug/lsp/task surfaces aligned
     ; with parity expectations instead of UI-only startup.
@@ -329,7 +329,7 @@ WinMain PROC FRAME
     xor     eax, eax
     jmp     @exit
 
-    ; ── Stress test mode (--stress) ───────────────────────────
+    ; ?? Stress test mode (--stress) ???????????????????????????
 @stress_test:
     call    SwarmNet_Init
     call    Consensus_Init
@@ -339,14 +339,14 @@ WinMain PROC FRAME
     xor     eax, eax
     jmp     @exit
 
-    ; ── External test runner mode (--run-tests) ───────────────
+    ; ?? External test runner mode (--run-tests) ???????????????
 @run_tests:
     mov     rcx, g_pTestRunner
     mov     rdx, g_pTestArgs
     call    RawrXD_RunExternalTestsW
     jmp     @exit
 
-    ; ── Build-self mode (--build) ──────────────────────────────
+    ; ?? Build-self mode (--build) ??????????????????????????????
 @build_self:
     call    WritePEFile
     test    rax, rax
@@ -357,7 +357,7 @@ WinMain PROC FRAME
     xor     eax, eax
     jmp     @exit
 
-    ; ── Heal-build mode (--autofix / --heal-build) ────────────
+    ; ?? Heal-build mode (--autofix / --heal-build) ????????????
 @heal_build:
     call    BeaconRouterInit
     call    InferenceEngineInit
@@ -373,7 +373,7 @@ WinMain PROC FRAME
     call    StreamMapModel
 @hb_no_model:
 
-    ; Attempt build, diagnose errors, apply fix — up to 3 attempts
+    ; Attempt build, diagnose errors, apply fix ? up to 3 attempts
     mov     r12d, 3                      ; max attempts
 @hb_retry:
     mov     rcx, g_pHealBuildCmd         ; build command (wide)
@@ -387,7 +387,7 @@ WinMain PROC FRAME
 @hb_done:
     jmp     @exit
 
-    ; ── Benchmark mode ────────────────────────────────────────
+    ; ?? Benchmark mode ????????????????????????????????????????
 @benchmark:
     call    GetTickCount64
     mov     g_benchStart, rax
@@ -410,7 +410,7 @@ WinMain PROC FRAME
     mov     ecx, eax
     call    ExitProcess
 
-    ; ── Direct agent prompt mode (--agent-prompt --prompt <text>) ─────────
+    ; ?? Direct agent prompt mode (--agent-prompt --prompt <text>) ?????????
 @agent_prompt:
     mov     r8, g_pPrompt
     test    r8, r8
@@ -843,11 +843,11 @@ AgentEntry_Safe PROC FRAME
     ret
 AgentEntry_Safe ENDP
 
-; ────────────────────────────────────────────────────────────────
-; ParseCommandLine — scan argv for --bench/--model/--prompt
+; ????????????????????????????????????????????????????????????????
+; ParseCommandLine ? scan argv for --bench/--model/--prompt
 ;   Uses CommandLineToArgvW + lstrcmpiW for proper tokenisation.
 ;   Argv buffer intentionally leaked (g_pModelPath/g_pPrompt point into it).
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 ParseCommandLine PROC FRAME
     push    rbp
     .pushreg rbp
@@ -884,7 +884,7 @@ ParseCommandLine PROC FRAME
     jge     @pcl_done
     mov     r12, [rsi + rbx*8]      ; r12 = argv[i]
 
-    ; ── try --bench ───────────────────────────
+    ; ?? try --bench ???????????????????????????
     mov     rcx, r12
     lea     rdx, [szBench]
     call    lstrcmpiW
@@ -897,89 +897,89 @@ ParseCommandLine PROC FRAME
     test    eax, eax
     jz      @pcl_bench
 
-    ; ── try --model ───────────────────────────
+    ; ?? try --model ???????????????????????????
     mov     rcx, r12
     lea     rdx, [szModel]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_model
 
-    ; ── try --prompt ──────────────────────────
+    ; ?? try --prompt ??????????????????????????
     mov     rcx, r12
     lea     rdx, [szPrompt]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_prompt
 
-    ; ── try --build ───────────────────────────
+    ; ?? try --build ???????????????????????????
     mov     rcx, r12
     lea     rdx, [szBuild]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_build
 
-    ; ── try --stress ──────────────────────────
+    ; ?? try --stress ??????????????????????????
     mov     rcx, r12
     lea     rdx, [szStress]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_stress
 
-    ; ── try --run-tests ───────────────────────
+    ; ?? try --run-tests ???????????????????????
     mov     rcx, r12
     lea     rdx, [szRunTests]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_run_tests
 
-    ; ── try --test-runner ─────────────────────
+    ; ?? try --test-runner ?????????????????????
     mov     rcx, r12
     lea     rdx, [szTestRunner]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_test_runner
 
-    ; ── try --test-args ───────────────────────
+    ; ?? try --test-args ???????????????????????
     mov     rcx, r12
     lea     rdx, [szTestArgs]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_test_args
 
-    ; ── try --lsp ─────────────────────────────
+    ; ?? try --lsp ?????????????????????????????
     mov     rcx, r12
     lea     rdx, [szLSP]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_lsp
-    ; ── try --agent-prompt ───────────────────────
+    ; ?? try --agent-prompt ???????????????????????
     mov     rcx, r12
     lea     rdx, [szAgentPrompt]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_agent_prompt
-    ; ── try --autofix ─────────────────────────────────────────
+    ; ?? try --autofix ?????????????????????????????????????????
     mov     rcx, r12
     lea     rdx, [szAutofix]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_autofix
 
-    ; ── try --heal-build ──────────────────────────────────────
+    ; ?? try --heal-build ??????????????????????????????????????
     mov     rcx, r12
     lea     rdx, [szHealBuild]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_autofix
 
-    ; ── try --build-command ───────────────────────────────────
+    ; ?? try --build-command ???????????????????????????????????
     mov     rcx, r12
     lea     rdx, [szBuildCmd]
     call    lstrcmpiW
     test    eax, eax
     jz      @pcl_build_cmd
 
-    ; ── try --workspace-root ──────────────────────────────────
+    ; ?? try --workspace-root ??????????????????????????????????
     mov     rcx, r12
     lea     rdx, [szWorkspace]
     call    lstrcmpiW
@@ -1092,11 +1092,11 @@ ParseCommandLine PROC FRAME
     ret
 ParseCommandLine ENDP
 
-; ────────────────────────────────────────────────────────────────
-; WinMainCRTStartup — CRT-less entry point
+; ????????????????????????????????????????????????????????????????
+; WinMainCRTStartup ? CRT-less entry point
 ;   Linker: /ENTRY:WinMainCRTStartup
 ;   Must preserve hInstance (rbx) across GetCommandLineW call.
-; ────────────────────────────────────────────────────────────────
+; ????????????????????????????????????????????????????????????????
 WinMainCRTStartup PROC FRAME
     push    rbx
     .pushreg rbx
@@ -1108,12 +1108,12 @@ WinMainCRTStartup PROC FRAME
     mov     ecx, 'C'
     call    AgentPhaseStamp
 
-    ; GetModuleHandleW(NULL) → hInstance
+    ; GetModuleHandleW(NULL) ? hInstance
     xor     rcx, rcx
     call    GetModuleHandleW
     mov     rbx, rax                ; save hInstance (rbx = non-volatile)
 
-    ; GetCommandLineW() → lpCmdLine
+    ; GetCommandLineW() ? lpCmdLine
     call    GetCommandLineW
 
     ; WinMain(hInstance, NULL, lpCmdLine, SW_SHOWDEFAULT)
@@ -1129,3 +1129,4 @@ WinMainCRTStartup PROC FRAME
 WinMainCRTStartup ENDP
 
 END
+

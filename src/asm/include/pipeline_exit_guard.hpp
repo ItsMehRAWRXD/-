@@ -1,5 +1,5 @@
 // ============================================================================
-// pipeline_exit_guard.hpp — P-Settings Exit Invariants + PID Safety Rails
+// pipeline_exit_guard.hpp ? P-Settings Exit Invariants + PID Safety Rails
 // ============================================================================
 //
 // Action Item #13: Enforce invariants at pipeline exit (C++ side):
@@ -8,7 +8,7 @@
 //   - visibility policy enforced
 //
 // Action Item #14: PID Self-Tuning Safety Rails:
-//   - min/max depth slew rate (no more than ±2 per step)
+//   - min/max depth slew rate (no more than ?2 per step)
 //   - cooldown windows (min 5s between adjustments)
 //   - bounded integrator (anti-windup, |I| <= 4.0)
 //
@@ -36,7 +36,7 @@
 #include "reasoning_profile.h"
 
 // ============================================================================
-// Pipeline Exit Guard — enforces invariants on every pipeline output
+// Pipeline Exit Guard ? enforces invariants on every pipeline output
 // ============================================================================
 class PipelineExitGuard {
 public:
@@ -94,7 +94,7 @@ public:
         // ---- Invariant 3: visibility policy enforced ----
         switch (visibility) {
             case ReasoningVisibility::FinalOnly:
-                // Strip all step content — only final is visible
+                // Strip all step content ? only final is visible
                 for (auto& step : resp.steps) {
                     step.content.clear();
                 }
@@ -120,7 +120,7 @@ public:
                 break;
 
             case ReasoningVisibility::FullCoT:
-                // No modification — full visibility (dev mode)
+                // No modification ? full visibility (dev mode)
                 break;
 
             default:
@@ -156,12 +156,12 @@ public:
 };
 
 // ============================================================================
-// PID Safety Rails — bounded self-tuning controller
+// PID Safety Rails ? bounded self-tuning controller
 // ============================================================================
 class PIDSafetyRails {
 public:
     // Configuration constants
-    static constexpr int    MAX_SLEW_RATE = 2;              // Max ±depth change per step
+    static constexpr int    MAX_SLEW_RATE = 2;              // Max ?depth change per step
     static constexpr double COOLDOWN_SECONDS = 5.0;         // Min time between adjustments
     static constexpr double INTEGRATOR_MAX = 4.0;           // Anti-windup bound |I|
     static constexpr double INTEGRATOR_MIN = -4.0;
@@ -232,7 +232,7 @@ public:
 
         state.prevError = error;
 
-        // Combined PID output → depth offset
+        // Combined PID output ? depth offset
         double pidOutput = P + I + D;
         int targetDepth = state.lastDepth + static_cast<int>(std::round(pidOutput));
 
@@ -286,3 +286,4 @@ public:
 };
 
 #endif // RAWRXD_PIPELINE_EXIT_GUARD_H
+

@@ -681,19 +681,22 @@ DAPResult DAPClient::setBreakpoint(const std::string& file, uint32_t line,
     
     if (response.contains("body") && response["body"].contains("breakpoints")) {
         auto breakpoints = response["body"]["breakpoints"];
-        if (!breakpoints.empty() && breakpoints[0].contains("id")) {
-            uint32_t bpId = breakpoints[0]["id"];
-            
-            std::lock_guard<std::mutex> lock(m_breakpointMutex);
-            DAPBreakpoint bp;
-            bp.id = bpId;
-            bp.file = file;
-            bp.line = line;
-            bp.condition = condition;
-            bp.verified = breakpoints[0].value("verified", false);
-            m_breakpoints[bpId] = bp;
-            
-            return DAPResult::ok({{"id", bpId}});
+        if (!breakpoints.empty()) {
+            const auto& firstBreakpoint = breakpoints.at(static_cast<std::size_t>(0));
+            if (firstBreakpoint.contains("id")) {
+                uint32_t bpId = firstBreakpoint["id"];
+
+                std::lock_guard<std::mutex> lock(m_breakpointMutex);
+                DAPBreakpoint bp;
+                bp.id = bpId;
+                bp.file = file;
+                bp.line = line;
+                bp.condition = condition;
+                bp.verified = firstBreakpoint.value("verified", false);
+                m_breakpoints[bpId] = bp;
+
+                return DAPResult::ok({{"id", bpId}});
+            }
         }
     }
     

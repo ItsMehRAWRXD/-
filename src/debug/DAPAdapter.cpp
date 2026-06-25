@@ -47,6 +47,10 @@ void DAPAdapter::Run() {
     }
 }
 
+void DAPAdapter::RunSingleTest(const char* json) {
+    ProcessMessage(json);
+}
+
 //=============================================================================
 // Message Processing
 //=============================================================================

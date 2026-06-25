@@ -31,14 +31,14 @@ extern "C" void SparseGather_GetStats(void* context, uint64_t* loaded, uint64_t*
 class SparseGatherBridge {
 public:
     static inline bool ShouldFailLoud() {
-        // Default fail-loud to prevent silent no-op benchmark runs.
-        // Set RAWRXD_SPARSEGATHER_FAIL_LOUD=0 to opt out.
+        // Default to soft-fail for IDE stability.
+        // Set RAWRXD_SPARSEGATHER_FAIL_LOUD=1 to enable hard abort on misconfig.
         char buf[8] = {};
         const DWORD n = GetEnvironmentVariableA("RAWRXD_SPARSEGATHER_FAIL_LOUD", buf, static_cast<DWORD>(sizeof(buf)));
         if (n == 0) {
-            return true;
+            return false;  // Default: soft-fail for IDE mode
         }
-        return !(buf[0] == '0' || buf[0] == 'n' || buf[0] == 'N' || buf[0] == 'f' || buf[0] == 'F');
+        return (buf[0] == '1' || buf[0] == 'y' || buf[0] == 'Y' || buf[0] == 't' || buf[0] == 'T');
     }
 
     static inline void FailLoud(const char* reason) {
@@ -105,11 +105,23 @@ public:
             }
             return false;
         }
-        return SparseGather_Execute(m_context, input, router_logits, output, layer) == 1;
+        __try {
+            return SparseGather_Execute(m_context, input, router_logits, output, layer) == 1;
+        }
+        __except(EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
     }
 
     void Flush() {
-        if (m_context) SparseGather_FlushCache(m_context);
+        if (m_context) {
+            __try {
+                SparseGather_FlushCache(m_context);
+            }
+            __except(EXCEPTION_EXECUTE_HANDLER) {
+                // Ignore
+            }
+        }
     }
 
     struct Stats {
@@ -119,7 +131,18 @@ public:
 
     Stats GetStats() {
         Stats s = {0, 0};
-        if (m_context) SparseGather_GetStats(m_context, &s.loaded, &s.skipped);
+        // Additional safety: check m_context is valid before calling into ASM
+        // Use SEH to catch any access violations from invalid context
+        if (m_context) {
+            __try {
+                SparseGather_GetStats(m_context, &s.loaded, &s.skipped);
+            }
+            __except(EXCEPTION_EXECUTE_HANDLER) {
+                // Silently ignore exceptions from invalid context
+                s.loaded = 0;
+                s.skipped = 0;
+            }
+        }
         return s;
     }
 

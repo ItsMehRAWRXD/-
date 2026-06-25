@@ -16,7 +16,7 @@ BEACON_SCALE        EQU 32
 .code
 
 ; ============================================================================
-; Function: ApplyLoRA_Optimized
+; Function: ApplyLoRA_Clean
 ; Purpose: Optimized LoRA application
 ; Input:  RCX = base_output pointer
 ;         RDX = input pointer
@@ -25,7 +25,7 @@ BEACON_SCALE        EQU 32
 ;         R10 = token_count
 ; Output: Result in R8
 ; ============================================================================
-ApplyLoRA_Optimized PROC FRAME
+ApplyLoRA_Clean PROC FRAME
     push    rbp
     .pushreg rbp
     push    rbx
@@ -155,6 +155,6 @@ done:
     pop     rbp
     xor     rax, rax
     ret
-ApplyLoRA_Optimized ENDP
+ApplyLoRA_Clean ENDP
 
 END

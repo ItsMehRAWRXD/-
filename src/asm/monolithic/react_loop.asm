@@ -1,6 +1,6 @@
 ;==============================================================================
-; react_loop.asm  —  x64 MASM  ReAct (Reasoning + Acting) Agentic Loop
-; RawrXD IDE  —  complete monolithic implementation
+; react_loop.asm  ?  x64 MASM  ReAct (Reasoning + Acting) Agentic Loop
+; RawrXD IDE  ?  complete monolithic implementation
 ; Microsoft x64 ABI / MASM  (ml64.exe)
 ; No stubs. No TODOs. Every function fully implemented.
 ;==============================================================================
@@ -59,7 +59,7 @@ PUBLIC ReAct_FormatResult
 PUBLIC ReAct_Abort
 
 ;==============================================================================
-; .DATA  —  initialised string literals
+; .DATA  ?  initialised string literals
 ;==============================================================================
 .DATA
 
@@ -95,7 +95,7 @@ szToolResultSuffix  DB 0Ah, 0Ah, "Assistant:", 0
 szInfError          DB "[inference error]", 0
 
 ;==============================================================================
-; .DATA?  —  uninitialised / mutable globals
+; .DATA?  ?  uninitialised / mutable globals
 ;==============================================================================
 .DATA?
 
@@ -180,7 +180,7 @@ ReAct_Init PROC FRAME
     push    rsi
     .PUSHREG rdi
     push    rdi
-    ; 3 pushes (24 B) + return addr (8 B) = 32 B → 16-byte aligned
+    ; 3 pushes (24 B) + return addr (8 B) = 32 B ? 16-byte aligned
     .ALLOCSTACK 20h
     sub     rsp, 20h        ; shadow space for callees
     .ENDPROLOG
@@ -304,9 +304,9 @@ ReAct_Run PROC FRAME
     push    r14
     .PUSHREG r15
     push    r15
-    ; 7 pushes (56 B) + return addr (8 B) = 64 B → 16-byte aligned before sub
+    ; 7 pushes (56 B) + return addr (8 B) = 64 B ? 16-byte aligned before sub
     .ALLOCSTACK 60h
-    sub     rsp, 60h    ; 96 B: 32 shadow + 64 locals  → RSP total offset = 160, aligned
+    sub     rsp, 60h    ; 96 B: 32 shadow + 64 locals  ? RSP total offset = 160, aligned
     .ENDPROLOG
 
     ;------------------------------------------------------------------
@@ -470,7 +470,7 @@ RR_TermResp:
     cmp     ecx, REACT_PROMPT_BUF_SIZE - 1
     jb      RR_AppendResp
 
-    ; Context would overflow — truncate: keep last REACT_TRUNC_KEEP bytes
+    ; Context would overflow ? truncate: keep last REACT_TRUNC_KEEP bytes
     cmp     r15d, REACT_TRUNC_KEEP
     jb      RR_TruncReset
 
@@ -492,11 +492,11 @@ RR_TermResp:
     mov     ecx, r15d
     add     ecx, eax
     cmp     ecx, REACT_PROMPT_BUF_SIZE - 1
-    jae     RR_SkipAppendResp   ; still no room — skip appending this fragment
+    jae     RR_SkipAppendResp   ; still no room ? skip appending this fragment
     jmp     RR_AppendResp
 
 RR_TruncReset:
-    ; Buffer shorter than REACT_TRUNC_KEEP — just clear it
+    ; Buffer shorter than REACT_TRUNC_KEEP ? just clear it
     mov     byte ptr [r12], 0
     mov     r15d, 0
     mov     dword ptr [g_reactPromptLen], 0
@@ -517,7 +517,7 @@ RR_AppendResp:
 RR_SkipAppendResp:
 
     ;--------------------------------------------------------------
-    ; Step iv: ReAct_ParseToolCall(pRespBuf) → tool_id in EAX
+    ; Step iv: ReAct_ParseToolCall(pRespBuf) ? tool_id in EAX
     ;--------------------------------------------------------------
     mov     rcx, r13
     call    ReAct_ParseToolCall
@@ -525,7 +525,7 @@ RR_SkipAppendResp:
     mov     dword ptr [rsp+40h], eax        ; save tool_id
 
     ;--------------------------------------------------------------
-    ; Step v: No tool call → this IS the final answer
+    ; Step v: No tool call ? this IS the final answer
     ;--------------------------------------------------------------
     cmp     eax, -1
     jne     RR_HasToolCall
@@ -565,7 +565,7 @@ RR_FinalSendBeacon:
     jmp     RR_Return
 
     ;--------------------------------------------------------------
-    ; Step vi: Tool call found — execute the tool
+    ; Step vi: Tool call found ? execute the tool
     ;--------------------------------------------------------------
 RR_HasToolCall:
     ; -- Send REACT_EVT_TOOL_CALL beacon with tool_id as payload --
@@ -576,7 +576,7 @@ RR_HasToolCall:
 
     ; -- Tool_Execute(tool_id, pArgsJson, pResultBuf, maxResultLen) --
     mov     ecx,  dword ptr [rsp+40h]   ; tool_id
-    mov     rdx,  [g_parsedArgsPtr]     ; pArgsJson (may be NULL → well-formed call)
+    mov     rdx,  [g_parsedArgsPtr]     ; pArgsJson (may be NULL ? well-formed call)
     mov     r8,   r14                   ; pResultBuf = g_reactResultBuf
     mov     r9d,  REACT_RESULT_BUF_SIZE - 1
     call    Tool_Execute
@@ -605,7 +605,7 @@ RR_TermResult:
     mov     r15d, dword ptr [g_reactPromptLen]
 
     ;--------------------------------------------------------------
-    ; Step vii: Bookkeeping — increment iteration, check abort,
+    ; Step vii: Bookkeeping ? increment iteration, check abort,
     ;           check context buffer pressure
     ;--------------------------------------------------------------
     inc     ebx
@@ -636,7 +636,7 @@ RR_TermResult:
     jmp     RR_LoopTop
 
 RR_LoopTrunc_TooShort:
-    ; context length < REACT_TRUNC_KEEP but still above threshold — harmless, continue
+    ; context length < REACT_TRUNC_KEEP but still above threshold ? harmless, continue
     jmp     RR_LoopTop
 
     ;==================================================================
@@ -773,7 +773,7 @@ ReAct_ParseToolCall PROC FRAME
     push    r12
     .PUSHREG r13
     push    r13
-    ; 5 pushes (40 B) + return addr (8 B) = 48 B → 16-byte aligned before sub
+    ; 5 pushes (40 B) + return addr (8 B) = 48 B ? 16-byte aligned before sub
     .ALLOCSTACK 30h
     sub     rsp, 30h    ; 48 B: 32 shadow + 16 locals; total offset = 96, aligned
     .ENDPROLOG
@@ -810,17 +810,17 @@ PC_ScanLoop:
 PC_MatchChar:
     mov     al,  byte ptr [rdi]     ; next marker char
     test    al,  al
-    jz      PC_MarkerMatched        ; reached end of marker  → full match
+    jz      PC_MarkerMatched        ; reached end of marker  ? full match
     mov     r8b, byte ptr [rsi]     ; next response char
     test    r8b, r8b
-    jz      PC_NotFound             ; response ended mid-match → no tool call
+    jz      PC_NotFound             ; response ended mid-match ? no tool call
     cmp     al,  r8b
-    jne     PC_ScanNext             ; mismatch → advance scan position by 1
+    jne     PC_ScanNext             ; mismatch ? advance scan position by 1
     inc     rsi
     inc     rdi
     dec     ecx
     jnz     PC_MatchChar
-    ; fall-through: ecx reached 0 with no mismatch → full match
+    ; fall-through: ecx reached 0 with no mismatch ? full match
 
 PC_MarkerMatched:
     ; rsi now points to the first byte of the tool name (after the opening '"')
@@ -1002,7 +1002,7 @@ PC_ArgsScanLoop:
 PC_ArgsMatchChar:
     mov     al,  byte ptr [rbx] ; next marker char
     test    al,  al
-    jz      PC_ArgsMatched      ; reached end of marker → match
+    jz      PC_ArgsMatched      ; reached end of marker ? match
     mov     r8b, byte ptr [rsi]
     test    r8b, r8b
     jz      PC_NoArgs           ; response ended mid-match
@@ -1025,7 +1025,7 @@ PC_ArgsNext:
     jmp     PC_ArgsScanLoop
 
 PC_NoArgs:
-    ; args marker not found — still return the tool_id but with null args ptr
+    ; args marker not found ? still return the tool_id but with null args ptr
     mov     qword ptr [g_parsedArgsPtr], 0
     mov     eax, dword ptr [rsp+28h]
     jmp     PC_Done
@@ -1074,8 +1074,8 @@ ReAct_FormatResult PROC FRAME
     push    r13
     .PUSHREG r14
     push    r14
-    ; 6 pushes (48 B) + return addr (8 B) = 56 B → NOT aligned; need sub to fix
-    ; sub rsp, 28h (40 B): total = 96 B → 16-byte aligned ✓
+    ; 6 pushes (48 B) + return addr (8 B) = 56 B ? NOT aligned; need sub to fix
+    ; sub rsp, 28h (40 B): total = 96 B ? 16-byte aligned ?
     .ALLOCSTACK 28h
     sub     rsp, 28h
     .ENDPROLOG
@@ -1121,7 +1121,7 @@ ReAct_FormatResult PROC FRAME
     jae     FR_Done
     ; tool_id is guaranteed 0-6; one digit
     mov     al, r12b
-    add     al, '0'             ; convert 0-6 → '0'-'6'
+    add     al, '0'             ; convert 0-6 ? '0'-'6'
     mov     byte ptr [r14 + rbx], al
     inc     ebx
 
@@ -1223,3 +1223,4 @@ ReAct_Abort PROC
 ReAct_Abort ENDP
 
 END
+

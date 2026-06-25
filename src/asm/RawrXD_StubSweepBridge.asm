@@ -5,3 +5,4 @@ RawrXD_StubSweepBridge PROC PUBLIC
     ret
 RawrXD_StubSweepBridge ENDP
 END
+

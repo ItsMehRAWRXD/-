@@ -8,8 +8,8 @@
 #include <sstream>
 
 #ifdef _WIN32
-#include <psapi.h>
 #include <windows.h>
+#include <psapi.h>
 
 #pragma comment(lib, "psapi.lib")
 #endif

@@ -16,3 +16,4 @@ EXTERNDEF RtlZeroMemory:PROC
 EXTERNDEF CreateIoCompletionPort:PROC
 EXTERNDEF CreateMutexW:PROC
 EXTERNDEF CloseHandle:PROC
+

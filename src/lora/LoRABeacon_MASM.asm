@@ -24,7 +24,7 @@ BEACON_COMPOSITE    EQU 3
 ; ============================================================================
 ; External Symbols (provided by C++ data provider)
 ; ============================================================================
-EXTERNDEF g_beacon_state:QWORD      ; Pointer to LoRABeaconState
+EXTERNDEF g_beacon_state:QWORD      ; Address of LoRABeaconState struct
 EXTERNDEF g_matrix_a_storage:DWORD  ; Aligned A matrix storage
 EXTERNDEF g_matrix_b_storage:DWORD  ; Aligned B matrix storage
 
@@ -32,11 +32,11 @@ EXTERNDEF g_matrix_b_storage:DWORD  ; Aligned B matrix storage
 ; Macro: CHECK_BEACON
 ; Purpose: Check if LoRA is active and branch accordingly
 ; Input:  None (reads g_beacon_state)
-; Output: RAX = beacon status
+; Output: RAX = beacon state pointer (address of g_beacon_state)
 ; Clobbers: RAX, RCX, RDX
 ; ============================================================================
 CHECK_BEACON MACRO
-    mov     rax, OFFSET g_beacon_state
+    mov     rax, OFFSET g_beacon_state  ; Get address of beacon state struct
     mov     ecx, DWORD PTR [rax + BEACON_STATUS]
     cmp     ecx, BEACON_ACTIVE
     je      beacon_active
@@ -76,7 +76,8 @@ ENDM
 ; Clobbers: YMM0-YMM15, RAX, RBX, RCX
 ; ============================================================================
 LORA_APPLY_SINGLE MACRO
-    LOCAL compute_loop, done_compute
+    LOCAL compute_loop, row_loop, col_loop, rows_done, cols_done
+    LOCAL output_loop, inner_loop, inner_done, done_compute
     
     ; Allocate stack space for temp buffer (rank floats)
     sub     rsp, 256                    ; Align to 32 bytes, max rank 64
@@ -175,6 +176,7 @@ ENDM
 ;         R9  = token_count
 ; Output: None (result written to R8)
 ; ============================================================================
+.code
 LoRA_Apply_Beacon PROC FRAME
     push    rbp
     .pushreg rbp
@@ -193,7 +195,22 @@ LoRA_Apply_Beacon PROC FRAME
     .endprolog
     
     ; Check beacon status
-    mov     r15, OFFSET g_beacon_state
+    mov     r15, OFFSET g_beacon_state  ; Get address of beacon state struct
+    
+    mov     ecx, DWORD PTR [r15 + BEACON_STATUS]
+    cmp     ecx, BEACON_ACTIVE
+    je      @@beacon_active
+    cmp     ecx, BEACON_COMPOSITE
+    je      @@beacon_composite
+    jmp     @@beacon_inactive              ; Any other status = inactive
+    
+@@beacon_active:
+    jmp     do_single_lora
+    
+@@beacon_composite:
+    jmp     do_chain_lora
+    
+@@beacon_inactive:
     mov     eax, DWORD PTR [r15 + BEACON_STATUS]
     cmp     eax, BEACON_ACTIVE
     je      do_single_lora
@@ -262,7 +279,7 @@ LoRA_Apply_Beacon ENDP
 ; Output: RAX = 1 if active, 0 if inactive
 ; ============================================================================
 LoRA_Check_Beacon PROC
-    mov     rax, OFFSET g_beacon_state
+    mov     rax, OFFSET g_beacon_state  ; Get address of beacon state struct
     mov     eax, DWORD PTR [rax + BEACON_STATUS]
     cmp     eax, BEACON_ACTIVE
     sete    al
@@ -278,7 +295,7 @@ LoRA_Check_Beacon ENDP
 ; Output: None
 ; ============================================================================
 LoRA_Get_Beacon_Ptrs PROC
-    mov     r8, OFFSET g_beacon_state
+    mov     r8, OFFSET g_beacon_state  ; Get address of beacon state struct
     mov     r9, QWORD PTR [r8 + BEACON_PTR_A]
     mov     QWORD PTR [rcx], r9
     mov     r9, QWORD PTR [r8 + BEACON_PTR_B]

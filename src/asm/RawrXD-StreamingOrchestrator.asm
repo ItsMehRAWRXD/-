@@ -18,7 +18,7 @@ include rawrxd_win64.inc
 includelib kernel32.lib
 includelib ntdll.lib
 
-; c_str macro — inline string literal (must be defined before first use)
+; c_str macro ? inline string literal (must be defined before first use)
 c_str MACRO text:VARARG
     LOCAL szText
     .data
@@ -681,7 +681,7 @@ LoadExecFile PROC
     
     mov rbx, rcx                    ; file path
     
-    ; Open file (7-arg CreateFileA — manual stack for 7th arg)
+    ; Open file (7-arg CreateFileA ? manual stack for 7th arg)
     sub rsp, 58h
     mov QWORD PTR [rsp+48], 0               ; hTemplateFile = NULL (arg 7)
     mov QWORD PTR [rsp+40], FILE_FLAG_SEQUENTIAL_SCAN  ; dwFlagsAndAttributes (arg 6)
@@ -2427,7 +2427,7 @@ rwfl_not_ready:
     pop rbx
     ret
 RawrXD_Wait_For_Layer_Ready ENDP
-; [c_str duplicate removed — using definition at top of file]
+; [c_str duplicate removed ? using definition at top of file]
 
 ; ---------------------------------------------------------------------------
 ; Vulkan utility compatibility functions
@@ -2553,7 +2553,7 @@ prefetch_queue PrefetchEntry 16 DUP(<>)  ; 16-entry prefetch queue
 .code
 
 ; =============================================================================
-; PUBLIC API — SO_ prefixed symbols for C ABI linkage (streaming_orchestrator.h)
+; PUBLIC API ? SO_ prefixed symbols for C ABI linkage (streaming_orchestrator.h)
 ; option proc:private makes all PROCs internal; these PUBLIC aliases export
 ; =============================================================================
 
@@ -2737,3 +2737,4 @@ SO_OpenMemoryMappedFile PROC
 SO_OpenMemoryMappedFile ENDP
 
 END
+

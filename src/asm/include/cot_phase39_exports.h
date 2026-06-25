@@ -1,13 +1,13 @@
 #pragma once
 // ============================================================================
-// cot_phase39_exports.h — Phase 39–42 Enterprise CoT Finishers (C++ Bindings)
+// cot_phase39_exports.h ? Phase 39?42 Enterprise CoT Finishers (C++ Bindings)
 // ============================================================================
 //
 // Provides extern "C" declarations for the 16 new MASM64 procs introduced
-// in Phase 39–42 of the RawrXD CoT Engine.
+// in Phase 39?42 of the RawrXD CoT Engine.
 //
 // Usage: Include this header in any C++ translation unit that needs to call
-// the Phase 39–42 procs. The linker resolves symbols against
+// the Phase 39?42 procs. The linker resolves symbols against
 // rawrxd_cot_phase39.obj (built by ml64 from rawrxd_cot_phase39.asm).
 //
 // All functions follow the project's PatchResult-style contract:
@@ -15,7 +15,7 @@
 //   - No exceptions thrown
 //   - Thread-safe (SRW lock + atomics as appropriate)
 //
-// Generated: 2026-02-08 | Phase 39–42 Complete
+// Generated: 2026-02-08 | Phase 39?42 Complete
 // ============================================================================
 
 #ifndef RAWRXD_COT_PHASE39_EXPORTS_H
@@ -43,7 +43,7 @@ struct CoT_CommitGovernor {
     uint64_t _reserved;             // alignment pad
 };
 
-// Snapshot descriptor — O(1) capture of arena state (Phase 40)
+// Snapshot descriptor ? O(1) capture of arena state (Phase 40)
 struct CoT_Snapshot {
     uint64_t UsedLength;            // g_arenaUsed at snapshot time
     uint64_t CommitMark;            // g_arenaCommitted at snapshot time
@@ -54,7 +54,7 @@ struct CoT_Snapshot {
 
 // Shared-Memory Telemetry Page (Phase 41)
 // Single struct, mapped once, read-only to observers.
-// No locks needed for reads — counters are updated via atomic ops.
+// No locks needed for reads ? counters are updated via atomic ops.
 struct CoT_Telemetry {
     // Arena metrics
     uint64_t TotalCommitted;        // bytes committed in arena
@@ -114,7 +114,7 @@ enum CoT_ThrottleLevel : uint32_t {
 // Copy engine IDs
 enum CoT_CopyEngineId : uint32_t {
     COT_COPY_ERMS   = 0,           // rep movsb (microcode-optimized)
-    COT_COPY_AVX2   = 1,           // 256-bit YMM copy (256B–32KB)
+    COT_COPY_AVX2   = 1,           // 256-bit YMM copy (256B?32KB)
     COT_COPY_AVX512 = 2            // 512-bit ZMM copy (>32KB)
 };
 
@@ -136,7 +136,7 @@ CoT_CommitGovernor* CoT_GetCommitGovernor(void);
 uint32_t CoT_SelectCopyEngine(void);
 
 // Runtime-dispatched copy using the best available engine.
-// Size-based routing: <256B → ERMS, 256B–32KB → AVX2, >32KB → AVX-512.
+// Size-based routing: <256B ? ERMS, 256B?32KB ? AVX2, >32KB ? AVX-512.
 // Returns: bytes copied (= size on success)
 uint64_t CoT_CopyDispatch(void* dest, const void* src, uint64_t size);
 
@@ -157,8 +157,8 @@ uint64_t CoT_MultiProducerAppend(const void* src, uint64_t size);
 // Phase 40: Snapshot / Rollback
 // ============================================================================
 
-// O(1) snapshot — captures arena UsedLength, CommitMark, Timestamp.
-// Returns: snapshot slot index (0–15), or -1 on failure.
+// O(1) snapshot ? captures arena UsedLength, CommitMark, Timestamp.
+// Returns: snapshot slot index (0?15), or -1 on failure.
 int32_t CoT_CreateSnapshot(void);
 
 // Rollback arena state to a previously captured snapshot.
@@ -215,7 +215,7 @@ int32_t CoT_UnsealMemory(void);
 // Phase 42: Tenant / Extension Quotas
 // ============================================================================
 
-// Set per-tenant byte ceiling. tenantId = 0–63, quota = 0 for unlimited.
+// Set per-tenant byte ceiling. tenantId = 0?63, quota = 0 for unlimited.
 // Returns: 0 on success, -1 on invalid tenant.
 int32_t CoT_SetTenantQuota(uint32_t tenantId, uint64_t quotaBytes);
 
@@ -224,10 +224,10 @@ int32_t CoT_SetTenantQuota(uint32_t tenantId, uint64_t quotaBytes);
 int64_t CoT_CheckTenantQuota(uint32_t tenantId, uint64_t proposedSize);
 
 // ============================================================================
-// Existing Phase 37 exports (for completeness — also in chain_of_thought_engine.h)
+// Existing Phase 37 exports (for completeness ? also in chain_of_thought_engine.h)
 // ============================================================================
 
-// Engine version (Phase 39–42: returns 0x00020000 = 2.0.0)
+// Engine version (Phase 39?42: returns 0x00020000 = 2.0.0)
 uint32_t CoT_Get_Version(void);
 
 // Arena data access
@@ -253,3 +253,4 @@ void Release_CoT_Lock_Shared(void);
 #endif
 
 #endif // RAWRXD_COT_PHASE39_EXPORTS_H
+

@@ -24,7 +24,15 @@
 // CREATE ANNOTATION OVERLAY — transparent overlay window for inline annotations
 // ============================================================================
 void Win32IDE::createAnnotationOverlay(HWND hwndParent) {
-    if (!hwndParent || m_hwndAnnotationOverlay) return;
+    // DEFENSIVE: Validate parent window and prevent double-creation
+    if (!hwndParent || !IsWindow(hwndParent)) {
+        LOG_WARNING("Annotation overlay: invalid parent window");
+        return;
+    }
+    if (m_hwndAnnotationOverlay) {
+        LOG_INFO("Annotation overlay: already exists, skipping creation");
+        return;
+    }
 
     static bool classRegistered = false;
     if (!classRegistered) {
@@ -36,20 +44,37 @@ void Win32IDE::createAnnotationOverlay(HWND hwndParent) {
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = (HBRUSH)GetStockObject(HOLLOW_BRUSH);
         wc.lpszClassName = "RawrXDAnnotationOverlay";
-        if (RegisterClassExA(&wc)) classRegistered = true;
+        if (!RegisterClassExA(&wc)) {
+            LOG_ERROR("Annotation overlay: failed to register window class");
+            return;
+        }
+        classRegistered = true;
     }
 
     m_hwndAnnotationOverlay = CreateWindowExA(
-        WS_EX_LAYERED,
+        WS_EX_LAYERED | WS_EX_TRANSPARENT,
         "RawrXDAnnotationOverlay", "",
-        WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+        WS_CHILD | WS_CLIPSIBLINGS,  // Removed WS_VISIBLE
         0, 0, 1, 1,
         hwndParent, (HMENU)(UINT_PTR)IDC_ANNOTATION_OVERLAY, m_hInstance, nullptr);
 
     if (m_hwndAnnotationOverlay) {
-        SetPropA(m_hwndAnnotationOverlay, "IDE_PTR", (HANDLE)this);
-        SetLayeredWindowAttributes(m_hwndAnnotationOverlay, 0, 255, LWA_ALPHA);
-        LOG_INFO("Annotation overlay created");
+        // DEFENSIVE: Set IDE pointer property with validation
+        if (SetPropA(m_hwndAnnotationOverlay, "IDE_PTR", (HANDLE)this)) {
+            // Use near-black (RGB 1,1,1) for color-key transparency instead of pure black (0,0,0)
+            // Pure black conflicts with BLACK_BRUSH fills and causes the entire overlay to become transparent
+            // Near-black ensures only the background is transparent while annotation content remains visible
+            SetLayeredWindowAttributes(m_hwndAnnotationOverlay, RGB(1, 1, 1), 0, LWA_COLORKEY);
+            // Show the overlay - it will be transparent until annotations are drawn
+            ShowWindow(m_hwndAnnotationOverlay, SW_SHOW);
+            LOG_INFO("Annotation overlay created with near-black color key transparency (visible, transparent background)");
+        } else {
+            LOG_ERROR("Annotation overlay: failed to set IDE_PTR property");
+            DestroyWindow(m_hwndAnnotationOverlay);
+            m_hwndAnnotationOverlay = nullptr;
+        }
+    } else {
+        LOG_ERROR("Annotation overlay: CreateWindowExA failed");
     }
 }
 
@@ -1068,13 +1093,23 @@ std::string Win32IDE::buildLanguageAwarePrompt(const std::string& basePrompt) co
 // ANNOTATION OVERLAY WINDOW PROC
 // ============================================================================
 LRESULT CALLBACK Win32IDE::AnnotationOverlayProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    Win32IDE* ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
+    // DEFENSIVE: Early null check for IDE pointer
+    Win32IDE* ide = nullptr;
+    if (hwnd) {
+        ide = (Win32IDE*)GetPropA(hwnd, "IDE_PTR");
+    }
+    
+    // If IDE pointer is null or invalid, only handle essential messages
+    if (!ide && uMsg != WM_CREATE && uMsg != WM_NCCREATE && uMsg != WM_DESTROY && uMsg != WM_NCDESTROY) {
+        return DefWindowProcA(hwnd, uMsg, wParam, lParam);
+    }
     
     switch (uMsg) {
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            if (ide) {
+            // DEFENSIVE: Only paint if IDE is valid and fully initialized
+            if (ide && ide->m_hwndEditor && IsWindow(ide->m_hwndEditor)) {
                 RECT rc;
                 GetClientRect(hwnd, &rc);
                 ide->paintAnnotations(hdc, rc);
@@ -1083,8 +1118,23 @@ LRESULT CALLBACK Win32IDE::AnnotationOverlayProc(HWND hwnd, UINT uMsg, WPARAM wP
             return 0;
         }
         
-        case WM_ERASEBKGND:
-            return 1; // We handle painting — transparent overlay
+        case WM_ERASEBKGND: {
+            // DEFENSIVE: Validate HDC before using
+            HDC hdc = (HDC)wParam;
+            if (!hdc) return 0;
+            
+            // Clear to near-black (RGB 1,1,1) which is the transparent color key
+            // Using pure black (0,0,0) would conflict with BLACK_BRUSH and make everything transparent
+            RECT rc;
+            if (GetClientRect(hwnd, &rc)) {
+                HBRUSH keyBrush = CreateSolidBrush(RGB(1, 1, 1));
+                if (keyBrush) {
+                    FillRect(hdc, &rc, keyBrush);
+                    DeleteObject(keyBrush);
+                }
+            }
+            return 1; // We handled painting - prevents flicker
+        }
 
         case WM_NCHITTEST: {
             // Conditionally intercept clicks on annotation regions.

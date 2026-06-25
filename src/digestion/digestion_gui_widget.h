@@ -78,6 +78,29 @@ private:
         std::string path;
         std::string lang;
         int stubs = 0;
+        // Wide strings for UI display (persist to avoid dangling pointers)
+        mutable std::wstring wpath;
+        mutable std::wstring wlang;
+        mutable std::wstring wstubs;
+        mutable std::wstring status;
+
+        void EnsureWideStrings() const {
+            if (wpath.empty() && !path.empty()) {
+                wpath = std::wstring(path.begin(), path.end());
+            }
+            if (wlang.empty() && !lang.empty()) {
+                wlang = std::wstring(lang.begin(), lang.end());
+            }
+            if (wstubs.empty()) {
+                wstubs = std::to_wstring(stubs);
+            }
+            if (status.empty()) {
+                status = (stubs > 0) ? L"Stubs Found" : L"OK";
+            }
+        }
     };
+
+    // Store scanned file data persistently for ListView
+    std::vector<FileScannedMsg> m_scannedFiles;
 };
 

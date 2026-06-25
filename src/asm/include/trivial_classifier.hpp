@@ -1,5 +1,5 @@
 // ============================================================================
-// trivial_classifier.hpp — Centralized Trivial Input Detection (Single Source)
+// trivial_classifier.hpp ? Centralized Trivial Input Detection (Single Source)
 // ============================================================================
 //
 // Action Item #5: Centralize "trivial detection" rules across Python + C++.
@@ -9,7 +9,7 @@
 // Design:
 //   - Shared patterns exported from C++ ReasoningProfileManager
 //   - Version hash computed at compile time
-//   - Python reads the version via /api/cot/metrics → trivialVersion field
+//   - Python reads the version via /api/cot/metrics ? trivialVersion field
 //   - No exceptions, no STL allocators on hot path
 //
 // Rule: NO SOURCE FILE IS TO BE SIMPLIFIED
@@ -27,13 +27,13 @@
 #include <cctype>
 
 // ============================================================================
-// Classifier Version — single source of truth
+// Classifier Version ? single source of truth
 // Bump this when patterns change so Python can detect drift.
 // ============================================================================
 static constexpr const char* TRIVIAL_CLASSIFIER_VERSION = "tc-v3-20260211";
 
 // ============================================================================
-// Canonical Pattern List — shared between C++ and Python
+// Canonical Pattern List ? shared between C++ and Python
 // ============================================================================
 namespace TrivialPatterns {
 
@@ -66,7 +66,7 @@ namespace TrivialPatterns {
 } // namespace TrivialPatterns
 
 // ============================================================================
-// TrivialClassifier — stateless, reentrant
+// TrivialClassifier ? stateless, reentrant
 // ============================================================================
 class TrivialClassifier {
 public:
@@ -123,3 +123,4 @@ public:
 };
 
 #endif // RAWRXD_TRIVIAL_CLASSIFIER_H
+

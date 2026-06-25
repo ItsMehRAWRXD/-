@@ -1,4 +1,14 @@
 {
+  "agentBridge": {
+    "enabled": true,
+    "telemetryPath": "d:/rawrxd/rawrxd_telemetry.json",
+    "commandInputPath": "d:/rawrxd/ai_control.json",
+    "responseOutputPath": "d:/rawrxd/ai_response.json",
+    "logPath": "d:/rawrxd/rawrxd_agent.log",
+    "telemetryIntervalMs": 500,
+    "commandPollIntervalMs": 100,
+    "verboseLogging": true
+  },
   "theme": {
     "foreground": "#D4D4D4",
     "accent": "#007ACC",

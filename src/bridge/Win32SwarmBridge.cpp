@@ -175,9 +175,21 @@ struct SidebarPanelEntry {
     bool visible;
 };
 
-std::mutex g_uiBridgeStateMutex;
-std::vector<TabEntry> g_tabs;
-std::unordered_map<std::string, SidebarPanelEntry> g_sidebarPanels;
+// Lazy-initialized globals to avoid static initialization order issues
+std::mutex& getUiBridgeMutex() {
+    static std::mutex* m = new std::mutex();
+    return *m;
+}
+
+std::vector<TabEntry>& getTabs() {
+    static std::vector<TabEntry>* v = new std::vector<TabEntry>();
+    return *v;
+}
+
+std::unordered_map<std::string, SidebarPanelEntry>& getSidebarPanels() {
+    static std::unordered_map<std::string, SidebarPanelEntry>* m = new std::unordered_map<std::string, SidebarPanelEntry>();
+    return *m;
+}
 
 } // namespace
 
@@ -212,17 +224,18 @@ extern "C" __declspec(dllexport) bool Win32IDE_removeTab(int tabIndex) {
         return false;
     }
 
-    std::lock_guard<std::mutex> lock(g_uiBridgeStateMutex);
-    if (static_cast<size_t>(tabIndex) >= g_tabs.size()) {
+    std::lock_guard<std::mutex> lock(getUiBridgeMutex());
+    auto& tabs = getTabs();
+    if (static_cast<size_t>(tabIndex) >= tabs.size()) {
         char outOfRange[96];
         sprintf_s(outOfRange, "[Win32IDE] removeTab index out of range=%d\n", tabIndex);
         OutputDebugStringA(outOfRange);
         return false;
     }
 
-    g_tabs.erase(g_tabs.begin() + tabIndex);
+    tabs.erase(tabs.begin() + tabIndex);
     char buf[64];
-    sprintf_s(buf, "[Win32IDE] removeTab index=%d remaining=%zu\n", tabIndex, g_tabs.size());
+    sprintf_s(buf, "[Win32IDE] removeTab index=%d remaining=%zu\n", tabIndex, tabs.size());
     OutputDebugStringA(buf);
     return true;
 }
@@ -232,8 +245,8 @@ extern "C" __declspec(dllexport) bool Win32IDE_addTab(const char* title, void* p
         return false;
     }
 
-    std::lock_guard<std::mutex> lock(g_uiBridgeStateMutex);
-    g_tabs.push_back(TabEntry{title, pContent});
+    std::lock_guard<std::mutex> lock(getUiBridgeMutex());
+    getTabs().push_back(TabEntry{title, pContent});
     return true;
 }
 
@@ -241,63 +254,114 @@ extern "C" __declspec(dllexport) bool Win32IDE_addTab(const char* title, void* p
 extern "C" __declspec(dllexport) bool Win32IDE_addSidebarPanel(const char* id, const char* title, void* pContent) {
     if (!id || !title) return false;
 
-    std::lock_guard<std::mutex> lock(g_uiBridgeStateMutex);
-    g_sidebarPanels[std::string(id)] = SidebarPanelEntry{title, pContent, true};
+    // Prevent recursion
+    static thread_local bool inAddSidebar = false;
+    if (inAddSidebar) {
+        OutputDebugStringA("[Win32IDE] addSidebarPanel - recursion detected, skipping\n");
+        return false;
+    }
+    inAddSidebar = true;
 
-    char buf[256];
-    sprintf_s(buf, "[Win32IDE] addSidebarPanel ID=%s Title=%s count=%zu\n", id, title, g_sidebarPanels.size());
-    OutputDebugStringA(buf);
+    {
+        std::lock_guard<std::mutex> lock(getUiBridgeMutex());
+        getSidebarPanels()[std::string(id)] = SidebarPanelEntry{title, pContent, true};
+
+        char buf[256];
+        sprintf_s(buf, "[Win32IDE] addSidebarPanel ID=%s Title=%s count=%zu\n", id, title, getSidebarPanels().size());
+        OutputDebugStringA(buf);
+    }
+    
+    inAddSidebar = false;
     return true;
 }
 
 extern "C" __declspec(dllexport) bool Win32IDE_removeSidebarPanel(const char* id) {
     if (!id) return false;
 
-    std::lock_guard<std::mutex> lock(g_uiBridgeStateMutex);
-    const size_t erased = g_sidebarPanels.erase(std::string(id));
+    // Prevent recursion
+    static thread_local bool inRemoveSidebar = false;
+    if (inRemoveSidebar) {
+        OutputDebugStringA("[Win32IDE] removeSidebarPanel - recursion detected, skipping\n");
+        return false;
+    }
+    inRemoveSidebar = true;
 
-    char buf[128];
-    sprintf_s(buf, "[Win32IDE] removeSidebarPanel ID=%s removed=%zu\n", id, erased);
-    OutputDebugStringA(buf);
+    size_t erased = 0;
+    {
+        std::lock_guard<std::mutex> lock(getUiBridgeMutex());
+        erased = getSidebarPanels().erase(std::string(id));
+
+        char buf[128];
+        sprintf_s(buf, "[Win32IDE] removeSidebarPanel ID=%s removed=%zu\n", id, erased);
+        OutputDebugStringA(buf);
+    }
+    
+    inRemoveSidebar = false;
     return erased > 0;
 }
 
 extern "C" __declspec(dllexport) void Win32IDE_showSidebarPanel(const char* id) {
     if (!id) return;
 
-    std::lock_guard<std::mutex> lock(g_uiBridgeStateMutex);
-    auto it = g_sidebarPanels.find(std::string(id));
-    if (it == g_sidebarPanels.end()) {
-        char missing[160];
-        sprintf_s(missing, "[Win32IDE] showSidebarPanel missing ID=%s\n", id);
-        OutputDebugStringA(missing);
+    // Prevent recursion - check if already in this function
+    static thread_local bool inShowSidebar = false;
+    if (inShowSidebar) {
+        OutputDebugStringA("[Win32IDE] showSidebarPanel - recursion detected, skipping\n");
         return;
     }
+    inShowSidebar = true;
+    
+    {
+        std::lock_guard<std::mutex> lock(getUiBridgeMutex());
+        auto it = getSidebarPanels().find(std::string(id));
+        if (it == getSidebarPanels().end()) {
+            char missing[160];
+            sprintf_s(missing, "[Win32IDE] showSidebarPanel missing ID=%s\n", id);
+            OutputDebugStringA(missing);
+            inShowSidebar = false;
+            return;
+        }
 
-    it->second.visible = true;
+        it->second.visible = true;
 
-    char buf[128];
-    sprintf_s(buf, "[Win32IDE] showSidebarPanel ID=%s\n", id);
-    OutputDebugStringA(buf);
+        char buf[128];
+        sprintf_s(buf, "[Win32IDE] showSidebarPanel ID=%s\n", id);
+        OutputDebugStringA(buf);
+    }
+    
+    inShowSidebar = false;
 }
 
 extern "C" __declspec(dllexport) void Win32IDE_hideSidebarPanel(const char* id) {
     if (!id) return;
 
-    std::lock_guard<std::mutex> lock(g_uiBridgeStateMutex);
-    auto it = g_sidebarPanels.find(std::string(id));
-    if (it == g_sidebarPanels.end()) {
-        char missing[160];
-        sprintf_s(missing, "[Win32IDE] hideSidebarPanel missing ID=%s\n", id);
-        OutputDebugStringA(missing);
+    // Prevent recursion
+    static thread_local bool inHideSidebar = false;
+    if (inHideSidebar) {
+        OutputDebugStringA("[Win32IDE] hideSidebarPanel - recursion detected, skipping\n");
         return;
     }
+    inHideSidebar = true;
 
-    it->second.visible = false;
+    {
+        std::lock_guard<std::mutex> lock(getUiBridgeMutex());
+        auto it = getSidebarPanels().find(std::string(id));
+        if (it == getSidebarPanels().end()) {
+            char missing[160];
+            sprintf_s(missing, "[Win32IDE] hideSidebarPanel missing ID=%s\n", id);
+            OutputDebugStringA(missing);
+            inHideSidebar = false;
+            return;
+        }
 
-    char buf[128];
-    sprintf_s(buf, "[Win32IDE] hideSidebarPanel ID=%s\n", id);
-    OutputDebugStringA(buf);
+        it->second.visible = false;
+
+        char buf[128];
+        sprintf_s(buf, "[Win32IDE] hideSidebarPanel ID=%s\n", id);
+        OutputDebugStringA(buf);
+    }
+    
+    inHideSidebar = false;
 }
 
 extern "C" __declspec(dllexport) uint32_t Win32IDE_executeSwarmTask(const char* taskDesc) {
@@ -308,3 +372,4 @@ extern "C" __declspec(dllexport) uint32_t Win32IDE_executeSwarmTask(const char* 
 extern "C" __declspec(dllexport) void Win32IDE_shutdownSwarmSystem() {
     RawrXD::Bridge::ShutdownSwarmSystem();
 }
+

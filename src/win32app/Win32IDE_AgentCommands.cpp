@@ -14,6 +14,7 @@
 #include "Win32IDE.h"
 #include "Win32IDE_AgenticBridge.h"
 #include "Win32IDE_Commands.h"
+#include "Win32IDE_LoRAKernelBridge.h"
 #include "Win32IDE_ModelDropdownProfile.h"
 #include "Win32SwarmBridge.h"
 #include <algorithm>
@@ -162,124 +163,39 @@ bool invokeConfigureModelWithSehGuard(Win32IDE* ide)
 // ACTIVE IMPLEMENTATIONS BELOW
 // ============================================================================
 
-// ensureAutonomousPipelineInitialized + pipeline handlers (defined here so they are compiled)
-// E1: workspace-aware prompt injection  E2: loop telemetry  E3: shutdown guard
-// E4: backend health pre-check          E5: memory snapshot E6: context-window sync
-// E7: subagent status on loop end
+// [GHOST CODE - DISABLED] AutonomousAgenticPipelineCoordinator has no implementation
+// The following methods are disabled until the class is implemented:
+//   - ensureAutonomousPipelineInitialized()
+//   - onPipelineRun()
+//   - onPipelineAutonomyStart()
+//   - onPipelineAutonomyStop()
+//
+// Original code preserved in git history. To re-enable:
+//   1. Implement RawrXD::AutonomousAgenticPipelineCoordinator class
+//   2. Uncomment the methods below
+//   3. Add declarations back to Win32IDE.h
+
+/*
 void Win32IDE::ensureAutonomousPipelineInitialized()
 {
-    if (m_autonomousPipeline)
-        return;
-
-    // E4: probe active backend before wiring the pipeline
-    if (m_backendManagerInitialized)
-        probeBackendHealth(m_activeBackend);
-
-    m_autonomousPipeline = std::make_unique<RawrXD::AutonomousAgenticPipelineCoordinator>();
-
-    // E6: mirror IDE inference context window into pipeline coordinator
-    m_autonomousPipeline->setContextWindow(m_inferenceConfig.contextWindow);
-
-    // E1 + E5: workspace root + recent memory snapshot injected into every prompt
-    m_autonomousPipeline->setBuildPrompt(
-        [this](const std::string& m)
-        {
-            std::string enriched = m;
-            // E1: prepend workspace root
-            const std::string ws = !m_projectRoot.empty() ? m_projectRoot : m_explorerRootPath;
-            if (!ws.empty())
-                enriched = "[Workspace: " + ws + "]\n" + enriched;
-            // E5: prepend last 3 agent memory entries
-            if (m_agentHistoryEnabled)
-            {
-                std::lock_guard<std::mutex> lk(m_eventBufferMutex);
-                int shown = 0;
-                std::string mem;
-                for (auto it = m_eventBuffer.rbegin(); it != m_eventBuffer.rend() && shown < 3; ++it, ++shown)
-                    if (!it->prompt.empty())
-                        mem = "[ctx] " + truncateForLog(it->prompt, 80) + "\n" + mem;
-                if (!mem.empty())
-                    enriched = mem + enriched;
-            }
-            return buildChatPrompt(enriched);
-        });
-
-    // E3: wrap LLM route with shutdown guard
-    m_autonomousPipeline->setRouteLLM(
-        [this](const std::string& p) -> std::string
-        {
-            if (isShuttingDown())
-                return "[pipeline] shutdown requested";
-            return routeWithIntelligence(p);
-        });
-    m_autonomousPipeline->setOnToken([this](const std::string& t, bool) { onInferenceToken(t); });
-    m_autonomousPipeline->setAppendRenderer([this](const std::string& s) { appendStreamingToken(s); });
-    if (!m_agentCoordinatorForPipeline)
-    {
-        m_agentCoordinatorForPipeline = CreateAgentCoordinator();
-        if (m_agentCoordinatorForPipeline &&
-            AgentCoordinator_Initialize((AgentCoordinatorHandle)m_agentCoordinatorForPipeline))
-        {
-            m_autonomousPipeline->setExternalAgentCoordinator(m_agentCoordinatorForPipeline);
-            m_autonomousPipeline->setDequeueTaskFn(
-                [this](std::wstring* outDesc, int* outPriority) -> bool
-                {
-                    if (!m_agentCoordinatorForPipeline || !outDesc || !outPriority)
-                        return false;
-                    wchar_t buf[4096];
-                    if (!AgentCoordinator_TryDequeueTask(
-                            static_cast<AgentCoordinatorHandle>(m_agentCoordinatorForPipeline), buf, (int)4096,
-                            outPriority))
-                        return false;
-                    *outDesc = buf;
-                    return true;
-                });
-            LOG_INFO("Autonomous Pipeline wired to AgentCoordinator (dequeue tasks)");
-        }
-    }
-    LOG_INFO("Autonomous Agentic Pipeline initialized and wired");
+    // Implementation requires AutonomousAgenticPipelineCoordinator
 }
 
 void Win32IDE::onPipelineRun()
 {
-    ensureAutonomousPipelineInitialized();
-    if (!m_autonomousPipeline)
-        return;
-    // E2: record telemetry
-    recordSimpleEvent(AgentEventType::AgentStarted, "pipeline:run");
-    std::string msg = "Run pipeline once from IDE.";
-    auto result = m_autonomousPipeline->runPipeline(msg);
-    if (result.success)
-    {
-        recordSimpleEvent(AgentEventType::AgentCompleted, "pipeline:run");
-        appendToOutput("Pipeline run completed.\n", "Output", OutputSeverity::Info);
-    }
-    else
-    {
-        recordSimpleEvent(AgentEventType::AgentFailed, "pipeline:run:" + result.error.message);
-        appendToOutput("Pipeline failed: " + result.error.message + "\n", "Output", OutputSeverity::Error);
-    }
-    // E7: show subagent status after run
-    if (m_agenticBridge)
-        appendToOutput(m_agenticBridge->GetSubAgentStatus() + "\n", "Output", OutputSeverity::Info);
+    // Implementation requires AutonomousAgenticPipelineCoordinator
 }
 
 void Win32IDE::onPipelineAutonomyStart()
 {
-    ensureAutonomousPipelineInitialized();
-    if (!m_autonomousPipeline)
-        return;
-    m_autonomousPipeline->startAutonomousLoop();
-    appendToOutput("Pipeline autonomous loop started.\n", "Output", OutputSeverity::Info);
+    // Implementation requires AutonomousAgenticPipelineCoordinator
 }
 
 void Win32IDE::onPipelineAutonomyStop()
 {
-    if (!m_autonomousPipeline)
-        return;
-    m_autonomousPipeline->stopAutonomousLoop();
-    appendToOutput("Pipeline autonomous loop stopped.\n", "Output", OutputSeverity::Info);
+    // Implementation requires AutonomousAgenticPipelineCoordinator
 }
+*/
 
 // Initialize the Agentic Bridge — Full Agentic IDE is the single entry point (src/full_agentic_ide/)
 void Win32IDE::initializeAgenticBridge()
@@ -1762,15 +1678,16 @@ void Win32IDE::handleAgentCommand(int commandId)
         case IDM_AUTONOMY_MEMORY:
             onAutonomyViewMemory();
             break;
-        case IDM_PIPELINE_RUN:
-            onPipelineRun();
-            break;
-        case IDM_PIPELINE_AUTONOMY_START:
-            onPipelineAutonomyStart();
-            break;
-        case IDM_PIPELINE_AUTONOMY_STOP:
-            onPipelineAutonomyStop();
-            break;
+        // [GHOST CODE - DISABLED] Pipeline commands require AutonomousAgenticPipelineCoordinator
+        // case IDM_PIPELINE_RUN:
+        //     onPipelineRun();
+        //     break;
+        // case IDM_PIPELINE_AUTONOMY_START:
+        //     onPipelineAutonomyStart();
+        //     break;
+        // case IDM_PIPELINE_AUTONOMY_STOP:
+        //     onPipelineAutonomyStop();
+        //     break;
         case IDM_TELEMETRY_UNIFIED_CORE:
             HandleUnifiedTelemetry(this);
             break;

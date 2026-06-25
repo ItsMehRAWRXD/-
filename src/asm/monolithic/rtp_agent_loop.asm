@@ -1,5 +1,5 @@
 ; =============================================================================
-; rtp_agent_loop.asm — x64 MASM — RTP plan→execute→verify agent loop
+; rtp_agent_loop.asm ? x64 MASM ? RTP plan?execute?verify agent loop
 ; ABI: RTP_AgentLoop_Run(userPrompt, outBuf, outCap, maxIters)
 ; =============================================================================
 OPTION CASEMAP:NONE
@@ -190,3 +190,4 @@ RTP_AgentLoop_Run PROC FRAME
 RTP_AgentLoop_Run ENDP
 
 END
+

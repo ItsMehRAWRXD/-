@@ -123,9 +123,6 @@ rawrxd_addr_patch_diag_reset_asm PROC
     ret
 rawrxd_addr_patch_diag_reset_asm ENDP
 
-<<<<<<< HEAD
 END
 
-=======
-END
->>>>>>> 5d06bca79190edcc5ccb7d4763eb2bdab10aecbd
+

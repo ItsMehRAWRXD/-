@@ -1,5 +1,5 @@
 // ============================================================================
-// pipeline_trace.hpp — Deterministic Pipeline Trace Mode (Dev Only)
+// pipeline_trace.hpp ? Deterministic Pipeline Trace Mode (Dev Only)
 // ============================================================================
 //
 // Action Item #9: Add ?trace=1 (or header) that returns exact routing decisions.
@@ -25,7 +25,7 @@
 #include <sstream>
 
 // ============================================================================
-// Trace Event — one decision point in the pipeline
+// Trace Event ? one decision point in the pipeline
 // ============================================================================
 struct PipelineTraceEvent {
     std::string stage;          // "classify", "bypass_check", "depth_select", etc.
@@ -35,7 +35,7 @@ struct PipelineTraceEvent {
 };
 
 // ============================================================================
-// Pipeline Trace — accumulated trace for one request
+// Pipeline Trace ? accumulated trace for one request
 // ============================================================================
 struct PipelineTrace {
     bool        enabled     = false;
@@ -108,3 +108,4 @@ struct PipelineTrace {
 };
 
 #endif // RAWRXD_PIPELINE_TRACE_H
+

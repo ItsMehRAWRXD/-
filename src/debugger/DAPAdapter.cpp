@@ -4,9 +4,11 @@
 
 #include "DAPAdapter.h"
 #include "DAPTransport.h"
-#include "debugger/Debugger_Backend.h"
+#include "Debugger_Backend.h"
 #include <sstream>
 #include <iomanip>
+#include <memory>
+#include <initializer_list>
 
 namespace RawrXD {
 namespace DAP {
@@ -41,6 +43,10 @@ namespace JSON {
         result += "}";
         return result;
     }
+
+    std::string MakeObject(std::initializer_list<std::pair<std::string, std::string>> pairs) {
+        return MakeObject(std::vector<std::pair<std::string, std::string>>(pairs));
+    }
     
     std::string MakeArray(const std::vector<std::string>& items) {
         std::string result = "[";
@@ -61,6 +67,10 @@ namespace JSON {
     }
     
     std::string Number(uint64_t value) {
+        return std::to_string(value);
+    }
+
+    std::string Number(uint32_t value) {
         return std::to_string(value);
     }
     
@@ -303,10 +313,15 @@ void DAPAdapter::Impl::HandleLaunch(int seq, const std::string& json) {
     // Launch the process
     if (debugSession_) {
         std::wstring wProgram(program.begin(), program.end());
-        if (debugSession_>LaunchProcess(wProgram, L"", L"")) {
+        if (debugSession_->LaunchProcess(wProgram, L"", L"")) {
             SendResponse(seq, "launch");
         } else {
-            SendErrorResponse(seq, "launch", "Failed to launch process");
+            std::wstring lastError = debugSession_->GetLastError();
+            std::string reason(lastError.begin(), lastError.end());
+            if (reason.empty()) {
+                reason = "Failed to launch process";
+            }
+            SendErrorResponse(seq, "launch", reason);
         }
     } else {
         SendErrorResponse(seq, "launch", "Debug session not available");
@@ -324,10 +339,17 @@ void DAPAdapter::Impl::HandleAttach(int seq, const std::string& json) {
     try {
         uint32_t pid = std::stoul(json.substr(pos + 12));
         
-        if (debugSession_ && debugSession_>AttachToProcess(pid)) {
+        if (debugSession_ && debugSession_->AttachToProcess(pid)) {
             SendResponse(seq, "attach");
         } else {
-            SendErrorResponse(seq, "attach", "Failed to attach to process");
+            std::string reason = "Failed to attach to process";
+            if (debugSession_) {
+                std::wstring lastError = debugSession_->GetLastError();
+                if (!lastError.empty()) {
+                    reason.assign(lastError.begin(), lastError.end());
+                }
+            }
+            SendErrorResponse(seq, "attach", reason);
         }
     } catch (...) {
         SendErrorResponse(seq, "attach", "Invalid 'processId' format");
@@ -340,7 +362,7 @@ void DAPAdapter::Impl::HandleConfigurationDone(int seq) {
 
 void DAPAdapter::Impl::HandleDisconnect(int seq) {
     if (debugSession_) {
-        debugSession_>Detach();
+        debugSession_->Detach();
     }
     SendResponse(seq, "disconnect");
     shutdown_ = true;
@@ -472,7 +494,7 @@ void DAPAdapter::Impl::HandleSetBreakpoints(int seq, const std::string& json) {
         
         if (address != 0 && debugSession_) {
             // Set the breakpoint in the debug session
-            if (debugSession_->SetBreakpoint(address, condition)) {
+            if (debugSession_->SetBreakpointAtAddress(address)) {
                 verified = true;
             } else {
                 message = "Failed to set breakpoint at this location";
@@ -508,7 +530,7 @@ void DAPAdapter::Impl::HandleSetBreakpoints(int seq, const std::string& json) {
 
 void DAPAdapter::Impl::HandleContinue(int seq, const std::string& json) {
     if (debugSession_) {
-        debugSession_>ContinueExecution();
+        debugSession_->ContinueExecution();
     }
     
     std::string body = JSON::MakeObject({
@@ -519,28 +541,28 @@ void DAPAdapter::Impl::HandleContinue(int seq, const std::string& json) {
 
 void DAPAdapter::Impl::HandleNext(int seq, const std::string& json) {
     if (debugSession_) {
-        debugSession_>StepOver();
+        debugSession_->StepOver();
     }
     SendResponse(seq, "next");
 }
 
 void DAPAdapter::Impl::HandleStepIn(int seq, const std::string& json) {
     if (debugSession_) {
-        debugSession_>StepInto();
+        debugSession_->StepInto();
     }
     SendResponse(seq, "stepIn");
 }
 
 void DAPAdapter::Impl::HandleStepOut(int seq, const std::string& json) {
     if (debugSession_) {
-        debugSession_>StepOut();
+        debugSession_->StepOut();
     }
     SendResponse(seq, "stepOut");
 }
 
 void DAPAdapter::Impl::HandlePause(int seq) {
     if (debugSession_) {
-        debugSession_>BreakExecution();
+        debugSession_->BreakExecution();
     }
     SendResponse(seq, "pause");
 }
@@ -549,7 +571,7 @@ void DAPAdapter::Impl::HandleStackTrace(int seq, const std::string& json) {
     std::vector<std::string> frames;
     
     if (debugSession_) {
-        auto stackFrames = debugSession_>GetCallStack();
+        auto stackFrames = debugSession_->GetCallStack();
         uint64_t id = 0;
         for (const auto& frame : stackFrames) {
             std::string frameJson = JSON::MakeObject({
@@ -609,7 +631,7 @@ void DAPAdapter::Impl::SendResponse(int seq, const std::string& command,
     });
     
     if (transport_) {
-        transport_>SendMessage(response);
+        transport_->SendMessage(response);
     }
 }
 
@@ -665,14 +687,14 @@ void DAPAdapter::SendStoppedEvent(const std::string& reason, uint64_t threadId) 
     });
     
     std::string event = JSON::MakeObject({
-        {"seq", JSON::Number(++pImpl_>requestSeq_)},
+        {"seq", JSON::Number(++pImpl_->requestSeq_)},
         {"type", JSON::String("event")},
         {"event", JSON::String("stopped")},
         {"body", body}
     });
     
-    if (pImpl_>transport_) {
-        pImpl_>transport_>SendMessage(event);
+    if (pImpl_->transport_) {
+        pImpl_->transport_->SendMessage(event);
     }
 }
 
@@ -683,14 +705,14 @@ void DAPAdapter::SendContinuedEvent(uint64_t threadId) {
     });
     
     std::string event = JSON::MakeObject({
-        {"seq", JSON::Number(++pImpl_>requestSeq_)},
+        {"seq", JSON::Number(++pImpl_->requestSeq_)},
         {"type", JSON::String("event")},
         {"event", JSON::String("continued")},
         {"body", body}
     });
     
-    if (pImpl_>transport_) {
-        pImpl_>transport_>SendMessage(event);
+    if (pImpl_->transport_) {
+        pImpl_->transport_->SendMessage(event);
     }
 }
 
@@ -701,27 +723,27 @@ void DAPAdapter::SendOutputEvent(const std::string& category, const std::string&
     });
     
     std::string event = JSON::MakeObject({
-        {"seq", JSON::Number(++pImpl_>requestSeq_)},
+        {"seq", JSON::Number(++pImpl_->requestSeq_)},
         {"type", JSON::String("event")},
         {"event", JSON::String("output")},
         {"body", body}
     });
     
-    if (pImpl_>transport_) {
-        pImpl_>transport_>SendMessage(event);
+    if (pImpl_->transport_) {
+        pImpl_->transport_->SendMessage(event);
     }
 }
 
 void DAPAdapter::SendTerminatedEvent() {
     std::string event = JSON::MakeObject({
-        {"seq", JSON::Number(++pImpl_>requestSeq_)},
+        {"seq", JSON::Number(++pImpl_->requestSeq_)},
         {"type", JSON::String("event")},
         {"event", JSON::String("terminated")},
         {"body", "{}"}
     });
     
-    if (pImpl_>transport_) {
-        pImpl_>transport_>SendMessage(event);
+    if (pImpl_->transport_) {
+        pImpl_->transport_->SendMessage(event);
     }
 }
 
@@ -731,14 +753,14 @@ void DAPAdapter::SendExitedEvent(uint32_t exitCode) {
     });
     
     std::string event = JSON::MakeObject({
-        {"seq", JSON::Number(++pImpl_>requestSeq_)},
+        {"seq", JSON::Number(++pImpl_->requestSeq_)},
         {"type", JSON::String("event")},
         {"event", JSON::String("exited")},
         {"body", body}
     });
     
-    if (pImpl_>transport_) {
-        pImpl_>transport_>SendMessage(event);
+    if (pImpl_->transport_) {
+        pImpl_->transport_->SendMessage(event);
     }
 }
 
@@ -746,13 +768,13 @@ void DAPAdapter::SendExitedEvent(uint32_t exitCode) {
 // Main Loop
 // ============================================================================
 void DAPAdapter::Run() {
-    pImpl_>running_ = true;
+    pImpl_->running_ = true;
     
-    while (pImpl_>running_ && !pImpl_>shutdown_) {
-        if (pImpl_>transport_) {
+    while (pImpl_->running_ && !pImpl_->shutdown_) {
+        if (pImpl_->transport_) {
             std::string message;
-            if (pImpl_>transport_>ReadMessage(message)) {
-                pImpl_>DispatchCommand(message);
+            if (pImpl_->transport_->ReadMessage(message)) {
+                pImpl_->DispatchCommand(message);
             }
         }
         
@@ -762,11 +784,11 @@ void DAPAdapter::Run() {
 }
 
 void DAPAdapter::Stop() {
-    pImpl_>running_ = false;
+    pImpl_->running_ = false;
 }
 
 bool DAPAdapter::IsRunning() const {
-    return pImpl_>running_;
+    return pImpl_->running_;
 }
 
 // ============================================================================

@@ -1,13 +1,20 @@
 #include "AdvancedLSPClient.h"
 #include <iostream>
+#include <memory>
+#include <mutex>
 
 namespace RawrXD::LSP {
 
 using json = nlohmann::json;
 
+// Lazy initialization to avoid static initialization order fiasco
 AdvancedLSPClient& AdvancedLSPClient::GetInstance() {
-    static AdvancedLSPClient instance;
-    return instance;
+    static AdvancedLSPClient* instance = nullptr;
+    static std::once_flag initFlag;
+    std::call_once(initFlag, []() {
+        instance = new AdvancedLSPClient();
+    });
+    return *instance;
 }
 
 std::future<std::vector<WorkspaceSymbol>> AdvancedLSPClient::QueryWorkspaceSymbols(const std::string& query) {

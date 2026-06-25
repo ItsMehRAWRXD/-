@@ -1,5 +1,5 @@
 ; =============================================================================
-; rtp_tool_handlers.asm — x64 MASM — concrete RTP tool handlers (44)
+; rtp_tool_handlers.asm ? x64 MASM ? concrete RTP tool handlers (44)
 ; ABI: RCX=json_args, RDX=result_buf, R8=result_buf_size -> EAX status
 ; =============================================================================
 OPTION CASEMAP:NONE
@@ -479,3 +479,4 @@ RawrXD_Tools_HexmagSwarm PROC
 RawrXD_Tools_HexmagSwarm ENDP
 
 END
+

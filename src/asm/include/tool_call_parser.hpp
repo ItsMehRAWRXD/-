@@ -1,5 +1,5 @@
 // ============================================================================
-// tool_call_parser.hpp — Tool-Call Ingestion Hardening for bulk_fix
+// tool_call_parser.hpp ? Tool-Call Ingestion Hardening for bulk_fix
 // ============================================================================
 //
 // Action Item #16: Strict parser with clear error objects, max targets per
@@ -33,7 +33,7 @@ static constexpr int    TOOL_MAX_JSON_SIZE          = 1024 * 1024; // 1MB
 static constexpr int    TOOL_MAX_CONCURRENCY        = 16;
 
 // ============================================================================
-// Structs — Parsed Tool Call
+// Structs ? Parsed Tool Call
 // ============================================================================
 
 struct ToolCallTarget {
@@ -181,12 +181,12 @@ namespace ToolCallPathValidator {
 }
 
 // ============================================================================
-// ToolCallParser — strict parser with clear error objects
+// ToolCallParser ? strict parser with clear error objects
 // ============================================================================
 class ToolCallParser {
 public:
     /// Parse a raw JSON tool call for bulk_fix operations.
-    /// Does NOT use external JSON library — manual parse for safety.
+    /// Does NOT use external JSON library ? manual parse for safety.
     /// Returns a structured result that never crashes the orchestrator.
     static ToolCallParseResult parse(const std::string& rawJson) {
         // Size check
@@ -198,7 +198,7 @@ public:
                 "JSON exceeds max size (" + std::to_string(TOOL_MAX_JSON_SIZE) + " bytes)");
         }
 
-        // Basic JSON structure validation — must be an object
+        // Basic JSON structure validation ? must be an object
         size_t firstBrace = rawJson.find('{');
         size_t lastBrace = rawJson.rfind('}');
         if (firstBrace == std::string::npos || lastBrace == std::string::npos ||
@@ -366,3 +366,4 @@ private:
 };
 
 #endif // RAWRXD_TOOL_CALL_PARSER_H
+

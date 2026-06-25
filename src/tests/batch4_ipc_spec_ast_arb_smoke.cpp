@@ -38,7 +38,35 @@ struct StubInferenceEngine : public RawrXD::InferenceEngine {
         for (auto t : Generate(input, max)) if (tok_cb) tok_cb(t);
     }
     bool LoadModel(const std::string&) override { return true; }
-    bool IsLoaded()                    const override { return true; }
+    bool IsModelLoaded() const override { return true; }
+    
+    // Required pure virtual implementations
+    std::vector<int32_t> Tokenize(const std::string& text) override {
+        std::vector<int32_t> tokens;
+        for (char c : text) tokens.push_back(static_cast<int32_t>(c));
+        return tokens;
+    }
+    std::string Detokenize(const std::vector<int32_t>& tokens) override {
+        std::string text;
+        for (int32_t t : tokens) text.push_back(static_cast<char>(t));
+        return text;
+    }
+    std::vector<float> Eval(const std::vector<int32_t>&) override {
+        return std::vector<float>(1000, 0.0f);
+    }
+    int GetVocabSize() const override { return 1000; }
+    int GetEmbeddingDim() const override { return 128; }
+    int GetNumLayers() const override { return 4; }
+    int GetNumHeads() const override { return 4; }
+    void SetMaxMode(bool) override {}
+    void SetDeepThinking(bool) override {}
+    void SetDeepResearch(bool) override {}
+    bool IsMaxMode() const override { return false; }
+    bool IsDeepThinking() const override { return false; }
+    bool IsDeepResearch() const override { return false; }
+    size_t GetMemoryUsage() const override { return 0; }
+    void ClearCache() override {}
+    const char* GetEngineName() const override { return "StubInferenceEngine"; }
 };
 
 // ---------------------------------------------------------------------------
@@ -120,7 +148,7 @@ static int test_ast_completion() {
         "    }\n"
         "}\n";
 
-    TreesitterParser parser;
+    TreeSitterParser parser;
     ASTCompletionSource src(parser);
 
     auto items = src.provide("file.cpp", doc, "loc", 4, 13);

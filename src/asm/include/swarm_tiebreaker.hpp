@@ -1,5 +1,5 @@
 // ============================================================================
-// swarm_tiebreaker.hpp — Deterministic Tie-Breaking + Reproducibility
+// swarm_tiebreaker.hpp ? Deterministic Tie-Breaking + Reproducibility
 // ============================================================================
 //
 // Action Item #15: Seed control + deterministic tie-break policy.
@@ -26,7 +26,7 @@
 #include <functional>
 
 // ============================================================================
-// SwarmCandidate — one agent's output for tie-breaking
+// SwarmCandidate ? one agent's output for tie-breaking
 // ============================================================================
 struct SwarmCandidate {
     std::string agentId;        // Unique agent identifier
@@ -38,7 +38,7 @@ struct SwarmCandidate {
 };
 
 // ============================================================================
-// TieBreakerPolicy — configurable deterministic resolution
+// TieBreakerPolicy ? configurable deterministic resolution
 // ============================================================================
 enum class TieBreakerPolicy : uint8_t {
     ConfidenceThenId    = 0,  // Sort by confidence desc, then agent id asc (default)
@@ -49,7 +49,7 @@ enum class TieBreakerPolicy : uint8_t {
 };
 
 // ============================================================================
-// SwarmTieBreaker — stateless, deterministic
+// SwarmTieBreaker ? stateless, deterministic
 // ============================================================================
 class SwarmTieBreaker {
 public:
@@ -197,3 +197,4 @@ private:
 };
 
 #endif // RAWRXD_SWARM_TIEBREAKER_H
+

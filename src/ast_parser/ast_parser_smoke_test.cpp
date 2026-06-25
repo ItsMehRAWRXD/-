@@ -60,7 +60,7 @@ void globalFunction() {
     std::cout << "[PASS] Cache check" << std::endl;
     
     // Test 5: Get symbols at cursor
-    CursorPosition cursor{"test.cpp", 5, 10};
+    CursorPosition cursor{5, 10, "test.cpp"};
     auto symbols = provider.get_symbols_at_cursor(cursor);
     std::cout << "[TEST] Found " << symbols.size() << " symbols near cursor" << std::endl;
     for (size_t i = 0; i < symbols.size() && i < 3; ++i) {

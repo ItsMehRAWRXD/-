@@ -13,7 +13,7 @@ extern "C" {
     size_t CountSymbolsByKind(const void* symbolBuffer, size_t count, const char* kindToFind);
 }
 
-// POD Symbol struct — must stay in sync with SymbolProcessor.asm layout
+// POD Symbol struct ? must stay in sync with SymbolProcessor.asm layout
 struct alignas(8) POD_Symbol {
     const char* pName;       // 8 bytes  (offset 0)
     const char* pKind;       // 8 bytes  (offset 8)
@@ -31,3 +31,4 @@ static_assert(offsetof(POD_Symbol, line)      == 16, "line offset mismatch");
 static_assert(offsetof(POD_Symbol, column)    == 24, "column offset mismatch");
 static_assert(offsetof(POD_Symbol, is_public) == 32, "is_public offset mismatch");
 static_assert(offsetof(POD_Symbol, node_type) == 40, "node_type offset mismatch");
+
