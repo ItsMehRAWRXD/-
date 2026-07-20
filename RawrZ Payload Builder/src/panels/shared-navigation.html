@@ -1,0 +1,317 @@
+<!-- RawrZ Security Platform - Shared Navigation Component -->
+<!-- Include this in all panels for unified navigation -->
+
+<style>
+    /* RawrZ Navigation Styles */
+    .rawrz-nav {
+        background: linear-gradient(135deg, #0b1020 0%, #1a1f3a 100%);
+        border-bottom: 2px solid #4a9eff;
+        padding: 0;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        box-shadow: 0 4px 20px rgba(74, 158, 255, 0.2);
+    }
+
+    .rawrz-nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+        background: rgba(17, 22, 42, 0.95);
+        backdrop-filter: blur(10px);
+    }
+
+    .rawrz-nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #4a9eff;
+        font-size: 1.5rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .rawrz-nav-brand:hover {
+        color: #6ab8ff;
+    }
+
+    .rawrz-nav-logo {
+        font-size: 1.8rem;
+    }
+
+    .rawrz-nav-toggle {
+        display: none;
+        background: none;
+        border: 2px solid #4a9eff;
+        color: #4a9eff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.2rem;
+    }
+
+    .rawrz-nav-menu {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        padding: 0.5rem 2rem;
+        background: rgba(15, 21, 48, 0.8);
+        border-top: 1px solid #20284a;
+    }
+
+    .rawrz-nav-item {
+        position: relative;
+    }
+
+    .rawrz-nav-link {
+        display: block;
+        padding: 0.6rem 1rem;
+        color: #a0a8b8;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.85rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .rawrz-nav-link:hover {
+        background: rgba(74, 158, 255, 0.1);
+        color: #4a9eff;
+    }
+
+    .rawrz-nav-link.active {
+        background: linear-gradient(135deg, #4a9eff 0%, #3578e5 100%);
+        color: #fff;
+    }
+
+    .rawrz-nav-link::before {
+        content: attr(data-icon);
+        margin-right: 6px;
+    }
+
+    /* Dropdown for grouped panels */
+    .rawrz-nav-dropdown {
+        position: relative;
+    }
+
+    .rawrz-nav-dropdown-content {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: rgba(18, 25, 47, 0.95);
+        border: 1px solid #20284a;
+        border-radius: 8px;
+        min-width: 200px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        z-index: 1001;
+    }
+
+    .rawrz-nav-dropdown:hover .rawrz-nav-dropdown-content {
+        display: block;
+    }
+
+    .rawrz-nav-dropdown-item {
+        display: block;
+        padding: 0.75rem 1rem;
+        color: #a0a8b8;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #20284a;
+    }
+
+    .rawrz-nav-dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .rawrz-nav-dropdown-item:hover {
+        background: rgba(74, 158, 255, 0.1);
+        color: #4a9eff;
+    }
+
+    /* Status indicator */
+    .rawrz-nav-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #0f0;
+        font-size: 0.8rem;
+    }
+
+    .rawrz-nav-status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #0f0;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .rawrz-nav-toggle {
+            display: block;
+        }
+
+        .rawrz-nav-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            flex-direction: column;
+            background: rgba(15, 21, 48, 0.98);
+            padding: 1rem;
+        }
+
+        .rawrz-nav-menu.show {
+            display: flex;
+        }
+
+        .rawrz-nav-dropdown-content {
+            position: static;
+            display: none;
+            box-shadow: none;
+            border: none;
+            background: rgba(0, 0, 0, 0.2);
+            margin-top: 5px;
+        }
+
+        .rawrz-nav-dropdown:hover .rawrz-nav-dropdown-content {
+            display: none;
+        }
+
+        .rawrz-nav-dropdown.show .rawrz-nav-dropdown-content {
+            display: block;
+        }
+    }
+</style>
+
+<nav class="rawrz-nav" id="rawrzNavigation">
+    <div class="rawrz-nav-header">
+        <a href="index.html" class="rawrz-nav-brand">
+            <span class="rawrz-nav-logo">🔥</span>
+            <span>RawrZ Security Platform</span>
+        </a>
+        <div class="rawrz-nav-status">
+            <span class="rawrz-nav-status-indicator"></span>
+            <span>System Online</span>
+        </div>
+        <button class="rawrz-nav-toggle" onclick="toggleNav()">☰</button>
+    </div>
+
+    <div class="rawrz-nav-menu" id="rawrzNavMenu">
+        <!-- Main Dashboard -->
+        <div class="rawrz-nav-item">
+            <a href="index.html" class="rawrz-nav-link" data-icon="🏠">Dashboard</a>
+        </div>
+
+        <!-- Encryption Group -->
+        <div class="rawrz-nav-item rawrz-nav-dropdown">
+            <a href="#" class="rawrz-nav-link" data-icon="🔐">Encryption ▼</a>
+            <div class="rawrz-nav-dropdown-content">
+                <a href="encryption-panel.html" class="rawrz-nav-dropdown-item">🔐 File Encryption</a>
+                <a href="advanced-encryption-panel.html" class="rawrz-nav-dropdown-item">🔒 Advanced Encryption</a>
+                <a href="ev-cert-panel.html" class="rawrz-nav-dropdown-item">📜 EV Certificate</a>
+            </div>
+        </div>
+
+        <!-- Payload Generation -->
+        <div class="rawrz-nav-item rawrz-nav-dropdown">
+            <a href="#" class="rawrz-nav-link" data-icon="🚀">Payloads ▼</a>
+            <div class="rawrz-nav-dropdown-content">
+                <a href="payload-panel.html" class="rawrz-nav-dropdown-item">🎯 Payload Builder</a>
+                <a href="enhanced-payload-panel.html" class="rawrz-nav-dropdown-item">🚀 Enhanced Payload</a>
+                <a href="stub-generator-panel.html" class="rawrz-nav-dropdown-item">🔧 Stub Generator</a>
+            </div>
+        </div>
+
+        <!-- Bot Management -->
+        <div class="rawrz-nav-item rawrz-nav-dropdown">
+            <a href="#" class="rawrz-nav-link" data-icon="🤖">Bots ▼</a>
+            <div class="rawrz-nav-dropdown-content">
+                <a href="bot-manager.html" class="rawrz-nav-dropdown-item">🤖 Bot Manager</a>
+                <a href="irc-bot-builder.html" class="rawrz-nav-dropdown-item">💬 IRC Bot Builder</a>
+                <a href="http-bot-panel.html" class="rawrz-nav-dropdown-item">🌐 HTTP Bot Panel</a>
+            </div>
+        </div>
+
+        <!-- Security Tools -->
+        <div class="rawrz-nav-item rawrz-nav-dropdown">
+            <a href="#" class="rawrz-nav-link" data-icon="🛡️">Security ▼</a>
+            <div class="rawrz-nav-dropdown-content">
+                <a href="cve-analysis-panel.html" class="rawrz-nav-dropdown-item">🔍 CVE Analysis</a>
+                <a href="beaconism-panel.html" class="rawrz-nav-dropdown-item">📡 Beaconism DLL</a>
+                <a href="red-killer-panel.html" class="rawrz-nav-dropdown-item">🔴 Red Killer</a>
+            </div>
+        </div>
+
+        <!-- PowerShell -->
+        <div class="rawrz-nav-item rawrz-nav-dropdown">
+            <a href="#" class="rawrz-nav-link" data-icon="💻">PowerShell ▼</a>
+            <div class="rawrz-nav-dropdown-content">
+                <a href="powershell-panels.html" class="rawrz-nav-dropdown-item">💻 PowerShell Utils</a>
+                <a href="one-liner-panels.html" class="rawrz-nav-dropdown-item">⚡ One-Liners</a>
+            </div>
+        </div>
+
+        <!-- System -->
+        <div class="rawrz-nav-item rawrz-nav-dropdown">
+            <a href="#" class="rawrz-nav-link" data-icon="⚙️">System ▼</a>
+            <div class="rawrz-nav-dropdown-content">
+                <a href="health-dashboard.html" class="rawrz-nav-dropdown-item">🏥 Health Dashboard</a>
+                <a href="comprehensive-unified-panel.html" class="rawrz-nav-dropdown-item">🎛️ Unified Panel</a>
+                <a href="advanced-features-panel.html" class="rawrz-nav-dropdown-item">⚡ Advanced Features</a>
+            </div>
+        </div>
+
+        <!-- CLI Terminals -->
+        <div class="rawrz-nav-item rawrz-nav-dropdown">
+            <a href="#" class="rawrz-nav-link" data-icon="⌨️">Terminals ▼</a>
+            <div class="rawrz-nav-dropdown-content">
+                <a href="advanced-cli-terminal.html" class="rawrz-nav-dropdown-item">🖥️ Advanced CLI</a>
+                <a href="rawrz-advanced-cli.html" class="rawrz-nav-dropdown-item">⌨️ RawrZ CLI</a>
+                <a href="rawrz-cli-with-file-processing.html" class="rawrz-nav-dropdown-item">📁 CLI + Files</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+    // Toggle mobile navigation
+    function toggleNav() {
+        const menu = document.getElementById('rawrzNavMenu');
+        menu.classList.toggle('show');
+    }
+
+    // Highlight current page in navigation
+    function highlightCurrentPage() {
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        const links = document.querySelectorAll('.rawrz-nav-link');
+
+        links.forEach(link => {
+            if (link.getAttribute('href') === currentPage) {
+                link.classList.add('active');
+            }
+        });
+    }
+
+    // Initialize navigation
+    document.addEventListener('DOMContentLoaded', highlightCurrentPage);
+
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', function(e) {
+        const nav = document.getElementById('rawrzNavigation');
+        const menu = document.getElementById('rawrzNavMenu');
+
+        if (!nav.contains(e.target) && menu.classList.contains('show')) {
+            menu.classList.remove('show');
+        }
+    });
+</script>
