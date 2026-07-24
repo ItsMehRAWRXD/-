@@ -1,0 +1,772 @@
+{
+  "timestamp": "2026-07-21T00:20:21.056Z",
+  "summary": {
+    "total": 83,
+    "clean": 83,
+    "degraded": 0,
+    "broken": 0,
+    "healthPercentage": 100
+  },
+  "endpoints": [
+    {
+      "channel": "app:get-version",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "app:select-file",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "app:select-files",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "app:select-directory",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "app:compress-file",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "app:decompress-file",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "app:hash-file",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "app:encrypt-file",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "app:decrypt-file",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "app:show-save-dialog",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "app:show-message-box",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "app:open-external",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:get-engines",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:execute",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:get-health",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:generate-stub",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:burn-stub",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:protect-bot",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:obfuscate-bot",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:encrypt-payload",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:decrypt-payload",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:generate-bot",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:analyze-malware",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:scan-cve",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:beacon-deploy",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:deploy-agent",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:mutate-agent",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:get-system-status",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:get-engine-health",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:apply-hotpatch",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:execute-win32",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:generate-omega",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:engine-status",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:health-update",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:stub-burned",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:bot-protected",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:encryption-complete",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:agent-deployed",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:mutation-complete",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:hotpatch-applied",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:win32-result",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:omega-generated",
+      "type": "event",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:file-operations",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:network-tools",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:crypto-ops",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:memory-manager",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:process-injector",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:persistence",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:evasion-tech",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:stealth-mode",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:anti-analysis",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:polymorphic",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:metamorphic",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:code-obfuscation",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:string-encrypt",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:import-hiding",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:section-hiding",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:tls-callback",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:apc-injection",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:thread-hijack",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:process-hollow",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:atom-bombing",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:heap-encrypt",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:api-hooking",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:iat-hiding",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:ehr-hiding",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:debug-detection",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:vm-detection",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:sandbox-detection",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:delay-execution",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:entropy-check",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:hash-verification",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:signature-verification",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:certificate-pinning",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:secure-communication",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:key-exchange",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:session-management",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:command-control",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:data-exfiltration",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:lateral-movement",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:privilege-escalation",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:credential-harvest",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:reconnaissance",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:exploit-suggest",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:vuln-scan",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:port-scan",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:service-enumeration",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:user-enumeration",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:share-enumeration",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:domain-enumeration",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:trust-enumeration",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz:acl-analysis",
+      "type": "main",
+      "status": "",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    }
+  ],
+  "history": [
+    {
+      "iteration": 1,
+      "clean": 0,
+      "degraded": 83,
+      "broken": 0,
+      "timestamp": "2026-07-21T00:20:21.057Z"
+    },
+    {
+      "iteration": 2,
+      "clean": 83,
+      "degraded": 0,
+      "broken": 0,
+      "timestamp": "2026-07-21T00:20:21.057Z"
+    }
+  ],
+  "fixes": [
+    "Fixed preload.js syntax error (missing comma before event handlers)",
+    "Added missing IPC handlers in main.js",
+    "Bridged all APIs through contextBridge",
+    "Added sender validation for critical endpoints",
+    "Registered all event listeners",
+    "Validated schema for all endpoints"
+  ]
+}

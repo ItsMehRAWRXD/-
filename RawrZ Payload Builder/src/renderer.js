@@ -1010,3 +1010,6 @@ window.log = function(message) {
 };
 
 }); // End DOMContentLoaded event listener
+
+// BAD CODE: setInterval without cleanup
+setInterval(() => console.log('tick'), 1000);

@@ -1,0 +1,579 @@
+{
+  "fixes": [
+    {
+      "timestamp": "2026-07-20T23:55:14.912Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 9,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-file')",
+      "fixed": "ipcRenderer.invoke('select-file').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.913Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 10,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-files')",
+      "fixed": "ipcRenderer.invoke('select-files').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.913Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 11,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-directory')",
+      "fixed": "ipcRenderer.invoke('select-directory').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.913Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 12,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('hash-file', filePath)",
+      "fixed": "ipcRenderer.invoke('hash-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.914Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 13,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('compress-file', filePath)",
+      "fixed": "ipcRenderer.invoke('compress-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.914Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 14,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decompress-file', filePath)",
+      "fixed": "ipcRenderer.invoke('decompress-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.915Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 17,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-engines')",
+      "fixed": "ipcRenderer.invoke('get-engines').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.915Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 18,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('execute-engine', engineId, params)",
+      "fixed": "ipcRenderer.invoke('execute-engine', engineId, params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.915Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 19,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-engine-config', engineId)",
+      "fixed": "ipcRenderer.invoke('get-engine-config', engineId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.916Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 22,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('generate-stub', params)",
+      "fixed": "ipcRenderer.invoke('generate-stub', params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.916Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 23,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-stub-status', stubId)",
+      "fixed": "ipcRenderer.invoke('get-stub-status', stubId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.917Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 24,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('burn-stub', stubId)",
+      "fixed": "ipcRenderer.invoke('burn-stub', stubId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.917Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 27,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('protect-bot', botId)",
+      "fixed": "ipcRenderer.invoke('protect-bot', botId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.918Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 28,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('obfuscate-bot', botId)",
+      "fixed": "ipcRenderer.invoke('obfuscate-bot', botId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.918Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 31,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('encrypt-file', filePath, key)",
+      "fixed": "ipcRenderer.invoke('encrypt-file', filePath, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.918Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 32,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decrypt-file', filePath, key)",
+      "fixed": "ipcRenderer.invoke('decrypt-file', filePath, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.919Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 33,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('encrypt-text', text, key)",
+      "fixed": "ipcRenderer.invoke('encrypt-text', text, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.919Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 34,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decrypt-text', encrypted, key)",
+      "fixed": "ipcRenderer.invoke('decrypt-text', encrypted, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.920Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 37,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('execute-win32-operation', operation, params)",
+      "fixed": "ipcRenderer.invoke('execute-win32-operation', operation, params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.920Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 73,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('extract-archive', ...args)",
+      "fixed": "ipcRenderer.invoke('extract-archive', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.920Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 74,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('generate-password', ...args)",
+      "fixed": "ipcRenderer.invoke('generate-password', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.921Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 75,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('run-security-cli', ...args)",
+      "fixed": "ipcRenderer.invoke('run-security-cli', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.921Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 76,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('create-archive', ...args)",
+      "fixed": "ipcRenderer.invoke('create-archive', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.922Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 84,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-file')",
+      "fixed": "ipcRenderer.invoke('select-file').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.922Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 85,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-files')",
+      "fixed": "ipcRenderer.invoke('select-files').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.922Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 86,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-directory')",
+      "fixed": "ipcRenderer.invoke('select-directory').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.923Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 87,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('hash-file', filePath)",
+      "fixed": "ipcRenderer.invoke('hash-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.923Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 88,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('compress-file', filePath)",
+      "fixed": "ipcRenderer.invoke('compress-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.923Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 89,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decompress-file', filePath)",
+      "fixed": "ipcRenderer.invoke('decompress-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.924Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 92,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-engines')",
+      "fixed": "ipcRenderer.invoke('get-engines').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.924Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 93,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('execute-engine', engineId, params)",
+      "fixed": "ipcRenderer.invoke('execute-engine', engineId, params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.925Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 94,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-engine-config', engineId)",
+      "fixed": "ipcRenderer.invoke('get-engine-config', engineId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.925Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 97,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('generate-stub', params)",
+      "fixed": "ipcRenderer.invoke('generate-stub', params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.925Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 98,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-stub-status', stubId)",
+      "fixed": "ipcRenderer.invoke('get-stub-status', stubId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.926Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 99,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('burn-stub', stubId)",
+      "fixed": "ipcRenderer.invoke('burn-stub', stubId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.926Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 102,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('protect-bot', botId)",
+      "fixed": "ipcRenderer.invoke('protect-bot', botId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.926Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 103,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('obfuscate-bot', botId)",
+      "fixed": "ipcRenderer.invoke('obfuscate-bot', botId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.927Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 106,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('encrypt-file', filePath, key)",
+      "fixed": "ipcRenderer.invoke('encrypt-file', filePath, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.928Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 107,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decrypt-file', filePath, key)",
+      "fixed": "ipcRenderer.invoke('decrypt-file', filePath, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.928Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 108,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('encrypt-text', text, key)",
+      "fixed": "ipcRenderer.invoke('encrypt-text', text, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.929Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 109,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decrypt-text', encrypted, key)",
+      "fixed": "ipcRenderer.invoke('decrypt-text', encrypted, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.929Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 112,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('execute-win32-operation', operation, params)",
+      "fixed": "ipcRenderer.invoke('execute-win32-operation', operation, params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.930Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 114,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('encrypt-text-demo', ...args)",
+      "fixed": "ipcRenderer.invoke('encrypt-text-demo', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.930Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 115,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decrypt-text-demo', ...args)",
+      "fixed": "ipcRenderer.invoke('decrypt-text-demo', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.931Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 116,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('generate-engine-menu', ...args)",
+      "fixed": "ipcRenderer.invoke('generate-engine-menu', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.931Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 117,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('parse-jotti', ...args)",
+      "fixed": "ipcRenderer.invoke('parse-jotti', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.931Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 125,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke(channel, ...args)",
+      "fixed": "ipcRenderer.invoke(channel, ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.932Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 129,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-file')",
+      "fixed": "ipcRenderer.invoke('select-file').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.932Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 130,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-files')",
+      "fixed": "ipcRenderer.invoke('select-files').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.933Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 131,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('select-directory')",
+      "fixed": "ipcRenderer.invoke('select-directory').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.933Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 132,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('hash-file', filePath)",
+      "fixed": "ipcRenderer.invoke('hash-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.933Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 133,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('compress-file', filePath)",
+      "fixed": "ipcRenderer.invoke('compress-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.934Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 134,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decompress-file', filePath)",
+      "fixed": "ipcRenderer.invoke('decompress-file', filePath).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.934Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 139,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-engines')",
+      "fixed": "ipcRenderer.invoke('get-engines').catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.934Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 140,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('execute-engine', engineId, params)",
+      "fixed": "ipcRenderer.invoke('execute-engine', engineId, params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.935Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 141,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-engine-config', engineId)",
+      "fixed": "ipcRenderer.invoke('get-engine-config', engineId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.935Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 146,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('generate-stub', params)",
+      "fixed": "ipcRenderer.invoke('generate-stub', params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.936Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 147,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('get-stub-status', stubId)",
+      "fixed": "ipcRenderer.invoke('get-stub-status', stubId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.936Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 148,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('burn-stub', stubId)",
+      "fixed": "ipcRenderer.invoke('burn-stub', stubId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.936Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 153,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('protect-bot', botId)",
+      "fixed": "ipcRenderer.invoke('protect-bot', botId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.937Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 154,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('obfuscate-bot', botId)",
+      "fixed": "ipcRenderer.invoke('obfuscate-bot', botId).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.937Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 159,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('encrypt-file', filePath, key)",
+      "fixed": "ipcRenderer.invoke('encrypt-file', filePath, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.938Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 160,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decrypt-file', filePath, key)",
+      "fixed": "ipcRenderer.invoke('decrypt-file', filePath, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.938Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 161,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('encrypt-text', text, key)",
+      "fixed": "ipcRenderer.invoke('encrypt-text', text, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.938Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 162,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('decrypt-text', encrypted, key)",
+      "fixed": "ipcRenderer.invoke('decrypt-text', encrypted, key).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.939Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\preload.js",
+      "line": 167,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('execute-win32-operation', operation, params)",
+      "fixed": "ipcRenderer.invoke('execute-win32-operation', operation, params).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.940Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\src\\endpoint-validator.js",
+      "line": 32,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('channel', ...)",
+      "fixed": "ipcRenderer.invoke('channel', ...).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.941Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\src\\endpoint-validator.js",
+      "line": 312,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('channel', ...)",
+      "fixed": "ipcRenderer.invoke('channel', ...).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.942Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\src\\endpoint-validator.js",
+      "line": 844,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('${ipcChannel}', ...args)",
+      "fixed": "ipcRenderer.invoke('${ipcChannel}', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.942Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\src\\endpoint-validator.js",
+      "line": 881,
+      "dork": "ipc-without-try",
+      "original": "ipcRenderer.invoke('${channel}', ...args)",
+      "fixed": "ipcRenderer.invoke('${channel}', ...args).catch(err => console.error(\"IPC error:\", err))"
+    },
+    {
+      "timestamp": "2026-07-20T23:55:14.943Z",
+      "file": "D:\\BigDaddyG-Part4-RawrZ-Security-master\\RawrZ Payload Builder\\_introduce_issues.js",
+      "line": 9,
+      "dork": "unhandled-promise",
+      "original": ".then(r => r).catch(",
+      "fixed": ".then(r => r).catch(err => console.error(err)),"
+    }
+  ],
+  "patterns": {},
+  "stats": {
+    "runs": 6,
+    "fixesApplied": 71,
+    "lastRun": "2026-07-21T10:36:51.409Z"
+  },
+  "learned": []
+}

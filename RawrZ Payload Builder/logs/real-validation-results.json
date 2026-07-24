@@ -1,0 +1,830 @@
+{
+  "healthScore": 100,
+  "total": 32,
+  "passed": 32,
+  "failed": 0,
+  "layers": {
+    "frontend": {
+      "passed": 32,
+      "total": 32,
+      "status": "PENDING"
+    },
+    "middle": {
+      "passed": 32,
+      "total": 32,
+      "status": "PENDING"
+    },
+    "backend": {
+      "passed": 32,
+      "total": 32,
+      "status": "PENDING"
+    },
+    "other": {
+      "passed": 32,
+      "total": 32,
+      "status": "PENDING"
+    }
+  },
+  "results": [
+    {
+      "channel": "app:select-file",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:select-file"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 1
+    },
+    {
+      "channel": "app:select-files",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:select-files"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "app:select-directory",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:select-directory"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "app:compress-file",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:compress-file"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 1
+    },
+    {
+      "channel": "app:decompress-file",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:decompress-file"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "app:hash-file",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:hash-file"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 1
+    },
+    {
+      "channel": "app:encrypt-file",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:encrypt-file"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 2
+    },
+    {
+      "channel": "app:decrypt-file",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:decrypt-file"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "app:show-save-dialog",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:show-save-dialog"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "app:show-message-box",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:show-message-box"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "app:open-external",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:open-external"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "app:get-version",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for app:get-version"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 1
+    },
+    {
+      "channel": "rawrz:get-engines",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:get-engines"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:execute",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:execute"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 1
+    },
+    {
+      "channel": "rawrz:get-health",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:get-health"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:generate-stub",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:generate-stub"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:burn-stub",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:burn-stub"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:protect-bot",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:protect-bot"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:obfuscate-bot",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:obfuscate-bot"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:encrypt-payload",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:encrypt-payload"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:decrypt-payload",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:decrypt-payload"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:generate-bot",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:generate-bot"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:analyze-malware",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:analyze-malware"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:scan-cve",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:scan-cve"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:beacon-deploy",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:beacon-deploy"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:deploy-agent",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:deploy-agent"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:mutate-agent",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:mutate-agent"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:get-system-status",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:get-system-status"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:get-engine-health",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:get-engine-health"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 1
+    },
+    {
+      "channel": "rawrz:apply-hotpatch",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:apply-hotpatch"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:execute-win32",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:execute-win32"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    },
+    {
+      "channel": "rawrz:generate-omega",
+      "overall": "PASS",
+      "health": 100,
+      "layers": {
+        "frontend": {
+          "passed": true,
+          "details": "API exposed in window object"
+        },
+        "middle": {
+          "passed": true,
+          "details": "Channel exposed in preload"
+        },
+        "backend": {
+          "passed": true,
+          "details": "Handler registered for rawrz:generate-omega"
+        },
+        "other": {
+          "passed": true,
+          "details": "External dependencies available"
+        }
+      },
+      "errors": [],
+      "latency": 0
+    }
+  ]
+}

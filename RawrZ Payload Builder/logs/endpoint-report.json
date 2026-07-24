@@ -1,0 +1,680 @@
+{
+  "timestamp": "2026-07-21T10:37:03.261Z",
+  "summary": {
+    "total": 83,
+    "clean": 81,
+    "degraded": 2,
+    "broken": 0,
+    "healthPercentage": 98
+  },
+  "endpoints": [
+    {
+      "channel": "select-file",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "select-files",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "select-directory",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "hash-file",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "compress-file",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "decompress-file",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "get-engines",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "execute-engine",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "get-engine-config",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "generate-stub",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "get-stub-status",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "burn-stub",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "protect-bot",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "obfuscate-bot",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "encrypt-file",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "decrypt-file",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "encrypt-text",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "decrypt-text",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "engine-status",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "health-update",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "stub-burned",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "bot-protected",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "encryption-complete",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "agent-deployed",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "mutation-complete",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "hotpatch-applied",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "win32-result",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "omega-generated",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "extract-archive",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "encrypt-text-demo",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "show-save-dialog",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "show-message-box",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "open-external",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "get-version",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:get-health",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:encrypt-payload",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:decrypt-payload",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:generate-bot",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:analyze-malware",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:scan-cve",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:beacon-deploy",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:deploy-agent",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:mutate-agent",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:get-system-status",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:get-engine-health",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:apply-hotpatch",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:generate-omega",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:execute",
+      "type": "main",
+      "status": "DEGRADED",
+      "voltage": 80,
+      "errors": [
+        "preload-exposed"
+      ],
+      "critical": true
+    },
+    {
+      "channel": "rawrz:execute-win32",
+      "type": "main",
+      "status": "DEGRADED",
+      "voltage": 80,
+      "errors": [
+        "preload-exposed"
+      ],
+      "critical": true
+    },
+    {
+      "channel": "decrypt-text-demo",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "generate-engine-menu",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "generate-password",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "run-security-cli",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "create-archive",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "parse-jotti",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "execute-win32-operation",
+      "type": "main",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "electronAPI",
+      "type": "bridge",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "rawrz",
+      "type": "bridge",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "RawrZBridgeNative",
+      "type": "bridge",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": true
+    },
+    {
+      "channel": "electronAPI.selectFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.generateStub",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.selectFiles",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.selectDirectory",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.hashFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.compressFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.decompressFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.createArchive",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.extractArchive",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.encryptTextDemo",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.decryptTextDemo",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.encryptFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.decryptFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.parseJotti",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.getEngines",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.generateEngineMenu",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.getEngineConfig",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.executeEngine",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.executeEngine",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "rawrz.getStubStatus",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.encryptFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.decryptFile",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.generatePassword",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    },
+    {
+      "channel": "electronAPI.runSecurityCLI",
+      "type": "renderer",
+      "status": "CLEAN",
+      "voltage": 100,
+      "errors": [],
+      "critical": false
+    }
+  ]
+}
