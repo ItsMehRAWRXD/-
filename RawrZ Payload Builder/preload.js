@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   generateStub: (params) => ipcRenderer.invoke('generate-stub', params).catch(err => console.error("IPC error:", err)),
   getStubStatus: (stubId) => ipcRenderer.invoke('get-stub-status', stubId).catch(err => console.error("IPC error:", err)),
   burnStub: (stubId) => ipcRenderer.invoke('burn-stub', stubId).catch(err => console.error("IPC error:", err)),
+  useNextStub: () => ipcRenderer.invoke('use-next-stub').catch(err => console.error("IPC error:", err)),
+  getAllStubStatus: () => ipcRenderer.invoke('get-all-stub-status').catch(err => console.error("IPC error:", err)),
   
   // Bot operations
   protectBot: (botId) => ipcRenderer.invoke('protect-bot', botId).catch(err => console.error("IPC error:", err)),
@@ -45,6 +47,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options).catch(err => console.error("IPC error:", err)),
   openExternal: (url) => ipcRenderer.invoke('open-external', url).catch(err => console.error("IPC error:", err)),
   getVersion: () => ipcRenderer.invoke('get-version').catch(err => console.error("IPC error:", err)),
+  openPanel: (panelName) => ipcRenderer.invoke('open-panel', panelName).catch(err => console.error("IPC error:", err)),
 
   // RawrZ specific - added for validation
   getHealth: () => ipcRenderer.invoke('rawrz:get-health').catch(err => console.error("IPC error:", err)),
@@ -130,7 +133,7 @@ contextBridge.exposeInMainWorld('rawrz', {
   decryptText: (encrypted, key) => ipcRenderer.invoke('decrypt-text', encrypted, key).catch(err => console.error("IPC error:", err)),
   
   // Win32 operations
-  executeWin32Operation: (operation, params) => ipcRenderer.invoke('execute-win32-operation', operation, params).catch(err => console.error("IPC error:", err))
+  executeWin32Operation: (operation, params) => ipcRenderer.invoke('execute-win32-operation', operation, params).catch(err => console.error("IPC error:", err)),
 
   encryptTextDemo: (...args) => ipcRenderer.invoke('encrypt-text-demo', ...args).catch(err => console.error("IPC error:", err)),
   decryptTextDemo: (...args) => ipcRenderer.invoke('decrypt-text-demo', ...args).catch(err => console.error("IPC error:", err)),

@@ -355,8 +355,10 @@ async function loadEngineSystem() {
 // Generate and display dynamic engine menu
 async function showEngineMenu(engineId) {
   try {
-    const menuConfig = await window.rawrz.generateEngineMenu(engineId);
-    const engine = await window.rawrz.getEngineConfig(engineId);
+    const api = window.rawrz || window.electronAPI;
+    if (!api) { log('❌ No API available'); return null; }
+    const menuConfig = await api.generateEngineMenu(engineId);
+    const engine = await api.getEngineConfig(engineId);
     
     log(`🔧 Loading ${engine.icon} ${engine.name} configuration menu...`);
     
@@ -411,7 +413,9 @@ if (ircBotGen) {
         
         const format = document.getElementById('outputFormat')?.value || 'exe';
         const useSSL = document.getElementById('useFileSSL')?.checked || false;
-        const result = await window.electronAPI.executeEngine('irc-bot-generator', {
+        const api = window.rawrz || window.electronAPI;
+        if (!api) { log('❌ No API available'); return; }
+        const result = await api.executeEngine('irc-bot-generator', {
           server: 'irc.freenode.net',
           channel: '#test',
           nick: 'RawrBot',
@@ -448,7 +452,9 @@ if (httpBotGen) {
         
         const format = document.getElementById('outputFormat')?.value || 'exe';
         const useSSL = document.getElementById('useFileSSL')?.checked || false;
-        const result = await window.electronAPI.executeEngine('http-bot-generator', {
+        const api = window.rawrz || window.electronAPI;
+        if (!api) { log('❌ No API available'); return; }
+        const result = await api.executeEngine('http-bot-generator', {
           endpoint: 'http://localhost:8080/api',
           method: 'POST',
           auth: 'bearer',
@@ -472,7 +478,9 @@ if (tcpBotGen) {
   tcpBotGen.addEventListener('click', async () => {
     try {
       const format = document.getElementById('outputFormat')?.value || 'exe';
-      const result = await window.electronAPI.executeEngine('tcp-bot-generator', {
+      const api = window.rawrz || window.electronAPI;
+      if (!api) { log('❌ No API available'); return; }
+      const result = await api.executeEngine('tcp-bot-generator', {
         host: '127.0.0.1',
         port: 4444,
         outputFormat: format
@@ -491,7 +499,9 @@ if (udpBotGen) {
   udpBotGen.addEventListener('click', async () => {
     try {
       const format = document.getElementById('outputFormat')?.value || 'exe';
-      const result = await window.electronAPI.executeEngine('udp-bot-generator', {
+      const api = window.rawrz || window.electronAPI;
+      if (!api) { log('❌ No API available'); return; }
+      const result = await api.executeEngine('udp-bot-generator', {
         host: '127.0.0.1',
         port: 5555,
         outputFormat: format
@@ -509,7 +519,9 @@ if (udpBotGen) {
 const binaryAnalysis = document.getElementById('binaryAnalysis');
 if (binaryAnalysis) {
   binaryAnalysis.addEventListener('click', async () => {
-    const result = await window.electronAPI.executeEngine('malware-analysis');
+    const api = window.rawrz || window.electronAPI;
+    if (!api) { log('❌ No API available'); return; }
+    const result = await api.executeEngine('malware-analysis');
     log('🔍 Binary Analysis - ACTIVATED');
     log(result);
   });
@@ -518,7 +530,9 @@ if (binaryAnalysis) {
 const networkScan = document.getElementById('networkScan');
 if (networkScan) {
   networkScan.addEventListener('click', async () => {
-    const result = await window.electronAPI.executeEngine('network-tools');
+    const api = window.rawrz || window.electronAPI;
+    if (!api) { log('❌ No API available'); return; }
+    const result = await api.executeEngine('network-tools');
     log('🌐 Network Scanner - ACTIVATED');
     log(result);
   });
@@ -527,7 +541,9 @@ if (networkScan) {
 const stegoHide = document.getElementById('stegoHide');
 if (stegoHide) {
   stegoHide.addEventListener('click', async () => {
-    const result = await window.electronAPI.executeEngine('stealth-engine');
+    const api = window.rawrz || window.electronAPI;
+    if (!api) { log('❌ No API available'); return; }
+    const result = await api.executeEngine('stealth-engine');
     log('🖼️ Steganography - ACTIVATED');
     log(result);
   });
@@ -536,7 +552,9 @@ if (stegoHide) {
 const obfuscateCode = document.getElementById('obfuscateCode');
 if (obfuscateCode) {
   obfuscateCode.addEventListener('click', async () => {
-    const result = await window.electronAPI.executeEngine('polymorphic-engine');
+    const api = window.rawrz || window.electronAPI;
+    if (!api) { log('❌ No API available'); return; }
+    const result = await api.executeEngine('polymorphic-engine');
     log('🔒 Code Obfuscator - ACTIVATED');
     log(result);
   });
@@ -544,7 +562,9 @@ if (obfuscateCode) {
 
 async function executeEngine(engineName) {
   try {
-    const result = await window.electronAPI.executeEngine(engineName);
+    const api = window.rawrz || window.electronAPI;
+    if (!api) { log('❌ No API available'); return; }
+    const result = await api.executeEngine(engineName);
     log(`🚀 Engine ${engineName} executed`);
     log(result);
   } catch (error) {

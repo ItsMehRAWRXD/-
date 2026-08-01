@@ -56,10 +56,64 @@ class EngineManager {
 
     let menusHTML = '';
     Object.keys(this.engines).forEach(engineId => {
-      menusHTML += window.generateEngineMenu(engineId);
+      if (typeof window.generateEngineMenu === 'function') {
+        menusHTML += window.generateEngineMenu(engineId);
+      } else {
+        // Fallback: generate a basic menu from config
+        const config = this.engines[engineId];
+        if (config && config.menu) {
+          menusHTML += this.generateBasicMenu(engineId, config);
+        }
+      }
     });
 
     container.innerHTML = menusHTML;
+  }
+
+  // Fallback menu generator when generateEngineMenu is not available
+  generateBasicMenu(engineId, config) {
+    let html = `
+      <div class="engine-menu" id="${engineId}-menu" style="display: ${config.enabled ? 'block' : 'none'};">
+        <div class="engine-header">
+          <h3>${config.icon} ${config.name}</h3>
+          <span class="engine-category">${config.category}</span>
+        </div>
+        <div class="engine-controls">
+    `;
+    Object.entries(config.menu || {}).forEach(([key, field]) => {
+      const fieldId = `${engineId}-${key}`;
+      html += `<div class="form-group"><label for="${fieldId}">${field.label}:</label>`;
+      switch (field.type) {
+        case 'text':
+          html += `<input type="text" id="${fieldId}" placeholder="${field.placeholder || ''}" value="${field.default || ''}">`;
+          break;
+        case 'number':
+          html += `<input type="number" id="${fieldId}" value="${field.default || ''}">`;
+          break;
+        case 'select':
+          const opts = config.features?.[field.options] || [];
+          html += `<select id="${fieldId}">${opts.map(o => `<option value="${o}">${o}</option>`).join('')}</select>`;
+          break;
+        case 'checkbox':
+          html += `<label><input type="checkbox" id="${fieldId}"> ${field.label}</label>`;
+          break;
+        case 'file':
+          html += `<input type="text" id="${fieldId}" readonly><button onclick="browseFile('${fieldId}')">Browse</button>`;
+          break;
+        default:
+          html += `<input type="text" id="${fieldId}">`;
+      }
+      html += `</div>`;
+    });
+    html += `
+        </div>
+        <div class="engine-actions">
+          <button class="btn-primary" onclick="executeEngine('${engineId}')">${config.icon} Execute ${config.name}</button>
+          <button class="btn-secondary" onclick="clearEngineConfig('${engineId}')">🧹 Clear</button>
+        </div>
+      </div>
+    `;
+    return html;
   }
 
   // Toggle engine on/off
@@ -93,8 +147,12 @@ class EngineManager {
     this.log(`🚀 Executing ${config.icon} ${config.name}...`);
     
     try {
-      // Call the actual engine execution
-      const result = await window.electronAPI.executeEngine(engineId, params);
+      // Call the actual engine execution via rawrz API (works in browser + Electron)
+      const api = window.rawrz || window.electronAPI;
+      if (!api || !api.executeEngine) {
+        throw new Error('No engine execution API available');
+      }
+      const result = await api.executeEngine(engineId, params);
       this.log(`✅ ${config.name} completed successfully`);
       
       // Display detailed results
@@ -188,11 +246,14 @@ class EngineManager {
   // Browse for files
   async browseFile(fieldId, mode = 'open') {
     try {
+      const api = window.rawrz || window.electronAPI;
+      if (!api) throw new Error('No file API available');
+      
       let filePath;
       if (mode === 'save') {
-        filePath = await window.electronAPI.saveFile();
+        filePath = api.saveFile ? await api.saveFile() : await api.selectFile();
       } else {
-        filePath = await window.electronAPI.selectFile();
+        filePath = await api.selectFile();
       }
       
       if (filePath) {

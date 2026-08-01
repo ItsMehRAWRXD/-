@@ -511,11 +511,16 @@ class RawrZUnifiedBridge {
     if (typeof window !== 'undefined') {
       window.RawrZBridge = this;
       window.RawrZ = this.api;
-      
+
       // Also expose unified API directly
       window.rawrz = window.rawrz || {};
       Object.assign(window.rawrz, this.api);
-      
+
+      // Fire on window so interconnection-layer (and any other listener) receives it
+      window.dispatchEvent(new CustomEvent('bridge:initialized', {
+        detail: { bridge: this, version: this.version }
+      }));
+
       this.log('success', '✅ Bridge exposed globally as window.RawrZBridge and window.RawrZ');
     }
   }

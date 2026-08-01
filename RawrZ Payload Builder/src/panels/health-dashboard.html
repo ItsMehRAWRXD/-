@@ -489,9 +489,11 @@
             await loadEngineDetails();
         }
         
+        const IPC = 'http://localhost:27182';
+
         async function loadSystemStatus() {
             try {
-                const response = await fetch('/api/health');
+                const response = await fetch(IPC + '/api/health');
                 const result = await response.json();
                 
                 const statusCard = document.getElementById('systemStatus');
@@ -516,7 +518,7 @@
         
         async function loadEngineHealth() {
             try {
-                const response = await fetch('/api/engines/health');
+                const response = await fetch(IPC + '/api/engines/health');
                 const result = await response.json();
                 
                 const healthCard = document.getElementById('engineHealth');
@@ -551,7 +553,7 @@
         
         async function loadEngineDetails() {
             try {
-                const response = await fetch('/api/engines');
+                const response = await fetch(IPC + '/api/engines');
                 const result = await response.json();
                 
                 const engineList = document.getElementById('engineList');
@@ -577,7 +579,7 @@
         async function testAPI() {
             const startTime = Date.now();
             try {
-                const response = await fetch('/api/health');
+                const response = await fetch(IPC + '/api/health');
                 const result = await response.json();
                 const endTime = Date.now();
                 const responseTime = endTime - startTime;

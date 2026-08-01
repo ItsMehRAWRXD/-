@@ -56,7 +56,7 @@ class AgenticAuditor {
       
       // Phase 3: Self-Healing
       if (this.autoFix) {
-        await selfHeal();
+        await this.selfHeal();
       }
       
       // Phase 4: Verification

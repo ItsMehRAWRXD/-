@@ -9,6 +9,7 @@
     <title>RawrZ Payload Builder - UNLEASHED</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="styles/engine-styles.css">
+    <script src="renderer-bootstrap.js" defer></script>
 </head>
 
 <body>
@@ -362,31 +363,31 @@
                 
                 window.electronAPI = {
                     selectFile: async () => { 
-                        console.warn('selectFile: Not available in browser mode'); 
-                        return null; 
+                        const r = window.rawrz;
+                        return r ? r.selectFile() : null;
                     },
                     selectFiles: async () => { 
-                        console.warn('selectFiles: Not available in browser mode'); 
-                        return []; 
+                        const r = window.rawrz;
+                        return r ? r.selectFiles() : [];
                     },
                     selectDirectory: async () => { 
-                        console.warn('selectDirectory: Not available in browser mode'); 
-                        return null; 
+                        const r = window.rawrz;
+                        return r ? r.selectDirectory() : null;
                     },
                     executeEngine: async (name, params) => { 
-                        console.warn(`executeEngine(${name}): Not available in browser mode`); 
-                        return { success: false, error: 'Browser mode - engine execution disabled' }; 
+                        const r = window.rawrz;
+                        if (r && r.executeEngine) return r.executeEngine(name, params);
+                        return { success: false, error: 'Engine execution not available' };
                     },
                     encryptFile: async () => { 
-                        console.warn('encryptFile: Use browser encryption instead'); 
-                        return { success: false, error: 'Use browser encryption' }; 
+                        return { success: false, error: 'Use browser encryption' };
                     },
                     decryptFile: async () => { 
-                        console.warn('decryptFile: Use browser decryption instead'); 
-                        return { success: false, error: 'Use browser decryption' }; 
+                        return { success: false, error: 'Use browser decryption' };
                     },
                     hashFile: async (file) => { 
-                        // Browser-compatible hashing
+                        const r = window.rawrz;
+                        if (r && r.hashFile) return r.hashFile(file);
                         if (file && window.crypto) {
                             const data = await file.arrayBuffer();
                             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -400,162 +401,41 @@
                     createArchive: async () => null,
                     extractArchive: async () => null,
                     generatePassword: async () => { 
-                        // Browser-compatible password generation
+                        const r = window.rawrz;
+                        if (r && r.generatePassword) return r.generatePassword();
                         const array = new Uint8Array(32);
                         crypto.getRandomValues(array);
                         return btoa(String.fromCharCode(...array)); 
                     },
                     runSecurityCLI: async () => ({ success: false, error: 'CLI not available in browser' }),
-                    generateStub: async () => ({ success: false, error: 'Stub generation requires Electron' }),
-                    openPanel: async () => ({ success: false, error: 'Panel switching requires Electron' })
-                };
+                    generateStub: async (payload, opts) => { 
+                        const r = window.rawrz;
+                        if (r && r.generateStub) return r.generateStub(payload, opts);
+                        return { success: false, error: 'Stub generation requires Electron' };
+                    },
+                    openPanel: async (name) => { 
+                        window.open(name, '_blank');
+                        return { success: true };
+                    }
             }
         })();
     </script>
+    <!-- Bootstrap FIRST - provides real implementations for all APIs -->
+    <script src="bootstrap.js"></script>
+    
+    <!-- Engine Config (must load BEFORE engine-manager) -->
+    <script src="engines/engine-config.js"></script>
+    
+    <!-- Engine Manager (depends on engineConfigs + generateEngineMenu) -->
+    <script src="engine-manager.js"></script>
+    
     <!-- Unified Bridge System -->
     <script src="unified-bridge.js"></script>
     <script src="interconnection-layer.js"></script>
     <script src="unified-renderer.js"></script>
     
-    <!-- Legacy Scripts (now bridged) -->
-    <script src="engines/engine-config.js"></script>
-    <script src="engine-manager.js"></script>
+    <!-- Renderer (depends on all above) -->
     <script src="renderer.js"></script>
-
-    <!-- BigDaddyG Auto-Connection Script -->
-    <script>
-        (function () {
-            console.log('🔗 BigDaddyG Auto-Connection loading...');
-
-            // Auto-connection configuration
-            const config = {
-                mainServer: 'http://localhost:3000',
-                websocket: 'ws://localhost:8001',
-                fallback: 'http://localhost:3003',
-                timeout: 5000,
-                // Embedded mode: no separate BigDaddyG servers required.
-                // Flip this to true only if you actually have those services running.
-                enableNetwork: false
-            };
-
-            // Connection manager
-            class BigDaddyGConnection {
-                constructor() {
-                    this.connected = false;
-                    this.fallbackMode = false;
-                    this.ws = null;
-                    this.retryCount = 0;
-                    this.maxRetries = 3;
-                }
-
-                async connect() {
-                    if (!config.enableNetwork) {
-                        // Embedded mode: treat as connected immediately.
-                        this.connected = true;
-                        this.fallbackMode = true;
-                        console.log('✅ BigDaddyG embedded connection ready (no network)');
-                        return;
-                    }
-
-                    try {
-                        // Try main WebSocket first
-                        await this.connectWebSocket();
-                    } catch (error) {
-                        console.log('⚠️ Main connection failed, trying fallback...');
-                        await this.connectFallback();
-                    }
-                }
-
-                async connectWebSocket() {
-                    return new Promise((resolve, reject) => {
-                        if (!config.enableNetwork) {
-                            this.connected = true;
-                            this.fallbackMode = true;
-                            return resolve();
-                        }
-
-                        this.ws = new WebSocket(config.websocket);
-
-                        this.ws.onopen = () => {
-                            console.log('✅ Connected to BigDaddyG WebSocket');
-                            this.connected = true;
-                            this.fallbackMode = false;
-                            resolve();
-                        };
-
-                        this.ws.onerror = (error) => {
-                            console.log('❌ WebSocket connection failed:', error);
-                            reject(error);
-                        };
-
-                        this.ws.onclose = () => {
-                            this.connected = false;
-                            if (!config.enableNetwork) return;
-                            if (this.retryCount < this.maxRetries) {
-                                this.retryCount++;
-                                console.log(`🔄 Retrying connection (${this.retryCount}/${this.maxRetries})...`);
-                                setTimeout(() => this.connect(), 2000);
-                            }
-                        };
-
-                        // Timeout
-                        setTimeout(() => {
-                            if (!this.connected) {
-                                this.ws.close();
-                                reject(new Error('Connection timeout'));
-                            }
-                        }, config.timeout);
-                    });
-                }
-
-                async connectFallback() {
-                    try {
-                        if (!config.enableNetwork) {
-                            this.connected = true;
-                            this.fallbackMode = true;
-                            return;
-                        }
-                        const response = await fetch(config.fallback + '/api/fallback/status');
-                        const data = await response.json();
-                        console.log('✅ Connected to BigDaddyG Fallback mode');
-                        this.connected = true;
-                        this.fallbackMode = true;
-                    } catch (error) {
-                        console.log('❌ Fallback connection also failed:', error);
-                        throw error;
-                    }
-                }
-
-                send(message) {
-                    if (this.connected && !this.fallbackMode && this.ws) {
-                        this.ws.send(JSON.stringify(message));
-                    } else if (this.fallbackMode) {
-                        // Handle fallback mode
-                        this.handleFallbackMessage(message);
-                    }
-                }
-
-                handleFallbackMessage(message) {
-                    console.log('📤 Fallback mode - message:', message);
-                    // Embedded mode: no-op by default, but keep API stable.
-                }
-            }
-
-            // Initialize connection
-            window.BigDaddyGConnection = new BigDaddyGConnection();
-            window.BigDaddyGConnection.connect();
-
-            // Global functions for easy use
-            window.bigdaddyg = {
-                send: (msg) => window.BigDaddyGConnection.send(msg),
-                connected: () => window.BigDaddyGConnection.connected,
-                fallback: () => window.BigDaddyGConnection.fallbackMode
-            };
-
-            console.log('🎉 BigDaddyG Auto-Connection ready!');
-        })();
-    </script>
-    <!-- End BigDaddyG Auto-Connection Script -->
 
     <!-- Agentic Auditor - Self-Healing Code Analysis -->
     <script src="agentic-auditor.js"></script>
