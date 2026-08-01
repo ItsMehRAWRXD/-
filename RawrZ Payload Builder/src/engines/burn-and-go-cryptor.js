@@ -392,9 +392,16 @@ class BurnAndGoCryptor {
 
     // Start burn cleanup system
     startBurnCleanup() {
-        setInterval(() => {
+        this._burnCleanupInterval = setInterval(() => {
             this.cleanupCompletedBurns();
         }, this.config.cleanupInterval);
+    }
+
+    stopBurnCleanup() {
+        if (this._burnCleanupInterval) {
+            clearInterval(this._burnCleanupInterval);
+            this._burnCleanupInterval = null;
+        }
     }
 
     // Cleanup completed burns

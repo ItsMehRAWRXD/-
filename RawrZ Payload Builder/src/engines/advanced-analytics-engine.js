@@ -222,19 +222,28 @@ class AdvancedAnalyticsEngine extends EventEmitter {
 
     startDataCollection() {
         // Collect data every 30 seconds
-        setInterval(async () => {
+        this._dataCollectionInterval = setInterval(async () => {
             await this.collectAllData();
         }, 30000);
 
         // Generate insights every 5 minutes
-        setInterval(async () => {
+        this._insightsInterval = setInterval(async () => {
             await this.generateInsights();
         }, 300000);
 
         // Update dashboards every minute
-        setInterval(async () => {
+        this._dashboardInterval = setInterval(async () => {
             await this.updateDashboards();
         }, 60000);
+    }
+
+    stopDataCollection() {
+        if (this._dataCollectionInterval) clearInterval(this._dataCollectionInterval);
+        if (this._insightsInterval) clearInterval(this._insightsInterval);
+        if (this._dashboardInterval) clearInterval(this._dashboardInterval);
+        this._dataCollectionInterval = null;
+        this._insightsInterval = null;
+        this._dashboardInterval = null;
     }
 
     async collectAllData() {

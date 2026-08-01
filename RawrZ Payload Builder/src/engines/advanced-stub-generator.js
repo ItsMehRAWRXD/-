@@ -2257,16 +2257,23 @@ public class RawrZStub {
 
     startDetectionMonitoring() {
         // Monitor for detection events every 30 seconds
-        setInterval(async () => {
+        this._detectionInterval = setInterval(async () => {
             if (this.autoRegenerationEnabled) {
                 await this.checkForDetections();
             }
         }, 30000);
 
         // Monitor stub health every 5 minutes
-        setInterval(async () => {
+        this._stubHealthInterval = setInterval(async () => {
             await this.monitorStubHealth();
         }, 300000);
+    }
+
+    stopDetectionMonitoring() {
+        if (this._detectionInterval) clearInterval(this._detectionInterval);
+        if (this._stubHealthInterval) clearInterval(this._stubHealthInterval);
+        this._detectionInterval = null;
+        this._stubHealthInterval = null;
     }
 
     async checkForDetections() {
@@ -2928,21 +2935,30 @@ public class RawrZStub {
     }
 
     startPerformanceMonitoring() {
-        setInterval(() => {
+        this._perfMonitorInterval = setInterval(() => {
             this.updatePerformanceMetrics();
         }, 300000);
     }
 
     startSystemMonitoring() {
-        setInterval(() => {
+        this._sysMonitorInterval = setInterval(() => {
             this.updateSystemMetrics();
         }, 30000);
     }
 
     startDetectionMonitoring() {
-        setInterval(() => {
+        this._detectMonitorInterval = setInterval(() => {
             this.updateDetectionMetrics();
         }, 60000);
+    }
+
+    stopAllMonitoring() {
+        if (this._perfMonitorInterval) clearInterval(this._perfMonitorInterval);
+        if (this._sysMonitorInterval) clearInterval(this._sysMonitorInterval);
+        if (this._detectMonitorInterval) clearInterval(this._detectMonitorInterval);
+        this._perfMonitorInterval = null;
+        this._sysMonitorInterval = null;
+        this._detectMonitorInterval = null;
     }
 
     updatePerformanceMetrics() {

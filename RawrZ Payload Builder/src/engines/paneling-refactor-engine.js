@@ -346,11 +346,18 @@ class PanelingRefactorEngine extends EventEmitter {
     async setupRealTimeUpdates() {
         if (!this.config.enableRealTimeUpdates) return;
 
-        setInterval(() => {
+        this._updateInterval = setInterval(() => {
             this.processUpdateQueues();
         }, this.config.updateInterval);
 
         logger.info('Real-time panel updates enabled');
+    }
+
+    stopRealTimeUpdates() {
+        if (this._updateInterval) {
+            clearInterval(this._updateInterval);
+            this._updateInterval = null;
+        }
     }
 
     // Process update queues

@@ -1089,7 +1089,7 @@ class RawrZStandalone {
                     return;
                 }
                 const saveKey = commandArgs[2] === 'true';
-                return await this.generateKey(commandArgs[0], parseInt(commandArgs[1]) || 256, saveKey, commandArgs[3]);
+                return await this.generateKey(commandArgs[0], parseInt(commandArgs[1], 10) || 256, saveKey, commandArgs[3]);
 
             case 'ping':
                 if (commandArgs.length < 1) {
@@ -1125,7 +1125,7 @@ class RawrZStandalone {
                 return await this.uploadFile(commandArgs[0], commandArgs[1]);
 
             case 'password':
-                const length = parseInt(commandArgs[0]) || 16;
+                const length = parseInt(commandArgs[0], 10) || 16;
                 const includeSpecial = commandArgs[1] !== 'false';
                 return await this.generatePassword(length, includeSpecial);
 
@@ -1201,7 +1201,7 @@ class RawrZStandalone {
                     console.log('[ERROR] Usage: random [length]');
                     return;
                 }
-                return await this.generateRandom(parseInt(commandArgs[0]) || 32);
+                return await this.generateRandom(parseInt(commandArgs[0], 10) || 32);
 
             case 'analyze':
                 if (commandArgs.length < 1) {
@@ -1215,7 +1215,7 @@ class RawrZStandalone {
                     console.log('[ERROR] Usage: portscan <host> [startport] [endport]');
                     return;
                 }
-                return await this.portScan(commandArgs[0], parseInt(commandArgs[1]) || 1, parseInt(commandArgs[2]) || 1000);
+                return await this.portScan(commandArgs[0], parseInt(commandArgs[1], 10) || 1, parseInt(commandArgs[2], 10) || 1000);
 
             case 'traceroute':
                 if (commandArgs.length < 1) {

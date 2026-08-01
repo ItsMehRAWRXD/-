@@ -413,12 +413,26 @@ class RawrZUnifiedBridge {
     this.log('info', '📨 Starting message router...');
     
     // Process message queue
-    setInterval(() => {
+    this._routerInterval = setInterval(() => {
       while (this.messageQueue.length > 0) {
         const message = this.messageQueue.shift();
         this.routeMessage(message);
       }
     }, 100);
+  }
+
+  stopMessageRouter() {
+    if (this._routerInterval) {
+      clearInterval(this._routerInterval);
+      this._routerInterval = null;
+    }
+  }
+
+  destroy() {
+    this.stopMessageRouter();
+    this.messageQueue = [];
+    this.modules.clear();
+    this.eventBus.removeAllListeners();
   }
 
   routeMessage(message) {

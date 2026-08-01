@@ -178,19 +178,28 @@ class PerformanceOptimizer extends EventEmitter {
 
     startBackgroundOptimization() {
         // Run optimization every 30 seconds
-        setInterval(() => {
+        this._optInterval = setInterval(() => {
             this.runOptimizationCycle();
         }, 30000);
 
         // Run garbage collection every 5 minutes
-        setInterval(() => {
+        this._gcInterval = setInterval(() => {
             this.runGarbageCollection();
         }, 300000);
 
         // Run cache cleanup every 10 minutes
-        setInterval(() => {
+        this._cacheInterval = setInterval(() => {
             this.runCacheCleanup();
         }, 600000);
+    }
+
+    stopBackgroundOptimization() {
+        if (this._optInterval) clearInterval(this._optInterval);
+        if (this._gcInterval) clearInterval(this._gcInterval);
+        if (this._cacheInterval) clearInterval(this._cacheInterval);
+        this._optInterval = null;
+        this._gcInterval = null;
+        this._cacheInterval = null;
     }
 
     async runOptimizationCycle() {
@@ -503,10 +512,17 @@ class PerformanceOptimizer extends EventEmitter {
     }
 
     startPerformanceMonitoring() {
-        setInterval(async () => {
+        this._metricsInterval = setInterval(async () => {
             const metrics = await this.getCurrentMetrics();
             this.emit('metrics-update', metrics);
         }, 5000); // Every 5 seconds
+    }
+
+    stopPerformanceMonitoring() {
+        if (this._metricsInterval) {
+            clearInterval(this._metricsInterval);
+            this._metricsInterval = null;
+        }
     }
 
     getStatus() {

@@ -241,11 +241,18 @@ class PluginArchitecture extends EventEmitter {
 
     startPluginMonitoring() {
         // Start monitoring plugin health and performance
-        setInterval(() => {
+        this._pluginMonitorInterval = setInterval(() => {
             this.monitorPluginHealth();
         }, 30000); // Check every 30 seconds
 
         logger.info('Started plugin monitoring');
+    }
+
+    stopPluginMonitoring() {
+        if (this._pluginMonitorInterval) {
+            clearInterval(this._pluginMonitorInterval);
+            this._pluginMonitorInterval = null;
+        }
     }
 
     // Plugin Management Methods

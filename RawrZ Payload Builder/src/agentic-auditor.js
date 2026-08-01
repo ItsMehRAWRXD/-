@@ -468,11 +468,18 @@ class AgenticAuditor {
     });
     
     // Periodic health check
-    setInterval(() => {
+    this._healthCheckInterval = setInterval(() => {
       this.healthCheck();
     }, 30000); // Every 30 seconds
     
     this.log('success', 'Continuous monitoring active');
+  }
+
+  stopMonitoring() {
+    if (this._healthCheckInterval) {
+      clearInterval(this._healthCheckInterval);
+      this._healthCheckInterval = null;
+    }
   }
 
   // Handle runtime errors

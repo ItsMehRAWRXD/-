@@ -286,16 +286,23 @@ class APIStatus extends EventEmitter {
     // Start periodic status checks
     startPeriodicChecks() {
         // Check all APIs every 30 seconds
-        setInterval(() => {
+        this._apiCheckInterval = setInterval(() => {
             this.checkAllAPIs();
         }, 30000);
 
         // Check critical APIs every 10 seconds
-        setInterval(() => {
+        this._criticalApiInterval = setInterval(() => {
             this.checkCriticalAPIs();
         }, 10000);
 
         logger.info('Periodic API status checks started');
+    }
+
+    stopPeriodicChecks() {
+        if (this._apiCheckInterval) clearInterval(this._apiCheckInterval);
+        if (this._criticalApiInterval) clearInterval(this._criticalApiInterval);
+        this._apiCheckInterval = null;
+        this._criticalApiInterval = null;
     }
 
     // Check all APIs

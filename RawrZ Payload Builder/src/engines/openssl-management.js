@@ -419,7 +419,7 @@ class OpenSSLManagement extends EventEmitter {
             };
 
             // Reset performance data every hour
-            setInterval(() => {
+            this._perfResetInterval = setInterval(() => {
                 this.resetPerformanceData();
             }, 3600000);
 
@@ -428,6 +428,14 @@ class OpenSSLManagement extends EventEmitter {
             logger.error('Failed to initialize performance tracking:', error);
             throw error;
         }
+    }
+
+    stopPerformanceTracking() {
+        if (this._perfResetInterval) {
+            clearInterval(this._perfResetInterval);
+            this._perfResetInterval = null;
+        }
+    }
     }
 
     // Get comprehensive status

@@ -110,7 +110,8 @@
 
     // ── startAutonomousMonitoring ─────────────────────────────────────────
     global.startAutonomousMonitoring = function () {
-        setInterval(async function () {
+        if (global._autoMonitorInterval) return;
+        global._autoMonitorInterval = setInterval(async function () {
             const mgr = global.agenticBeaconManager;
             if (!mgr) return;
             try {
@@ -120,6 +121,13 @@
                 if (cb && cb.checked) await global.performAutonomousActions();
             } catch (e) { console.error('Autonomous monitoring:', e); }
         }, 5000);
+    };
+
+    global.stopAutonomousMonitoring = function () {
+        if (global._autoMonitorInterval) {
+            clearInterval(global._autoMonitorInterval);
+            global._autoMonitorInterval = null;
+        }
     };
 
     // ── executeWin32Operation ─────────────────────────────────────────────

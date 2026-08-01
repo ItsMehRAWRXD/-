@@ -304,7 +304,7 @@ class RawrZInterconnectionLayer {
 
   startStreamMonitoring() {
     // Monitor active data streams
-    setInterval(() => {
+    this._streamMonitorInterval = setInterval(() => {
       this.activeStreams.forEach((stream, id) => {
         if (stream.lastActivity < Date.now() - 30000) {
           // Stream inactive for 30 seconds, close it
@@ -312,6 +312,13 @@ class RawrZInterconnectionLayer {
         }
       });
     }, 10000);
+  }
+
+  stopStreamMonitoring() {
+    if (this._streamMonitorInterval) {
+      clearInterval(this._streamMonitorInterval);
+      this._streamMonitorInterval = null;
+    }
   }
 
   createStream(source, target, options = {}) {
