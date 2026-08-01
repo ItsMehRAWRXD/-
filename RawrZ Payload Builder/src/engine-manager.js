@@ -300,7 +300,7 @@ class EngineManager {
   updateStats(statId, increment = 1) {
     const element = document.getElementById(statId);
     if (element) {
-      const current = parseInt(element.textContent) || 0;
+      const current = parseInt(element.textContent, 10) || 0;
       element.textContent = current + increment;
     }
   }

@@ -511,7 +511,7 @@ class RawrZUnifiedRenderer {
   updateStats(statName, increment) {
     const element = document.getElementById(statName);
     if (element) {
-      const current = parseInt(element.textContent) || 0;
+      const current = parseInt(element.textContent, 10) || 0;
       element.textContent = current + increment;
     }
   }

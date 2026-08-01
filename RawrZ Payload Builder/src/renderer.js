@@ -96,7 +96,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-// File selection
 // File selection - with null checks
 const selectFileBtn = document.getElementById('selectFile');
 if (selectFileBtn) {
