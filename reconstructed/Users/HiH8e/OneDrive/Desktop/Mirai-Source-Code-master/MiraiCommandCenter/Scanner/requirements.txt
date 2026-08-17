@@ -2,14 +2,14 @@
 # Python 3.8+
 
 # Flask web framework
-Flask==3.0.0
-Werkzeug==3.0.1
+Flask==3.1.3
+Werkzeug==3.1.6
 
 # CORS support for web API
-Flask-Cors==4.0.0
+Flask-Cors==6.0.0
 
 # HTTP client library
-requests==2.31.0
+requests==2.33.0
 
 # Optional: For advanced features
 # python-magic==0.4.27  # File type detection
